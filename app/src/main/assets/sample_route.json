@@ -1,0 +1,36 @@
+{
+  "note": "가상 경로/좌표. S1 기본, S2 명절 혼잡.",
+  "scenarios": [
+    {
+      "id": "S1",
+      "title": "S1 기본 · 서울→속초(가상)",
+      "seed": 1,
+      "profileId": "default",
+      "totalDistanceKm": 210.0,
+      "startSoc": 60.0,
+      "speedKmh": 100.0,
+      "startHour": 9,
+      "start": { "lat": 37.55, "lon": 127.05 },
+      "destination": { "lat": 38.20, "lon": 128.59 },
+      "stationIds": ["rest_a", "rest_b", "rest_c", "rest_d"],
+      "stationOverrides": []
+    },
+    {
+      "id": "S2",
+      "title": "S2 명절 혼잡 · 서울→속초(가상)",
+      "seed": 2,
+      "profileId": "default",
+      "totalDistanceKm": 210.0,
+      "startSoc": 60.0,
+      "speedKmh": 90.0,
+      "startHour": 10,
+      "start": { "lat": 37.55, "lon": 127.05 },
+      "destination": { "lat": 38.20, "lon": 128.59 },
+      "stationIds": ["rest_b", "rest_c", "rest_d"],
+      "stationOverrides": [
+        { "id": "rest_b", "availableChargers": 0, "expectedWaitMin": 30 },
+        { "id": "rest_c", "availableChargers": 3, "expectedWaitMin": 5 }
+      ]
+    }
+  ]
+}

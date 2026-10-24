@@ -1,0 +1,12 @@
+{
+  "defaultProfileId": "default",
+  "profiles": [
+    {
+      "id": "default",
+      "displayName": "기본 차종 (가정값)",
+      "batteryKwh": 77.4,
+      "efficiencyKmPerKwh": 5.0,
+      "maxChargeKw": 150.0
+    }
+  ]
+}
