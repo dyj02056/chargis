@@ -10,6 +10,10 @@ import kotlinx.coroutines.flow.emptyFlow
 
 // Pleos Connect SDK가 docs/sdk/ 또는 libs/에 들어오기 전까지 실제 호출을 쓰지 않는다(plan.md §0.2-1).
 // 시그니처를 추측하지 않으며, 모든 메서드는 "정보 없음"을 돌려준다. AppContainer는 아직 이 클래스들을 쓰지 않는다.
+//
+// 실제 차량에 연결할 자리만 미리 만들어 둔 "빈 껍데기"다. 차량 SDK(현대차그룹이 제공하는 개발 도구)를 받으면
+// 이 클래스들 안을 채우고, AppContainer에서 Fake 대신 이것을 끼우면 된다.
+// TODO(SDK)는 "SDK가 오면 할 일"이라는 표시다.
 
 /** TODO(SDK): NaviHelper — getRouteStateInfo/getCurrentLocationInfo/addWaypoint/requestReRoute/addListener 연동. */
 class SdkNavi : NaviPort {

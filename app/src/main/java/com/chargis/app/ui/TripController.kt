@@ -124,7 +124,7 @@ class TripController(
     // ---- 사용자 액션 ----
     // 화면의 버튼을 누르면 불리는 함수들이다.
 
-    /** 시나리오(예: 서울→부산) 하나를 골라 새 여행을 시작한다. */
+    /** 시나리오(예: S1 서울→속초) 하나를 골라 새 여행을 시작한다. */
     fun startScenario(id: String) {
         demo.load(scenarios.first { it.id == id })
         resetTrip()
