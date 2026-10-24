@@ -7,6 +7,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/*
+ * 충전 진행 추적기 테스트. 남은 시간 계산, 실제 충전 속도로 보정, 목표 도달·제한 만료 판단을 확인한다.
+ * ChargingSessionTracker(차종, 설정, 충전기 kW, 목표 %, 제한 분, 시작 시각) 순서로 만든다.
+ */
 class ChargingSessionTrackerTest {
     private val config = RecommendationConfig()
 
@@ -33,6 +37,7 @@ class ChargingSessionTrackerTest {
         assertEquals(model.minutesToTarget * 2, s.minutesToTarget, model.minutesToTarget * 0.05)
     }
 
+    // 목표 %에 닿으면 "도달", 제한 시간(10분 = 600초)이 지나면 "만료"로 표시되는지
     @Test
     fun reachedAndExpiredFlags() {
         val tracker = ChargingSessionTracker(defaultProfile, config, 100.0, 50.0, 10, startSec = 0.0)

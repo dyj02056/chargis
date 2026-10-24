@@ -5,6 +5,8 @@ $ErrorActionPreference = 'Stop'
 $adb = Join-Path $SdkRoot 'platform-tools\adb.exe'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 
+# adb = 컴퓨터에서 안드로이드 기기를 조종하는 도구
+# 2초마다 부팅 완료 여부를 확인한다(최대 120번 = 4분).
 Write-Host '에뮬레이터 부팅을 기다리는 중...'
 & $adb wait-for-device
 for ($i = 0; $i -lt 120; $i++) {
@@ -22,5 +24,6 @@ try {
     Pop-Location
 }
 
+# 설치한 앱의 첫 화면(MainActivity)을 띄운다.
 & $adb shell am start -n com.chargis.app/.MainActivity | Out-Null
 Write-Host 'Chargis를 실행했습니다. 에뮬레이터 창을 확인하세요.'

@@ -7,6 +7,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/*
+ * 충전 중 음성 알림 테스트(T8). 충전을 처음부터 끝까지 가상으로 돌려 보고,
+ * 어떤 알림이 어떤 순서로 몇 번 나왔는지 목록으로 비교한다.
+ */
 class AlertSchedulerTest {
     private val config = RecommendationConfig()
 
@@ -53,12 +57,14 @@ class AlertSchedulerTest {
         assertEquals(fine, coarse)
     }
 
+    // 시간 제한이 없는 충전기면 규칙 안내와 제한 경고가 아예 나오지 않는지
     @Test
     fun noLimitMeansNoRuleNoticeOrLimitWarnings() {
         val alerts = runSession(30.0, 60.0, 100.0, limit = null, dtSec = 10.0)
         assertEquals(listOf(AlertType.TARGET_T5, AlertType.TARGET_REACHED), alerts)
     }
 
+    // 같은 상황을 두 번 평가해도 같은 알림을 두 번 내지 않는지(32분 시점 = 제한 10분 전 이내)
     @Test
     fun repeatedEvaluationDoesNotRefire() {
         val tracker = ChargingSessionTracker(defaultProfile, config, 50.0, 80.0, 40, startSec = 0.0)

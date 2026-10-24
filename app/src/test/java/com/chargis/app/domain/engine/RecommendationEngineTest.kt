@@ -9,6 +9,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/*
+ * 추천 엔진 테스트. T1~T7은 plan.md에 적어 둔 시험 상황 번호다.
+ * 각 테스트는 "이런 상황이면(입력) → 이렇게 추천해야 한다(기대 결과)"를 확인한다.
+ * route(남은 km), vehicle(배터리 %), station(id, 거리 km) 같은 재료는 TestFixtures.kt에 있다.
+ */
 class RecommendationEngineTest {
     private val config = RecommendationConfig()
     private val engine = RecommendationEngine(config)
@@ -116,6 +121,7 @@ class RecommendationEngineTest {
         assertEquals(1, announcements)
     }
 
+    /** T7: 수락한 휴게소는 작은 변화에는 그대로 두고, 후보에서 사라질 때만 바꾼다(히스테리시스). */
     @Test
     fun t7_acceptedChoiceSticksUnlessMuchWorse() {
         val gate = AnnouncementGate(config.announceWithinKm)

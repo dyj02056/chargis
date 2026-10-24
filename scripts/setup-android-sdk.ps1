@@ -9,6 +9,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
+# 1. JDK 17(자바 개발 도구) 찾기. 지정하지 않았으면 ~\tools 아래 jdk-17* 폴더를 찾아본다.
 if (-not $JavaHome -or -not (Test-Path (Join-Path $JavaHome 'bin\java.exe'))) {
     $found = Get-ChildItem (Join-Path $HOME 'tools') -Directory -Filter 'jdk-17*' -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $found) { throw 'JDK 17을 찾지 못했습니다. -JavaHome 으로 JDK 17 경로를 지정하세요.' }
@@ -18,6 +19,7 @@ $env:JAVA_HOME = $JavaHome
 Write-Host "JDK: $JavaHome"
 Write-Host "SDK: $SdkRoot"
 
+# 2. SDK 관리 도구(sdkmanager)가 없으면 구글에서 내려받아 압축을 푼다.
 $sdkManager = Join-Path $SdkRoot 'cmdline-tools\latest\bin\sdkmanager.bat'
 if (-not (Test-Path $sdkManager)) {
     Write-Host '명령줄 도구 내려받는 중...'
@@ -31,16 +33,19 @@ if (-not (Test-Path $sdkManager)) {
     Remove-Item $zip, $tmp -Recurse -Force
 }
 
+# 3. 라이선스 질문에 자동으로 y를 40번 답한다.
 Write-Host '라이선스 동의 중...'
 $yes = Join-Path $env:TEMP 'android-sdk-yes.txt'
 Set-Content -Path $yes -Value (@('y') * 40) -Encoding ascii
 cmd /c "`"$sdkManager`" --sdk_root=`"$SdkRoot`" --licenses < `"$yes`"" | Out-Null
 Remove-Item $yes
 
+# 4. 빌드와 에뮬레이터에 필요한 패키지 설치
 Write-Host 'SDK 패키지 설치 중 (약 2GB, 몇 분 걸립니다)...'
 & $sdkManager "--sdk_root=$SdkRoot" 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0' 'build-tools;35.0.0' 'emulator' 'system-images;android-35;google_apis;x86_64'
 if ($LASTEXITCODE -ne 0) { throw "sdkmanager 실패 (exit $LASTEXITCODE)" }
 
+# 5. 가상 기기(에뮬레이터) 만들기. 이미 있으면 건너뛴다. 차량 화면처럼 가로로 넓은 태블릿 모양을 쓴다.
 $avdManager = Join-Path $SdkRoot 'cmdline-tools\latest\bin\avdmanager.bat'
 $avdDir = Join-Path $HOME '.android\avd\chargis_wide.avd'
 if (-not (Test-Path $avdDir)) {

@@ -1,5 +1,9 @@
+// 앱을 "어떻게 만들지" 적은 빌드 설정 파일이다. Gradle(빌드 도구)이 이 파일을 읽고 앱을 조립한다.
+// 지원하는 안드로이드 버전, 개발용/배포용 차이, 가져다 쓰는 라이브러리 목록이 여기 있다.
+
 import java.util.Properties
 
+// 빌드에 쓰는 도구들: 안드로이드 앱, 코틀린 언어, Compose 화면, JSON 읽기
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,14 +22,15 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.chargis.app"
-        minSdk = 28
+        applicationId = "com.chargis.app"   // 앱 고유 이름(설치된 앱을 구별하는 주소)
+        minSdk = 28                         // 설치 가능한 가장 낮은 안드로이드 버전(Android 9)
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 1                     // 내부 버전 번호(올릴 때마다 1씩 증가)
+        versionName = "0.1.0"               // 사용자에게 보이는 버전
         buildConfigField("String", "CHARGER_API_KEY", "\"${localProps.getProperty("chargis.chargerApiKey", "")}\"")
     }
 
+    // debug = 개발·시연용(개발자 오버레이 켬), release = 배포용(끔)
     buildTypes {
         debug {
             buildConfigField("boolean", "DEV_OVERLAY", "true")
@@ -46,6 +51,7 @@ android {
         buildConfig = true
     }
     testOptions {
+        // 테스트에서 안드로이드 기능(예: Log)을 부르면 오류 대신 기본값을 돌려준다.
         unitTests.isReturnDefaultValues = true
     }
 }
@@ -54,6 +60,8 @@ kotlin {
     jvmToolchain(17)
 }
 
+// 가져다 쓰는 외부 라이브러리. 정확한 버전은 gradle/libs.versions.toml에 모아 두었다.
+// implementation = 앱에 포함, debugImplementation = 개발용 빌드에만, testImplementation = 테스트에만
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
