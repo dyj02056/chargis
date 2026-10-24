@@ -206,7 +206,7 @@ fun StampTag(text: String, modifier: Modifier = Modifier, color: Color = Ticket.
 
 /**
  * 뜯는 띠의 버튼. primary는 잉크로 채운 칸, secondary는 잉크 괘선 칸.
- * [stampInk]는 휴게소를 표에 찍는 동작(경유지 수락, 혼잡 시 고른 휴게소)에만 쓴다: 도장 잉크로 채운다.
+ * [stampInk]는 충전소를 표에 찍는 동작(경유지 수락, 혼잡 시 고른 충전소)에만 쓴다: 도장 잉크로 채운다.
  * 누르면 0.98로 살짝 눌린다.
  */
 @Composable

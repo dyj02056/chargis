@@ -42,7 +42,7 @@ Pleos Connect 에뮬레이터(Android Studio AVD)에서 **끝까지 동작하는
 ### 1.1 핵심 기능 4가지
 | ID | 기능 | 요약 |
 |---|---|---|
-| F1 | 휴게소 충전소 추천 | 경로상 휴게소 후보를 도착 시 배터리·출력·가용 대수·대기로 비교해 1순위 제안 |
+| F1 | 경로상 충전소 추천 | 경로상 충전소 후보(고속도로 휴게소·졸음쉼터 우선, 국도 휴게소·국도변·IC 근처·상업·공공시설은 대안)를 도착 시 배터리·출력·가용 대수·대기·왕복 우회로 비교해 1순위 제안 (2026-10-25 범위 확장, docs/DECISIONS.md) |
 | F2 | 목표 충전량 코치 | 목적지/다음 충전지까지 필요 에너지 + 안전 마진 → "OO%까지만 충전" |
 | F3 | 충전 시간 제한 알림 | 충전 시작 시 운영 규칙 안내, 제한 도달 전 남은 시간·예상 충전량 알림 |
 | F4 | 경유지 자동 추가 | 추천 수락 시 내비 경유지로 등록 + 재탐색 |
@@ -176,9 +176,9 @@ data class ChargingStation(
     val id: String,
     val name: String,
     val location: GeoPoint,
-    val isRestStop: Boolean,
+    val kind: StationKind,            // 2026-10-25: isRestStop → 시설 종류(휴게소/쉼터/상업/공공 등)
     val distanceAlongRouteKm: Double, // 현재 위치 기준 경로상 거리
-    val detourKm: Double,             // 경로 이탈 추가 거리(휴게소는 보통 0~소량)
+    val detourKm: Double,             // 경로에서 충전소까지 편도 거리. 엔진은 왕복으로 센다(휴게소는 0)
     val maxKw: Double,                // 해당 소의 최대 출력
     val totalChargers: Int,
     val availableChargers: Int?,      // null = 실시간 미상
@@ -243,7 +243,7 @@ interface VehiclePort {
 }
 
 interface ChargerDataPort {
-    // 경로 정보를 받아 "경로상 휴게소 충전소" 후보 반환 (distanceAlongRoute 포함)
+    // 경로 정보를 받아 "경로상 충전소"(휴게소·쉼터·국도변·상업·공공시설) 후보 반환 (distanceAlongRoute 포함)
     suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation>
     fun liveStatus(stationId: String): Flow<StationLiveStatus?>   // 불가 시 empty flow
 }
@@ -320,6 +320,7 @@ requiredSoc(dist)   = dist * socPerKm * (1 + safetyMargin) + minArrivalSocPercen
 - **히스테리시스:** 수락된 추천은 상태가 조금 변해도 뒤집지 않는다(점수 차가 크게 벌어지거나 후보가 불가능해질 때만 재계산).
 - **혼잡 변형(명절):** 1순위의 `expectedWaitMin`이 임계(기본 20분) 초과면 다음 휴게소/대안을 함께 제시하고 "대기 시간 vs 도착 시 배터리" 비교 카드 표시.
 - **사용자 조정:** 상한(기본 80%), 안전 마진, 최소 도착 잔량을 설정 화면에서 변경 가능. 변경값은 DataStore에 저장.
+- **휴게소 밖 충전소(2026-10-25 추가):** 졸음쉼터·국도 휴게소·국도변/IC 근처·상업·공공시설도 후보. `detourKm`(편도)를 왕복으로 세고, 편도 0.5km를 넘게 벗어나면 진출입 5분을 더한다. 휴게소·쉼터가 아니면 순위에만 5분 가산. 이용 가능 시간을 알면 도착 후 30분 동안 열려 있는 곳만 후보. 아파트·사업장 등 외부인이 쓰기 어려운 시설과 이용자 제한(`limitYn`/`limitDetail`) 충전기는 제외. `limitDetail`은 시간 제한이 아니라 이용자 제한 사유다.
 - 모든 수치는 **가정 기본값**이며 `RecommendationConfig`로만 조정한다.
 
 ---

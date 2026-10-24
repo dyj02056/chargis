@@ -214,7 +214,7 @@ Two paper-and-ink palettes with one reserved stamp ink and one warning ink; ever
 - **Figure Medium** (Mono 500, 40sp): measurements inside ruled cells (charge minutes, limit, arrival percent, wait, ETA).
 - **Figure Small** (Mono 500, 22sp): header clock and battery, receipt values, table numbers (at body-large size).
 - **Figure Unit** (Sans 600, 26sp): the unit beside a figure (km 앞, %, 분), baseline-aligned and offset 6dp.
-- **Display** (Sans 800, 48sp): rest-stop name under the monumental figure; screen titles.
+- **Display** (Sans 800, 48sp): station name under the monumental figure (non-rest-stop stations add one muted line: kind and round-trip detour); screen titles.
 - **Display Small** (Sans 700, 40sp): status sentences on the driving stub, congestion title, planned stop name.
 - **Headline** (Sans 700, 30sp): station names in parked and choice views, "unknown" values in cells.
 - **Title Large / Title** (Sans 600, 24 / 20sp): wordmark in the header; reasons, sub-lines, stamp text, table titles.
@@ -256,7 +256,7 @@ Tactile, printed blocks on the tear strip.
 - **Shape:** gently squared (6dp radius), minimum height 104dp, 24dp horizontal padding, Label Large text centred.
 - **Stamp ink (button-stamp):** cobalt fill with on-stamp text. Only for stamping a stop: "accept as waypoint" and the chosen stop under congestion.
 - **Ink (button-ink):** ink fill with stock-coloured text. All other primary actions (depart, reissue).
-- **Ruled (button-ruled):** transparent with a 2dp ink border and ink text. Secondary actions ("next rest stop").
+- **Ruled (button-ruled):** transparent with a 2dp ink border and ink text. Secondary actions ("다음 충전소", next stop).
 - **Press / Disabled:** scales to 0.98 while pressed with a ripple in the text colour; disabled renders at 40% alpha.
 
 ### Ticket Stock (TicketStock)

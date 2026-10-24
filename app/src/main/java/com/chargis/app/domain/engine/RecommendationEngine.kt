@@ -17,21 +17,25 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * plan.md §7.2 휴게소 충전 추천(F1) + 목표 충전량(F2).
+ * plan.md §7.2 경로상 충전소 추천(F1) + 목표 충전량(F2).
  * 무상태 순수 함수다. 재안내 금지/히스테리시스는 [AnnouncementGate]가 맡는다.
  *
- * 이 앱의 두뇌에 해당한다. 경로, 배터리, 충전소 목록을 넣으면 "어느 휴게소에서 몇 %까지"를 답한다.
+ * 이 앱의 두뇌에 해당한다. 경로, 배터리, 충전소 목록을 넣으면 "어느 충전소에서 몇 %까지"를 답한다.
  * "무상태 순수 함수"란 같은 입력을 넣으면 언제나 같은 답이 나오고, 이전 호출을 기억하지 않는다는 뜻이다.
  * 덕분에 테스트하기 쉽다.
  *
  * 순위 기준(B1)은 "목적지에 언제 도착하나" 하나다. 후보마다
- *   주행 시간(우회 포함) + 도착 시각의 예상 대기(B4) + 충전 시간 + 들르는 데 드는 시간
+ *   주행 시간(왕복 우회 포함) + 도착 시각의 예상 대기(B4) + 충전 시간 + 들르는 데 드는 시간(경로를 벗어나면 진출입 시간 추가)
  * 을 더해 목적지 도착까지 걸리는 분(etaMinutes)을 구하고, 불안 요소(도착 잔량 부족, 시간 제한 위험)를
  * 분 단위 가산점으로 더한 costMinutes가 가장 작은 곳을 고른다. 그래서 "C 휴게소가 12분 빨리 도착"처럼
  * 이유를 숫자 하나로 설명할 수 있다.
  *
- * 한 번 들러서 목적지까지 못 가면 두 번째 휴게소까지 함께 계획한다(B2). 첫 휴게소에서 몇 %까지 채울지는
- * 두 휴게소의 충전 속도와 대기를 비교해 전체 시간이 가장 짧아지는 값으로 고른다.
+ * 충전소는 휴게소만이 아니다. 졸음쉼터, 국도변·IC 근처 충전소, 상업·공공시설도 후보가 된다.
+ * 휴게소·쉼터가 아닌 곳에는 순위 가산([RecommendationConfig.nonRoadsidePenaltyMin])을 붙여, 휴게소가 붐비거나
+ * 닿지 못할 때처럼 확실히 나을 때만 1순위가 되게 한다. 이용 가능 시간을 아는 곳은 도착 시각에 닫혀 있으면 뺀다.
+ *
+ * 한 번 들러서 목적지까지 못 가면 두 번째 충전소까지 함께 계획한다(B2). 첫 충전소에서 몇 %까지 채울지는
+ * 두 충전소의 충전 속도와 대기를 비교해 전체 시간이 가장 짧아지는 값으로 고른다.
  */
 class RecommendationEngine(private val config: RecommendationConfig = RecommendationConfig()) {
 
@@ -58,9 +62,11 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
         }
 
         // 2. 하드 조건 필터
-        // 이미 지나친 곳과 목적지보다 먼 곳은 뺀다.
+        // 이미 지나친 곳, 목적지보다 먼 곳, 도착할 때 닫혀 있는 곳은 뺀다.
+        val speed = speedKmh(route)
         val ahead = stations.filter {
-            it.distanceAlongRouteKm > 0 && it.distanceAlongRouteKm < route.remainingDistanceKm
+            it.distanceAlongRouteKm > 0 && it.distanceAlongRouteKm < route.remainingDistanceKm &&
+                isOpenOnArrival(it, context, speed)
         }.sortedBy { it.distanceAlongRouteKm }
         // 도착했을 때 최소 잔량(10%)이 남는 곳만 "안전한" 후보로 남긴다.
         val safe = ahead.filter { arrivalSoc(soc, it, p) >= config.minArrivalSocPercent }
@@ -71,13 +77,13 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
                 .minByOrNull { it.distanceAlongRouteKm + it.detourKm }
             return RecommendationResult.NoSafeStop(nearest)
         }
-        // 안전한 후보 중 가장 먼 곳 = "늦어도 여기서는 충전해야 하는" 마지막 휴게소
+        // 안전한 후보 중 가장 먼 곳 = "늦어도 여기서는 충전해야 하는" 마지막 충전소
         val latestSafe = safe.maxBy { it.distanceAlongRouteKm }
 
         // 3~5. 후보마다 가장 빠른 충전 계획(한 번 또는 두 번 들르기)을 세운다.
-        val trip = Trip(route, soc, p, context, speedKmh(route))
+        val trip = Trip(route, soc, p, context, speed)
         val plans = safe.mapNotNull { planFrom(it, ahead, trip) }
-        // 안전 마진 덕분에 어느 휴게소에서도 충전할 필요가 없는 경우
+        // 안전 마진 덕분에 어느 충전소에서도 충전할 필요가 없는 경우
         if (plans.isEmpty()) return RecommendationResult.NotNeeded
 
         // 6. 정렬: 비용(분)이 작은 순서. 이유 배지는 전체 후보를 보고 붙인다.
@@ -117,34 +123,59 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
 
     private fun driveMinutes(km: Double, trip: Trip) = km / trip.speedKmh * 60.0
 
-    // 충전소까지 가는 거리 = 경로상 거리 + 휴게소로 빠지는 추가 거리
+    // 충전소까지 가는 거리 = 경로상 거리 + 경로에서 충전소까지 편도 거리
     private fun arrivalSoc(soc: Double, station: ChargingStation, profile: VehicleProfile) =
         ChargeMath.arrivalSoc(soc, station.distanceAlongRouteKm + station.detourKm, profile)
 
+    // 충전소에서 목적지까지 = 경로로 돌아오는 거리 + 남은 경로
+    private fun kmAfter(station: ChargingStation, route: RouteState) =
+        station.detourKm + route.remainingDistanceKm - station.distanceAlongRouteKm
+
+    // 한 번 들를 때 드는 시간. 경로를 벗어나는 곳은 IC 요금소·신호 등 진출입 시간을 더한다.
+    private fun stopMinutes(station: ChargingStation) =
+        config.stopOverheadMin + if (station.detourKm > config.offRouteKm) config.offRouteAccessMin else 0.0
+
+    // 휴게소·쉼터가 아닌 곳에 붙이는 순위 가산. 도착 시간(eta)에는 넣지 않고 비용에만 넣는다.
+    private fun kindPenalty(station: ChargingStation) =
+        if (station.kind.isRoadside) 0.0 else config.nonRoadsidePenaltyMin
+
     /**
-     * [s1]을 첫 휴게소로 하는 가장 빠른 계획. 여기서 충전할 필요가 없으면 null.
-     * 후보 계획: (가) 여기서만 충전, (나) 여기서 조금 + 뒤 휴게소 [ahead]에서 한 번 더.
+     * 이용 가능 시간을 아는 충전소가 도착 시각부터 [RecommendationConfig.minOpenAfterArrivalMin]분 동안 열려 있는지.
+     * 시간을 모르거나 지금 시각을 모르면 열려 있다고 본다(빼면 후보가 너무 줄어든다).
+     */
+    private fun isOpenOnArrival(station: ChargingStation, context: RecommendContext, speedKmh: Double): Boolean {
+        val hours = station.openHours ?: return true
+        val now = context.minuteOfDay ?: return true
+        val arrival = now + ((station.distanceAlongRouteKm + station.detourKm) / speedKmh * 60.0).roundToInt()
+        return hours.covers(arrival, arrival + config.minOpenAfterArrivalMin)
+    }
+
+    /**
+     * [s1]을 첫 충전소로 하는 가장 빠른 계획. 여기서 충전할 필요가 없으면 null.
+     * 후보 계획: (가) 여기서만 충전, (나) 여기서 조금 + 뒤 충전소 [ahead]에서 한 번 더.
      */
     private fun planFrom(s1: ChargingStation, ahead: List<ChargingStation>, trip: Trip): Plan? {
         val p = trip.profile
         val arrival1 = arrivalSoc(trip.soc, s1, p)
-        val needed = ChargeMath.requiredSoc(trip.route.remainingDistanceKm - s1.distanceAlongRouteKm, p, config)
+        // 경로를 벗어난 충전소라면 경로로 돌아오는 거리까지 채워야 한다.
+        val needed = ChargeMath.requiredSoc(kmAfter(s1, trip.route), p, config)
         val options = mutableListOf<Plan>()
 
         // (가) 한 번만 들르기: 목적지까지 필요한 %를 5% 단위로 올려 "50%까지"처럼 기억하기 쉬운 숫자로 만든다.
         if (needed <= config.maxTargetSocPercent) {
             val target = min(ChargeMath.ceilToStep(needed, config.roundUpStepPercent), config.maxTargetSocPercent)
-            // 도착 잔량이 이미 목표 이상이면 이 휴게소에서는 충전할 이유가 없다.
+            // 도착 잔량이 이미 목표 이상이면 이 충전소에서는 충전할 이유가 없다.
             if (target <= arrival1) return null
             options += build(s1, arrival1, target, needed, next = null, trip)
         }
 
-        // (나) 두 번 들르기: 뒤 휴게소마다, 거기까지 안전하게 가는 %부터 상한까지 5%씩 올려 보며 가장 빠른 조합을 찾는다.
+        // (나) 두 번 들르기: 뒤 충전소마다, 거기까지 안전하게 가는 %부터 상한까지 5%씩 올려 보며 가장 빠른 조합을 찾는다.
         for (s2 in ahead) {
             if (s2.distanceAlongRouteKm <= s1.distanceAlongRouteKm) continue
-            val legKm = s2.distanceAlongRouteKm - s1.distanceAlongRouteKm + s2.detourKm
+            // s1에서 경로로 돌아오고, 경로를 따라가다, s2로 빠지는 거리
+            val legKm = s1.detourKm + s2.distanceAlongRouteKm - s1.distanceAlongRouteKm + s2.detourKm
             val needToS2 = ChargeMath.requiredSoc(legKm, p, config)
-            val needAfterS2 = ChargeMath.requiredSoc(trip.route.remainingDistanceKm - s2.distanceAlongRouteKm, p, config)
+            val needAfterS2 = ChargeMath.requiredSoc(kmAfter(s2, trip.route), p, config)
             if (needAfterS2 > config.maxTargetSocPercent) continue // 세 번 이상 들러야 하는 조합은 다루지 않는다
             val target2 = min(ChargeMath.ceilToStep(needAfterS2, config.roundUpStepPercent), config.maxTargetSocPercent)
             var t1 = max(
@@ -167,12 +198,12 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
         return options.minBy { it.rec.costMinutes }
     }
 
-    // 두 번째 휴게소의 도착 잔량과 목표
+    // 두 번째 충전소의 도착 잔량과 목표
     private class Leg(val station: ChargingStation, val arrivalSoc: Double, val targetSoc: Double)
 
     /**
      * 계획 하나를 [Recommendation]으로 만든다: 충전 시간, 시간 제한, 도착 시각의 대기, 목적지 도착까지 걸리는 분, 비용.
-     * [needed]는 이 휴게소에서 최소한 채워야 하는 %(시간 제한 안에 그만큼도 못 채우면 위험으로 본다).
+     * [needed]는 이 충전소에서 최소한 채워야 하는 %(시간 제한 안에 그만큼도 못 채우면 위험으로 본다).
      */
     private fun build(
         s1: ChargingStation,
@@ -194,23 +225,24 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
 
         val toS1 = driveMinutes(s1.distanceAlongRouteKm + s1.detourKm, trip)
         val wait1 = waitAt(s1, toS1, trip)
-        var eta = driveMinutes(trip.route.remainingDistanceKm + s1.detourKm, trip) +
-            wait1.assumed + minutes1 + config.stopOverheadMin
-        var penalty = lowSocPenalty(arrival1) +
+        // 우회는 갔다가 돌아오므로 두 번 센다.
+        var eta = driveMinutes(trip.route.remainingDistanceKm + 2 * s1.detourKm, trip) +
+            wait1.assumed + minutes1 + stopMinutes(s1)
+        var penalty = lowSocPenalty(arrival1) + kindPenalty(s1) +
             (if (willHitLimit) config.limitRiskPenaltyMin else 0.0) +
             (if (unreachable) config.unreachablePenaltyMin else 0.0)
 
-        // 두 번째 휴게소: 첫 휴게소에서 출발한 뒤의 도착 시각으로 대기를 예측한다.
+        // 두 번째 충전소: 첫 충전소에서 출발한 뒤의 도착 시각으로 대기를 예측한다.
         var assumedWait = wait1.assumed
         val planned = next?.let { leg ->
             val s2 = leg.station
             val minutes2 = ChargeMath.chargeMinutes(leg.arrivalSoc, leg.targetSoc, s2.maxKw, p, config)
-            val toS2 = toS1 + wait1.assumed + minutes1 + config.stopOverheadMin +
-                driveMinutes(s2.distanceAlongRouteKm - s1.distanceAlongRouteKm + s2.detourKm, trip)
+            val toS2 = toS1 + wait1.assumed + minutes1 + stopMinutes(s1) +
+                driveMinutes(s1.detourKm + s2.distanceAlongRouteKm - s1.distanceAlongRouteKm + s2.detourKm, trip)
             val wait2 = waitAt(s2, toS2, trip)
             assumedWait += wait2.assumed
-            eta += driveMinutes(s2.detourKm, trip) + wait2.assumed + minutes2 + config.stopOverheadMin
-            penalty += lowSocPenalty(leg.arrivalSoc)
+            eta += driveMinutes(2 * s2.detourKm, trip) + wait2.assumed + minutes2 + stopMinutes(s2)
+            penalty += lowSocPenalty(leg.arrivalSoc) + kindPenalty(s2)
             s2.rule.timeLimitMin?.let { if (minutes2 > it) penalty += config.limitRiskPenaltyMin }
             PlannedStop(s2, leg.arrivalSoc, leg.targetSoc, ceil(minutes2).toInt(), wait2.shown)
         }
@@ -269,7 +301,7 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
                 }
                 if (availability != null && availability >= ENOUGH_RATIO) add(ReasonCode.ENOUGH_CHARGERS)
                 if (s.id == latestSafeId) add(ReasonCode.LATEST_SAFE_STOP)
-                if (s.detourKm <= NO_DETOUR_KM) add(ReasonCode.NO_DETOUR)
+                if (s.detourKm <= config.offRouteKm) add(ReasonCode.NO_DETOUR)
                 if (r.willHitTimeLimit && (r.socAtTimeLimitPercent ?: 0.0) < r.targetSocPercent) {
                     add(ReasonCode.TIME_LIMIT_RISK)
                 }
@@ -289,7 +321,6 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
         const val MAX_ALTERNATIVES = 2   // 대안으로 함께 보여 줄 충전소 수
         const val LOW_WAIT_MIN = 5       // 이 분 이하 대기면 "대기 짧음" 배지
         const val ENOUGH_RATIO = 0.5     // 빈 충전기가 절반 이상이면 "충전기 넉넉" 배지
-        const val NO_DETOUR_KM = 0.5     // 우회 거리가 이 km 이하면 "경로 이탈 없음" 배지
         const val MIN_SPEED_KMH = 30.0   // 내비 평균 속도가 튀어도 이 범위로 묶는다
         const val MAX_SPEED_KMH = 140.0
         const val STEP_EPS = 1e-6

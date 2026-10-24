@@ -47,6 +47,7 @@ import kotlinx.serialization.json.Json
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * plan.md §8.1 상태머신을 돌리는 여행 코디네이터. 안드로이드 의존이 없어 JVM 테스트로 시나리오를 끝까지 돌릴 수 있다.
@@ -156,7 +157,7 @@ class TripController(
         publish()
     }
 
-    /** 추천 카드의 [수락] 또는 혼잡 비교 카드에서 휴게소 선택. */
+    /** 추천 카드의 [수락] 또는 혼잡 비교 카드에서 충전소 선택. */
     fun accept(stationId: String) {
         val current = m.offer ?: return
         val rec = (listOf(current.primary) + current.alternatives).firstOrNull { it.station.id == stationId } ?: return
@@ -177,7 +178,7 @@ class TripController(
         }
     }
 
-    /** [다음 휴게소]: 이번 1순위를 거절하고 다음 후보를 기다린다. */
+    /** [다음 충전소]: 이번 1순위를 거절하고 다음 후보를 기다린다. */
     fun decline() {
         val current = m.offer ?: return
         gate.markDeclined(current.primary.station.id)
@@ -185,7 +186,7 @@ class TripController(
         transition(TripEvent.Declined)
     }
 
-    /** 휴게소에 도착한 뒤 [충전 시작]. 충전 세션(남은 시간 추적 + 알림)을 새로 만든다. */
+    /** 충전소에 도착한 뒤 [충전 시작]. 충전 세션(남은 시간 추적 + 알림)을 새로 만든다. */
     fun startCharging() {
         val rec = m.accepted ?: return
         if (m.phase != TripPhase.Arrived) return
@@ -353,7 +354,7 @@ class TripController(
             }
             TripPhase.AwaitingDecision -> refreshOffer(route, vehicleState)
             TripPhase.NavigatingToCharger -> {
-                // 차가 멈췄다 = 휴게소에 도착했다고 본다.
+                // 차가 멈췄다 = 충전소에 도착했다고 본다.
                 if (!vehicleState.isDriving) {
                     transition(TripEvent.ArrivedAtStop)
                 } else {
@@ -427,8 +428,10 @@ class TripController(
         val alt = result.alternatives.firstOrNull()
         if (result.congested && alt != null) {
             announcer.announce(phrases.congested(p.station.name, p.waitMinutes, alt.station.name))
+            announceOffRoute(alt.station)
         } else {
             announcer.announce(phrases.recommend(p.station.distanceAlongRouteKm, p.station.name, p.targetSocPercent))
+            announceOffRoute(p.station)
             val next = p.nextStop
             when {
                 next != null -> announcer.announce(phrases.planTwoStops(next.station.name, next.targetSocPercent))
@@ -437,7 +440,14 @@ class TripController(
         }
     }
 
-    /** 안내 후 결정 대기 중: 거리 표시를 갱신하고, 휴게소를 지나쳤으면 거절로 처리한다. */
+    // 휴게소가 아니라 경로를 벗어나는 곳이면 더 달리는 거리(왕복)를 함께 알린다.
+    private suspend fun announceOffRoute(station: ChargingStation) {
+        if (station.detourKm > config.offRouteKm) {
+            announcer.announce(phrases.offRoute(station.name, (2 * station.detourKm).roundToInt()))
+        }
+    }
+
+    /** 안내 후 결정 대기 중: 거리 표시를 갱신하고, 충전소를 지나쳤으면 거절로 처리한다. */
     private suspend fun refreshOffer(route: RouteState, v: VehicleState) {
         val current = m.offer ?: return
         val result = evaluate(route, v)
@@ -455,7 +465,7 @@ class TripController(
         }
     }
 
-    /** §7.3 히스테리시스: 수락한 휴게소는 크게 나빠지거나 사라질 때만 바꾼다. */
+    /** §7.3 히스테리시스: 수락한 충전소는 크게 나빠지거나 사라질 때만 바꾼다. */
     private suspend fun keepOrSwitchAccepted(route: RouteState, v: VehicleState) {
         val acc = m.accepted ?: return
         val result = evaluate(route, v)
@@ -640,7 +650,7 @@ class TripController(
         m.odometerKm = saved.odometerKm
         saved.charges.forEach { m.charges += it.toRecord() }
         gate.restore(saved.handled, saved.declined)
-        // 수락한 휴게소는 시나리오 목록에서 다시 찾아, 지금 위치 기준 거리로 바꿔 넣는다.
+        // 수락한 충전소는 시나리오 목록에서 다시 찾아, 지금 위치 기준 거리로 바꿔 넣는다.
         m.accepted = saved.accepted?.let { r ->
             scenario.stations.firstOrNull { it.id == r.stationId }?.let { st ->
                 r.toRecommendation(st.copy(distanceAlongRouteKm = st.distanceAlongRouteKm - saved.sim.traveledKm))

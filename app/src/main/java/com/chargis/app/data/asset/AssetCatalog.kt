@@ -4,6 +4,8 @@ import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.CurvePoint
 import com.chargis.app.domain.model.GeoPoint
+import com.chargis.app.domain.model.OpenHours
+import com.chargis.app.domain.model.StationKind
 import com.chargis.app.domain.model.VehicleProfile
 import com.chargis.app.sim.Scenario
 import kotlinx.serialization.Serializable
@@ -14,8 +16,8 @@ import kotlinx.serialization.json.Json
  *
  * 앱에 함께 들어 있는 샘플 데이터 파일 3개를 읽어 앱이 쓰는 모양으로 바꾼다.
  * - vehicle_profiles.json: 차종 사양
- * - sample_stations.json: 휴게소 충전소 목록
- * - sample_route.json: 데모 시나리오(어떤 경로로, 어느 휴게소들을 지나는지)
+ * - sample_stations.json: 충전소 목록(휴게소, 졸음쉼터, 국도변·상업시설 충전소)
+ * - sample_route.json: 데모 시나리오(어떤 경로로, 어느 충전소들을 지나는지)
  *
  * DTO(Data Transfer Object)는 JSON 파일 모양 그대로 받아 두는 임시 상자다.
  * 파일 모양과 앱 내부 모양을 나눠 두면, 파일 형식이 바뀌어도 이 파일만 고치면 된다.
@@ -38,7 +40,7 @@ class AssetCatalog(
 
     fun scenario(id: String): Scenario = scenarios.first { it.id == id }
 
-    // 시나리오 한 건을 만든다. 시나리오가 휴게소 id만 갖고 있으므로 충전소 목록에서 찾아 붙이고,
+    // 시나리오 한 건을 만든다. 시나리오가 충전소 id만 갖고 있으므로 충전소 목록에서 찾아 붙이고,
     // 시나리오별로 다르게 정한 혼잡도(overrides, 예: 명절이라 대기 30분)가 있으면 덮어쓴다.
     private fun ScenarioDto.toScenario(): Scenario {
         val overrides = stationOverrides.associateBy { it.id }
@@ -108,22 +110,24 @@ private data class StationDto(
     val lat: Double,
     val lon: Double,
     val routeKm: Double,
-    val detourKm: Double = 0.0,
-    val isRestStop: Boolean = true,
+    val detourKm: Double = 0.0,          // 경로에서 충전소까지 편도 거리(km)
+    val kind: String = "HIGHWAY_REST_STOP", // StationKind 이름. 예) "SHELTER", "COMMERCIAL"
     val maxKw: Double,
     val totalChargers: Int,
     val availableChargers: Int? = null,
     val expectedWaitMin: Int? = null,
     val timeLimitMin: Int? = null,
     val amountLimitKrw: Int? = null,
-    val waitByHour: List<Int>? = null
+    val waitByHour: List<Int>? = null,
+    val useTime: String? = null,         // 이용 가능 시간. 예) "09:00~22:00". 없으면 미상
+    val parkingFree: Boolean? = null
 ) {
     /** distanceAlongRouteKm에는 경로 출발점 기준 거리(routeKm)를 담는다. 현재 위치 기준 변환은 FakeChargerData가 한다. */
     fun toDomain() = ChargingStation(
         id = id,
         name = name,
         location = GeoPoint(lat, lon),
-        isRestStop = isRestStop,
+        kind = StationKind.valueOf(kind),
         distanceAlongRouteKm = routeKm,
         detourKm = detourKm,
         maxKw = maxKw,
@@ -131,7 +135,9 @@ private data class StationDto(
         availableChargers = availableChargers,
         expectedWaitMin = expectedWaitMin,
         rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = amountLimitKrw),
-        waitByHour = waitByHour?.takeIf { it.size == 24 }
+        waitByHour = waitByHour?.takeIf { it.size == 24 },
+        openHours = OpenHours.parse(useTime),
+        parkingFree = parkingFree
     )
 }
 

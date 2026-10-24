@@ -12,7 +12,7 @@ Drivers of Pleos Connect-equipped electric vehicles on long highway trips, typic
 
 ## Product Purpose
 
-Chargis reads the navigation route and battery state and tells the driver, before they have to ask, which rest stop to charge at, to what percentage, and for how long. It adds the chosen rest stop as a navigation waypoint and keeps track of the charger's time limit so a session does not end short of the target. Success means the driver makes one glance-and-tap decision per stop and arrives with a safe margin.
+Chargis reads the navigation route and battery state and tells the driver, before they have to ask, which charging stop to use (a highway rest stop first, a drowsy-driver shelter, or an off-route charger near the road when it is clearly faster), to what percentage, and for how long. It adds the chosen stop as a navigation waypoint and keeps track of the charger's time limit so a session does not end short of the target. Success means the driver makes one glance-and-tap decision per stop and arrives with a safe margin.
 
 ## Positioning
 
@@ -27,8 +27,8 @@ Map and charging apps show where chargers are. Chargis computes how much and how
 
 ## Capabilities and Constraints
 
-- F1 rest-stop recommendation, F2 target-charge coaching, F3 charger time-limit alerts, F4 waypoint addition. F3 limit warnings and real SDK integration are still in progress.
-- All rest-stop names, coordinates, and charger data are fictional ("A 휴게소" style). No real facility or operator trademarks.
+- F1 charging-stop recommendation (highway rest stops and shelters first; local rest stops, roadside/IC-adjacent, commercial and public chargers as alternatives, with round-trip detour and access time counted), F2 target-charge coaching, F3 charger time-limit alerts, F4 waypoint addition. F3 limit warnings and real SDK integration are still in progress.
+- All station names, coordinates, and charger data are fictional ("A 휴게소", "I 마트" style). Chargers that outsiders cannot use (apartments, workplaces, user-restricted) are excluded. No real facility or operator trademarks.
 - Unknown data is shown as unknown ("정보 없음"), never hidden; data source (simulated, manual, vehicle) is always labeled.
 - Kotlin + Jetpack Compose, minSdk 28. Strings live in `strings.xml` (Korean first).
 - Vehicle SDK availability (SoC, range, driving state) is unconfirmed; manual input is the fallback.
@@ -39,7 +39,7 @@ Map and charging apps show where chargers are. Chargis computes how much and how
 
 ## Evidence on Hand
 
-- Working demo app with two scenarios (S1 basic, S2 holiday congestion) and screenshots in `docs/screenshots/`.
+- Working demo app with five scenarios (S1 basic, S2 holiday congestion, S3 charger time limit, S4 winter consumption, S5 off-route charger) and screenshots in `docs/screenshots/`.
 - No real users, testimonials, partner logos, or measured outcomes exist; none may be invented.
 
 ## Product Principles

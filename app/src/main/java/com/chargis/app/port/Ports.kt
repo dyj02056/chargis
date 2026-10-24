@@ -35,9 +35,9 @@ interface VehiclePort {
     suspend fun isSupported(): Boolean          // SoC 수신 가능 여부
 }
 
-/** 충전소 정보 연결. 경로 위 휴게소 충전소 목록과 실시간 혼잡도를 준다. */
+/** 충전소 정보 연결. 경로 위 충전소 목록과 실시간 혼잡도를 준다. */
 interface ChargerDataPort {
-    // 경로 정보를 받아 "경로상 휴게소 충전소" 후보 반환 (distanceAlongRoute 포함)
+    // 경로 정보를 받아 "경로상 충전소" 후보 반환 (distanceAlongRoute 포함)
     suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation>
     fun liveStatus(stationId: String): Flow<StationLiveStatus?>   // 불가 시 empty flow
 }

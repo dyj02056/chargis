@@ -38,6 +38,7 @@ import com.chargis.app.ui.DriveCard
 import com.chargis.app.ui.RouteMark
 import com.chargis.app.ui.EnergyInfo
 import com.chargis.app.ui.reasonLabels
+import com.chargis.app.ui.stationMeta
 import com.chargis.app.ui.waitLabel
 import com.chargis.app.ui.theme.FigureStyle
 import com.chargis.app.ui.theme.Ticket
@@ -131,7 +132,7 @@ private fun StubTail(meta: TicketMeta) {
     }
 }
 
-/** 왼쪽 칸: 기념비 크기 거리, 그 아래 휴게소 이름, 그 아래 이유([sub] 글자 또는 [extra] 조각). */
+/** 왼쪽 칸: 기념비 크기 거리, 그 아래 충전소 이름, 그 아래 이유([sub] 글자 또는 [extra] 조각). */
 @Composable
 private fun LeadColumn(
     km: Int,
@@ -146,7 +147,7 @@ private fun LeadColumn(
     Column(modifier.fillMaxHeight(), verticalArrangement = Arrangement.Bottom) {
         Figure("$km", unit, FigureStyle.Monumental)
         Spacer(Modifier.height(8.dp))
-        // 휴게소 이름은 한 줄, 문장(상태 안내)은 작은 크기로 두 줄까지
+        // 충전소 이름은 한 줄, 문장(상태 안내)은 작은 크기로 두 줄까지
         Text(
             name,
             style = if (sentence) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayMedium,
@@ -192,8 +193,8 @@ private fun Words(label: String, text: String) {
 
 /**
  * 추천 카드 (03-recommend.png).
- * 왼쪽: "46 km 앞 / B 휴게소 / 이유 도장", 오른쪽: 목표 %, 충전 시간, 대기, 도착 배터리, 시간 제한
- * 맨 아래: [경유지로 수락] [다음 휴게소] 버튼
+ * 왼쪽: "46 km 앞 / B 휴게소 / (휴게소가 아니면) 종류·왕복 우회 / 이유 도장", 오른쪽: 목표 %, 충전 시간, 대기, 도착 배터리, 시간 제한
+ * 맨 아래: [경유지로 수락] [다음 충전소] 버튼
  *
  * F3 정보 위계: 목표 %가 주인이고, 시간 제한은 위험이 없으면 흐리게 두고 위험할 때만 경고색과 기호로 올린다.
  * 이유는 회색 글자 대신 도장 꼬리표로 찍고, 다음 후보보다 빨리 도착하면 그 분을 첫 꼬리표로 둔다.
@@ -214,7 +215,7 @@ private fun ColumnScope.RecommendStub(card: DriveCard.Recommend, onAccept: (Stri
     }
     Row(Modifier.weight(1f).fillMaxWidth()) {
         LeadColumn(
-            rec.station.distanceAlongRouteKm.roundToInt(), stringResource(R.string.unit_km_ahead), rec.station.name, null, Modifier.weight(1.3f),
+            rec.station.distanceAlongRouteKm.roundToInt(), stringResource(R.string.unit_km_ahead), rec.station.name, stationMeta(rec.station), Modifier.weight(1.3f),
             extra = if (tags.isEmpty()) null else {
                 { FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { tags.forEach { StampTag(it) } } }
             }
@@ -328,6 +329,9 @@ private fun ChoiceColumn(rec: Recommendation, eta: String, emphasize: Boolean, o
             Text(rec.station.name, style = MaterialTheme.typography.headlineMedium, color = c.ink, modifier = Modifier.weight(1f))
             Figure("${rec.station.distanceAlongRouteKm.roundToInt()}", stringResource(R.string.unit_km_ahead), FigureStyle.Small, color = c.inkMuted, unitStyle = MaterialTheme.typography.bodyMedium)
         }
+        stationMeta(rec.station)?.let {
+            Text(it, style = MaterialTheme.typography.titleMedium, color = c.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         Spacer(Modifier.height(12.dp))
         Field(stringResource(R.string.label_dest_eta)) {
             Figure(eta, null, FigureStyle.Large, color = if (emphasize) c.stamp else c.ink)
@@ -356,7 +360,7 @@ private fun ChoiceColumn(rec: Recommendation, eta: String, emphasize: Boolean, o
     }
 }
 
-/** 수락한 휴게소로 가는 중 카드 (04-navigating.png). 남은 거리와 "경유지 등록" 도장, 아래에 경로 띠. */
+/** 수락한 충전소로 가는 중 카드 (04-navigating.png). 남은 거리와 "경유지 등록" 도장, 아래에 경로 띠. */
 @Composable
 private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<RouteMark>, progress: Float) {
     val c = Ticket.colors

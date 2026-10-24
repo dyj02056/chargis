@@ -3,7 +3,9 @@ package com.chargis.app.data.publicapi
 import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.GeoPoint
+import com.chargis.app.domain.model.OpenHours
 import com.chargis.app.domain.model.RouteState
+import com.chargis.app.domain.model.StationKind
 import com.chargis.app.domain.model.StationLiveStatus
 import com.chargis.app.port.ChargerDataPort
 import kotlinx.coroutines.Dispatchers
@@ -31,12 +33,19 @@ import kotlin.math.sqrt
  * B5: 공공 충전소 데이터(한국환경공단 "전기자동차 충전소 정보" API, data.go.kr) 어댑터.
  *
  * 흐름: 시도별 충전기 목록(getChargerInfo)과 상태(getChargerStatus)를 받아
- *   → 충전소(statId)별로 묶고 → 휴게소 급속 충전소만 남기고
- *   → 지금 경로 위로 투영해 "경로상 몇 km 앞, 몇 km 우회"로 바꾼다.
+ *   → 충전소(statId)별로 묶고 → 누구나 쓸 수 있는 급속 충전소만 남기고
+ *   → 지금 경로 위로 투영해 "경로상 몇 km 앞, 편도 몇 km 우회"로 바꾼다.
  * 목록은 자주 바뀌지 않아 오래(기본 12시간), 상태는 짧게(기본 2분) 캐시한다.
  *
- * 주의: 응답 필드 이름은 공개 문서 기준으로 맞췄고 실제 키로 호출해 확인하지 못했다(docs/DECISIONS.md).
- * 그래서 파서는 숫자가 글자로 오거나 항목이 빠져도 넘어가도록 너그럽게 만들었다.
+ * 후보로 남기는 충전소: 고속도로·국도 휴게소, 졸음쉼터, 상업시설(마트·주유소 등), 공공시설, 관광지 등.
+ * 빼는 충전소: 완속, 아파트·사업장·학교처럼 외부인이 쓰기 어려운 시설, "입주민 전용" 같은 이용자 제한이 걸린 곳.
+ *
+ * limitYn/limitDetail은 충전 시간 제한이 아니라 "이용자 제한 여부/사유"다(data.go.kr 서비스 설명의
+ * "이용자 제한 여부" 항목). 그래서 이용자 제한 판단에 쓰고, 시간 제한은 "1회 40분 이내"처럼 분 단위 제한이
+ * 분명히 적힌 문구가 있을 때만 꺼낸다. 없으면 시간 제한 "정보 없음"으로 둔다.
+ *
+ * 주의: 응답 필드 이름과 시설 구분 코드는 공개 문서와 공개 구현 사례 기준으로 맞췄고 실제 키로 호출해
+ * 확인하지 못했다(docs/DECISIONS.md). 그래서 파서는 숫자가 글자로 오거나 항목이 빠져도 넘어가도록 너그럽게 만들었다.
  */
 
 /** 충전기 한 대(API의 item 한 줄). */
@@ -50,8 +59,13 @@ data class ChargerItem(
     val outputKw: Double?,
     val stat: Int?,               // 1 통신이상, 2 충전대기, 3 충전중, 4 운영중지, 5 점검중, 9 상태미확인
     val nowTsdt: String?,         // 지금 충전을 시작한 시각(충전 중일 때) "yyyyMMddHHmmss"
-    val limitYn: String?,
-    val limitDetail: String?
+    val limitYn: String?,         // 이용자 제한 여부 "Y"/"N"
+    val limitDetail: String?,     // 이용자 제한 사유. 예) "입주민 외 이용불가"
+    val kind: String? = null,     // 시설 구분(대) 예) "C0" 휴게시설
+    val kindDetail: String? = null, // 시설 구분(소) 예) "C001" 고속도로 휴게소, "C003" 쉼터
+    val useTime: String? = null,  // 이용 가능 시간. 예) "24시간 이용가능", "09:00~22:00"
+    val parkingFree: String? = null, // 주차료 무료 여부 "Y"/"N"
+    val note: String? = null      // 충전소 안내
 )
 
 /** 충전기 상태 한 줄(getChargerStatus). */
@@ -78,7 +92,12 @@ object EvChargerParser {
             stat = o.num("stat")?.toInt(),
             nowTsdt = o.str("nowTsdt")?.takeIf { it.isNotBlank() },
             limitYn = o.str("limitYn"),
-            limitDetail = o.str("limitDetail")
+            limitDetail = o.str("limitDetail"),
+            kind = o.str("kind"),
+            kindDetail = o.str("kindDetail"),
+            useTime = o.str("useTime"),
+            parkingFree = o.str("parkingFree"),
+            note = o.str("note")
         )
     }
 
@@ -110,43 +129,92 @@ object EvChargerParser {
     private fun JsonObject.num(key: String): Double? = str(key)?.toDoubleOrNull()
 }
 
-/** 휴게소 충전소 하나(충전기 여러 대를 묶은 것). */
+/** 공용 급속 충전소 하나(충전기 여러 대를 묶은 것). */
 data class PublicStation(
     val id: String,
     val name: String,
     val location: GeoPoint,
+    val kind: StationKind,
     val maxKw: Double,
     val totalChargers: Int,
     val availableChargers: Int?,
     val expectedWaitMin: Int?,
     val timeLimitMin: Int?,
-    val note: String?
+    val note: String?,
+    val openHours: OpenHours? = null,
+    val parkingFree: Boolean? = null
 )
 
-/** 충전기들을 충전소 단위로 묶는다. 휴게소 급속 충전기만 남긴다. */
+/**
+ * 시설 구분 코드(kind/kindDetail)를 [StationKind]로 바꾸고, 외부인이 쓰기 어려운 시설을 가려낸다.
+ * 코드표는 공개 구현 사례에서 옮겼다(실제 응답으로 확인 필요, docs/OPEN_ISSUES.md).
+ */
+object StationKinds {
+    /**
+     * 외부인이 자유롭게 쓰기 어려운 시설(시설 구분 소분류).
+     * 골프장, 서비스센터·정비소, 군부대, 오피스텔·단독주택, 공동주택(아파트·빌라·기숙사 등), 사업장,
+     * 병원·종교시설·경찰서·복지관·수련원·금융기관, 학교·교육원·학원.
+     */
+    val EXCLUDED_DETAILS = setOf(
+        "E004", "F001", "F002", "G001", "G005", "G006",
+        "H001", "H002", "H003", "H004", "H005",
+        "I001", "I002", "I004", "I006", "I007", "I008",
+        "J001", "J002", "J003"
+    )
+
+    /** 이 충전기가 있는 시설이 외부인에게 열려 있다고 볼 수 있는지(시설 종류만 본다). */
+    fun isOpenFacility(item: ChargerItem): Boolean =
+        item.kindDetail !in EXCLUDED_DETAILS && item.kind != "H0"
+
+    /** 시설 구분 코드로 종류를 정한다. 코드가 없으면 이름으로 짐작한다("휴게소", "쉼터"). */
+    fun of(item: ChargerItem): StationKind = when (item.kindDetail) {
+        "C001" -> StationKind.HIGHWAY_REST_STOP
+        "C002" -> StationKind.LOCAL_REST_STOP
+        "C003" -> StationKind.SHELTER
+        else -> when (item.kind) {
+            "A0", "B0" -> StationKind.PUBLIC          // 공공시설, 주차시설(공영주차장 등)
+            "E0" -> StationKind.COMMERCIAL            // 상업시설(마트, 주유소, 음식점 등)
+            "C0" -> byName(item.statNm) ?: StationKind.HIGHWAY_REST_STOP
+            null, "" -> byName(item.statNm) ?: StationKind.OTHER
+            else -> StationKind.OTHER                 // 관광, 근린생활, 교육문화, 기타
+        }
+    }
+
+    private fun byName(name: String): StationKind? = when {
+        name.contains("쉼터") -> StationKind.SHELTER
+        name.contains("휴게소") -> StationKind.HIGHWAY_REST_STOP
+        else -> null
+    }
+}
+
+/** 충전기들을 충전소 단위로 묶는다. 누구나 쓸 수 있는 급속 충전기만 남긴다. */
 object StationAggregator {
 
     fun aggregate(items: List<ChargerItem>, statuses: List<ChargerStatus>, now: LocalDateTime): List<PublicStation> {
         // 상태 API 값이 있으면 목록 API의 상태보다 최신이므로 덮어쓴다.
         val latest = statuses.associateBy { it.statId to it.chgerId }
         return items
-            .filter { isRestStop(it.statNm) && isFast(it) }
+            .filter { isFast(it) && StationKinds.isOpenFacility(it) && !isUserRestricted(it) }
             .map { item -> latest[item.statId to item.chgerId]?.let { s -> item.copy(stat = s.stat, nowTsdt = s.nowTsdt) } ?: item }
             .groupBy { it.statId }
             .map { (id, chargers) ->
                 val known = chargers.filter { it.stat != null && it.stat != STAT_UNKNOWN && it.stat != STAT_COMM_ERROR }
                 val available = known.count { it.stat == STAT_READY }
                 val usable = chargers.count { it.stat != STAT_STOPPED && it.stat != STAT_MAINTENANCE }
+                val first = chargers.first()
                 PublicStation(
                     id = id,
-                    name = chargers.first().statNm,
-                    location = GeoPoint(chargers.first().lat, chargers.first().lng),
+                    name = first.statNm,
+                    location = GeoPoint(first.lat, first.lng),
+                    kind = StationKinds.of(first),
                     maxKw = chargers.maxOf { it.outputKw ?: DEFAULT_FAST_KW },
                     totalChargers = usable,
                     availableChargers = if (known.isEmpty()) null else available,
                     expectedWaitMin = if (known.isEmpty()) null else estimateWait(known, available, now),
-                    timeLimitMin = chargers.firstNotNullOfOrNull { parseLimit(it.limitDetail) },
-                    note = chargers.firstNotNullOfOrNull { it.limitDetail?.takeIf { d -> d.isNotBlank() } }
+                    timeLimitMin = chargers.firstNotNullOfOrNull { parseLimit(it.limitDetail) ?: parseLimit(it.note) },
+                    note = chargers.firstNotNullOfOrNull { it.limitDetail?.takeIf { d -> d.isNotBlank() } },
+                    openHours = chargers.firstNotNullOfOrNull { OpenHours.parse(it.useTime) },
+                    parkingFree = first.parkingFree?.let { if (it == "Y") true else if (it == "N") false else null }
                 )
             }
     }
@@ -165,14 +233,36 @@ object StationAggregator {
         return max(MIN_WAIT, TYPICAL_SESSION_MIN - soonest)
     }
 
-    /** "1회 40분 이내", "최대 40분" 같은 문구에서 분을 꺼낸다. */
-    fun parseLimit(detail: String?): Int? =
-        detail?.let { Regex("""(\d{1,3})\s*분""").find(it)?.groupValues?.get(1)?.toIntOrNull() }
+    /**
+     * "1회 40분 이내", "최대 40분", "40분 제한" 같은 충전 시간 제한 문구에서 분을 꺼낸다.
+     * "입주민 외 이용불가"처럼 시간 제한이 아닌 문구나, "10분 거리"처럼 제한이 아닌 숫자는 null.
+     */
+    fun parseLimit(text: String?): Int? {
+        if (text.isNullOrBlank()) return null
+        val m = LIMIT_AFTER.find(text) ?: LIMIT_BEFORE.find(text) ?: return null
+        return m.groupValues[1].toIntOrNull()?.takeIf { it in 10..240 }
+    }
 
-    private fun isRestStop(name: String) = name.contains("휴게소")
+    /**
+     * 이용자 제한이 걸린 충전기인지. limitYn이 "Y"인데 사유가 비었거나 사유가 시간 제한뿐이 아니면 제한으로 본다.
+     * limitYn이 "N"이어도 사유·이용 시간에 "입주민", "외부인" 같은 말이 있으면 제한으로 본다.
+     */
+    fun isUserRestricted(item: ChargerItem): Boolean {
+        val texts = listOfNotNull(item.limitDetail, item.useTime)
+        if (texts.any { t -> RESTRICT_WORDS.any { t.contains(it) } }) return true
+        if (item.limitYn != "Y") return false
+        val detail = item.limitDetail?.trim().orEmpty()
+        return detail.isEmpty() || parseLimit(detail) == null
+    }
 
-    // 완속(AC 완속 "02")은 고속도로 충전에 맞지 않아 뺀다. 출력이 알려져 있으면 40kW 이상만 남긴다.
+    // 완속(AC 완속 "02")은 이동 중 충전에 맞지 않아 뺀다. 출력이 알려져 있으면 40kW 이상만 남긴다.
     private fun isFast(c: ChargerItem) = c.chgerType != TYPE_AC_SLOW && (c.outputKw == null || c.outputKw >= MIN_FAST_KW)
+
+    private val LIMIT_AFTER = Regex("""(\d{1,3})\s*분\s*(?:이내|제한|까지|초과\s*금지)""")
+    private val LIMIT_BEFORE = Regex("""(?:최대|1회)\s*(\d{1,3})\s*분""")
+    private val RESTRICT_WORDS = listOf(
+        "비개방", "외부인", "외부차량", "입주민", "거주자", "관계자", "직원 전용", "직원전용", "이용불가", "이용 불가"
+    )
 
     private val TS: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
     private const val STAT_COMM_ERROR = 1
@@ -190,11 +280,12 @@ object StationAggregator {
 
 /**
  * 지도 좌표를 경로 위 거리로 바꾼다. 경로 폴리라인이 없으므로(내비 SDK 확인 전) 지금 위치→목적지 직선을 경로로 본다.
- * 직선 위로 내린 위치를 실제 남은 거리 비율로 늘려 "경로상 거리"로, 직선에서 떨어진 거리를 "우회 거리"로 쓴다.
+ * 직선 위로 내린 위치를 실제 남은 거리 비율로 늘려 "경로상 거리"로, 직선에서 떨어진 거리를 "편도 우회 거리"로 쓴다.
+ * 돌아오는 거리는 추천 엔진이 왕복으로 다시 센다.
  */
 object RouteProjector {
 
-    /** (경로상 거리 km, 우회 km). 경로 앞쪽이 아니거나 [corridorKm]보다 멀면 null. */
+    /** (경로상 거리 km, 편도 우회 km). 경로 앞쪽이 아니거나 [corridorKm]보다 멀면 null. */
     fun project(route: RouteState, point: GeoPoint, corridorKm: Double): Pair<Double, Double>? {
         val dest = route.destination ?: return null
         val (dx, dy) = toKm(route.current, dest)
@@ -275,14 +366,17 @@ class PublicChargerData(
                 id = st.id,
                 name = st.name,
                 location = st.location,
-                isRestStop = true,
+                kind = st.kind,
                 distanceAlongRouteKm = along,
-                detourKm = detour,
+                // 휴게소·쉼터는 본선에 붙어 있어 직선 경로와의 거리가 투영 오차일 뿐이므로 우회 0으로 본다.
+                detourKm = if (st.kind == StationKind.HIGHWAY_REST_STOP || st.kind == StationKind.SHELTER) 0.0 else detour,
                 maxKw = st.maxKw,
                 totalChargers = st.totalChargers,
                 availableChargers = st.availableChargers,
                 expectedWaitMin = st.expectedWaitMin,
-                rule = ChargerRule(timeLimitMin = st.timeLimitMin, amountLimitKrw = null, note = st.note)
+                rule = ChargerRule(timeLimitMin = st.timeLimitMin, amountLimitKrw = null, note = st.note),
+                openHours = st.openHours,
+                parkingFree = st.parkingFree
             )
         }.sortedBy { it.distanceAlongRouteKm }
     }

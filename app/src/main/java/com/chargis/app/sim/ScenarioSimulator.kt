@@ -15,7 +15,7 @@ import kotlin.math.min
 
 /*
  * 데모용 "가상 고속도로"다. 실제 차와 내비가 없어도 앱을 시연할 수 있도록,
- * 차가 일정한 속도로 달리며 배터리가 줄고, 휴게소에서 멈추고, 충전하면 배터리가 차는 과정을 흉내 낸다.
+ * 차가 일정한 속도로 달리며 배터리가 줄고, 충전소에서 멈추고, 충전하면 배터리가 차는 과정을 흉내 낸다.
  * Fake 포트들(data/fake/Fakes.kt)이 모두 이 시뮬레이터의 상태를 읽어서 앱에 전달한다.
  */
 
@@ -40,7 +40,7 @@ data class Scenario(
     val stations: List<ChargingStation>
 )
 
-/** 가상 차량의 상태: 출발 전 / 주행 중 / 휴게소 정차 / 충전 중 / 도착 */
+/** 가상 차량의 상태: 출발 전 / 주행 중 / 충전소 정차 / 충전 중 / 도착 */
 enum class SimPhase { READY, DRIVING, STOPPED_AT_STATION, CHARGING, FINISHED }
 
 /** 시뮬레이터의 한 순간 상태 */
@@ -52,8 +52,8 @@ data class SimState(
     val simTimeSec: Double,                // 출발 후 흐른 가상 시간(초)
     val speedMultiplier: Int,              // 시간 배속(60이면 1초에 1분이 흐름)
     val paused: Boolean,
-    val waypointId: String? = null,        // 경유지로 등록된 휴게소(도착하면 자동 정차)
-    val stoppedAtId: String? = null,       // 지금 멈춰 있는 휴게소
+    val waypointId: String? = null,        // 경유지로 등록된 충전소(도착하면 자동 정차)
+    val stoppedAtId: String? = null,       // 지금 멈춰 있는 충전소
     val chargeTargetSoc: Double? = null,   // 충전 목표 %
     val chargeEndsAtSec: Double? = null    // 충전기 시간 제한이 끊는 시각(없으면 null)
 ) {
@@ -91,10 +91,10 @@ class ScenarioSimulator(
 
     fun togglePause() = _state.update { it.copy(paused = !it.paused) }
 
-    /** F4 데모: 경유지로 등록된 휴게소에 도착하면 자동으로 정차한다. */
+    /** F4 데모: 경유지로 등록된 충전소에 도착하면 자동으로 정차한다. */
     fun setWaypoint(stationId: String): Boolean {
         val station = scenario.stations.firstOrNull { it.id == stationId } ?: return false
-        // 이미 지나친 휴게소는 경유지로 등록할 수 없다.
+        // 이미 지나친 충전소는 경유지로 등록할 수 없다.
         if (station.distanceAlongRouteKm <= _state.value.traveledKm) return false
         _state.update { it.copy(waypointId = stationId) }
         return true
@@ -111,17 +111,26 @@ class ScenarioSimulator(
         } else it
     }
 
-    // 충전을 멈추고 휴게소 정차 상태로 돌아간다.
+    // 충전을 멈추고 충전소 정차 상태로 돌아간다.
     fun stopCharging() = _state.update {
         if (it.phase == SimPhase.CHARGING) it.copy(phase = SimPhase.STOPPED_AT_STATION, chargeTargetSoc = null, chargeEndsAtSec = null) else it
     }
 
-    // 휴게소에서 다시 출발한다.
+    // 충전소에서 다시 출발한다. 경로를 벗어난 충전소였다면 경로로 돌아오는 거리만큼 배터리와 시간을 쓴다.
     fun depart() = _state.update {
         if (it.phase == SimPhase.STOPPED_AT_STATION) {
-            it.copy(phase = SimPhase.DRIVING, stoppedAtId = null, chargeTargetSoc = null, chargeEndsAtSec = null)
+            val back = detourOf(it.stoppedAtId)
+            it.copy(
+                phase = SimPhase.DRIVING, stoppedAtId = null, chargeTargetSoc = null, chargeEndsAtSec = null,
+                soc = max(0.0, it.soc - back * socPerKm()), simTimeSec = it.simTimeSec + back / scenario.speedKmh * 3600.0
+            )
         } else it
     }
+
+    // 충전소의 편도 우회 거리(km). 휴게소·쉼터는 0
+    private fun detourOf(stationId: String?) = scenario.stations.firstOrNull { it.id == stationId }?.detourKm ?: 0.0
+
+    private fun socPerKm() = ChargeMath.socPerKm(scenario.profile) * scenario.consumptionFactor
 
     /** 개발자 오버레이: 주행 중 [km]만큼 앞으로 건너뛴다(경유지/목적지 직전에서 멈춤). */
     fun jumpAhead(km: Double) {
@@ -167,7 +176,7 @@ class ScenarioSimulator(
     // [dKm]만큼 달린다. 경유지나 목적지를 넘어가지 않도록 그 지점에서 멈춘다.
     private fun advanceDriving(dKm: Double, dtSec: Double) {
         val s = _state.value
-        val socPerKm = ChargeMath.socPerKm(scenario.profile) * scenario.consumptionFactor
+        val socPerKm = socPerKm()
         val wpKm = waypointKm(s)
         val stopKm = wpKm ?: scenario.totalDistanceKm
         val traveled = min(s.traveledKm + dKm, stopKm)
@@ -177,10 +186,14 @@ class ScenarioSimulator(
         // 도중에 멈췄다면 실제로 달린 비율만큼만 시간이 흐른 것으로 친다.
         val time = s.simTimeSec + if (used < dKm && dKm > 0) dtSec * used / dKm else dtSec
         _state.value = when {
-            wpKm != null && traveled >= wpKm -> s.copy(
-                phase = SimPhase.STOPPED_AT_STATION, traveledKm = traveled, soc = soc, simTimeSec = time,
-                stoppedAtId = s.waypointId, waypointId = null
-            )
+            // 경유지에 닿으면 경로에서 충전소까지 빠지는 거리(편도)만큼 더 달린 뒤 정차한다.
+            wpKm != null && traveled >= wpKm -> detourOf(s.waypointId).let { out ->
+                s.copy(
+                    phase = SimPhase.STOPPED_AT_STATION, traveledKm = traveled,
+                    soc = max(0.0, soc - out * socPerKm), simTimeSec = time + out / scenario.speedKmh * 3600.0,
+                    stoppedAtId = s.waypointId, waypointId = null
+                )
+            }
             traveled >= scenario.totalDistanceKm -> s.copy(
                 phase = SimPhase.FINISHED, traveledKm = traveled, soc = soc, simTimeSec = time
             )

@@ -61,6 +61,7 @@ class ScenarioFlowTest {
         override fun noSafeStop() = "no_safe"
         override fun planTwoStops(nextName: String, nextTarget: Double) = "two_stops:$nextName:${nextTarget.toInt()}"
         override fun targetChanged(target: Double) = "target_changed:${target.toInt()}"
+        override fun offRoute(name: String, roundTripKm: Int) = "off_route:$name:$roundTripKm"
     }
 
     // 테스트 한 번에 필요한 부품 묶음(시뮬레이터, 컨트롤러, 가짜 스피커)
@@ -226,6 +227,41 @@ class ScenarioFlowTest {
         val f3 = spoken.filter { it.startsWith("rule") || it.startsWith("limit") || it.startsWith("target") }
         assertEquals(listOf("rule:40", "limit_warn:10:43", "limit_warn:5:43", "limit_shortfall:43:45"), f3)
         assertTrue(spoken.indexOf("limit_shortfall:43:45") < spoken.indexOfFirst { it.startsWith("recommend:F 휴게소") })
+    }
+
+    /**
+     * S5 휴게소 밖 충전: G 휴게소와 H 졸음쉼터가 붐비고, 경로에서 2.5km 벗어난 I 마트는 비어 있다.
+     * 마트를 고르면 경로를 벗어난다는 안내가 붙고, 시뮬레이터도 왕복 우회만큼 배터리를 써서 안내한 도착 잔량과 맞는다.
+     */
+    @Test
+    fun s5_offRouteStationRecommendedAndDetourDriven() = runTest {
+        val h = harness()
+        h.controller.startScenario("S5")
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        // G 휴게소 대기 35분 → 혼잡 비교 카드에서 대안으로 I 마트가 나오고, 마트 쪽이 더 빨리 도착한다.
+        val card = h.controller.state.value.card as DriveCard.Congested
+        assertEquals("rest_g", card.primary.station.id)
+        val rec = card.alternative
+        assertEquals("mart_i", rec.station.id)
+        assertTrue(rec.etaMinutes < card.primary.etaMinutes)
+        assertTrue(h.tts.spoken.toString(), h.tts.spoken.contains("off_route:I 마트:5"))
+
+        h.controller.accept("mart_i")
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
+        // 경로 95km 지점 + 편도 2.5km를 달린 배터리
+        assertEquals(rec.arrivalSocPercent, h.sim.state.value.soc, 0.5)
+
+        h.controller.startCharging()
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.Done }
+        val charged = h.sim.state.value.soc
+        h.controller.depart()
+        runCurrent()
+        // 출발하면 경로로 돌아오는 2.5km만큼 배터리가 준다
+        assertTrue(h.sim.state.value.soc < charged)
+        drive(h) { h.controller.state.value.phase == TripPhase.Finished }
+        assertTrue(h.sim.state.value.soc >= 10.0)
     }
 
     /** B3 S4 겨울: 실제 소비가 사양보다 30% 많다. 달릴수록 앱이 실측으로 알아내 보정 배율이 1.3에 다가간다. */

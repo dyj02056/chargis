@@ -73,8 +73,8 @@ class FakeVehicle(private val sim: ScenarioSimulator) : VehiclePort {
 }
 
 /**
- * 시나리오 휴게소 목록을 현재 위치 기준 거리로 바꿔 돌려준다.
- * 예) 출발점에서 120km 지점 휴게소, 지금 80km 달림 → "40km 앞". 이미 지나친 곳은 뺀다.
+ * 시나리오 충전소 목록을 현재 위치 기준 거리로 바꿔 돌려준다.
+ * 예) 출발점에서 120km 지점 충전소, 지금 80km 달림 → "40km 앞". 이미 지나친 곳은 뺀다.
  */
 class FakeChargerData(private val sim: ScenarioSimulator) : ChargerDataPort {
     override suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation> {

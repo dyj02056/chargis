@@ -22,8 +22,8 @@ import com.chargis.app.ui.RouteMark
 import com.chargis.app.ui.theme.Ticket
 
 /**
- * 표에 인쇄된 구간 띠: 출발 ─ 휴게소들 ─ 도착. 지나온 구간은 실선, 남은 구간은 점선.
- * 목표 휴게소만 도장 잉크로 채우고, 거절한 곳은 X, 충전한 곳은 채운 원으로 남긴다.
+ * 표에 인쇄된 구간 띠: 출발 ─ 충전소들 ─ 도착. 지나온 구간은 실선, 남은 구간은 점선.
+ * 목표 충전소만 도장 잉크로 채우고, 거절한 곳은 X, 충전한 곳은 채운 원으로 남긴다.
  *
  * 지하철 노선도처럼 여행 전체를 가로 막대 하나로 보여 준다. [progress]는 지금까지 온 비율(0~1)이다.
  * Canvas는 선과 원을 직접 그리는 도화지다. 좌표는 왼쪽 위가 (0, 0)이고 오른쪽·아래로 갈수록 커진다.
@@ -38,14 +38,14 @@ fun RouteStrip(marks: List<RouteMark>, progress: Float, modifier: Modifier = Mod
         Canvas(Modifier.fillMaxWidth().height(28.dp)) {
             val y = size.height / 2              // 가운데 높이에 선을 긋는다.
             val px = size.width * progress       // 현재 위치의 가로 좌표
-            val r = 7.dp.toPx()                  // 휴게소 동그라미 반지름
+            val r = 7.dp.toPx()                  // 충전소 동그라미 반지름
             // 지나온 구간은 굵은 실선, 남은 구간은 점선
             drawLine(c.ink, Offset(0f, y), Offset(px, y), strokeWidth = 4f)
             drawLine(c.rule, Offset(px, y), Offset(size.width, y), strokeWidth = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
             // 출발·도착 막대
             drawLine(c.ink, Offset(1f, y - r), Offset(1f, y + r), strokeWidth = 3f)
             drawLine(c.ink, Offset(size.width - 1f, y - r), Offset(size.width - 1f, y + r), strokeWidth = 3f)
-            // 휴게소마다 상태에 맞는 모양을 그린다.
+            // 충전소마다 상태에 맞는 모양을 그린다.
             marks.forEach { m ->
                 val x = size.width * m.fraction
                 val center = Offset(x, y)
@@ -70,7 +70,7 @@ fun RouteStrip(marks: List<RouteMark>, progress: Float, modifier: Modifier = Mod
             // 현재 위치: 짧은 세로 막대
             drawLine(c.ink, Offset(px, y - r * 1.8f), Offset(px, y + r * 1.8f), strokeWidth = 5f)
         }
-        // 아래쪽: 동그라미 밑에 휴게소 이름. 거절한 곳은 취소선을 긋는다.
+        // 아래쪽: 동그라미 밑에 충전소 이름. 거절한 곳은 취소선을 긋는다.
         marks.forEach { m ->
             val color = when (m.state) {
                 MarkState.TARGET -> c.stamp

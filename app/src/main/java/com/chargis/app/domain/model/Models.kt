@@ -71,7 +71,7 @@ data class RouteState(
 )
 
 /**
- * 충전소의 운영 규칙. 고속도로 휴게소 급속충전기는 보통 "1회 40분" 같은 시간 제한이 있다.
+ * 충전소의 운영 규칙. 급속충전기에는 "1회 40분" 같은 시간 제한이 걸려 있기도 하다(운영사·기기마다 다르다).
  * 제한 시간이 지나면 충전이 자동으로 끊기므로, 앱이 미리 경고해야 한다(F3 기능).
  */
 data class ChargerRule(
@@ -80,14 +80,66 @@ data class ChargerRule(
     val note: String? = null         // 화면에 그대로 보여 줄 추가 안내 문구
 )
 
+/**
+ * 충전소가 있는 시설의 종류. 공공데이터의 시설 구분 코드(kindDetail)로 정한다.
+ * 고속도로 휴게소와 졸음쉼터는 본선에서 바로 들어가고, 나머지는 보통 IC나 교차로로 경로를 벗어나야 한다.
+ * 경로를 얼마나 벗어나는지는 종류가 아니라 [ChargingStation.detourKm]으로 판단한다.
+ */
+enum class StationKind {
+    HIGHWAY_REST_STOP, // 고속도로 휴게소
+    LOCAL_REST_STOP,   // 국도·지방도 휴게소
+    SHELTER,           // 졸음쉼터 등 쉼터
+    COMMERCIAL,        // 마트·주유소·음식점·숙박 등 상업시설
+    PUBLIC,            // 관공서·공영주차장 등 공공시설
+    OTHER;             // 관광지·공연장 등 그 밖의 시설
+
+    /** 휴게소·쉼터처럼 이동 중에 들르려고 만든 곳인지. 아니면 엔진이 대안 후보로만 쓰도록 가산점을 붙인다. */
+    val isRoadside: Boolean get() = this == HIGHWAY_REST_STOP || this == LOCAL_REST_STOP || this == SHELTER
+}
+
+/**
+ * 하루 중 이용 가능 시간(0시부터 분). 예) 09:00~22:00 → OpenHours(540, 1320).
+ * [closeMin]이 [openMin]보다 작으면 자정을 넘기는 시간대다. 예) 18:00~02:00
+ */
+data class OpenHours(val openMin: Int, val closeMin: Int) {
+    /** [startMin]부터 [endMin]까지(0시부터 분, 1440을 넘어도 된다) 계속 열려 있는지. */
+    fun covers(startMin: Int, endMin: Int): Boolean {
+        if (this == ALL_DAY) return true
+        if (endMin - startMin >= DAY) return false
+        val s = Math.floorMod(startMin, DAY)
+        val e = s + (endMin - startMin)
+        val close = if (closeMin <= openMin) closeMin + DAY else closeMin
+        // 시작이 오늘 열린 시간대 안이거나, 어제 열려 자정을 넘긴 시간대 안이면 된다.
+        return (s >= openMin && e <= close) || (s + DAY >= openMin && e + DAY <= close)
+    }
+
+    companion object {
+        private const val DAY = 24 * 60
+        val ALL_DAY = OpenHours(0, DAY)
+        private val HOURS = Regex("""(\d{1,2})\s*(?::\s*(\d{2})|시)\s*~\s*(\d{1,2})\s*(?::\s*(\d{2})|시)""")
+
+        /** "24시간 이용가능" → 하루 종일, "09:00~22:00"·"9시~22시" → 그 시간대. 알아볼 수 없으면 null(미상). */
+        fun parse(text: String?): OpenHours? {
+            if (text.isNullOrBlank()) return null
+            if (text.contains("24시간")) return ALL_DAY
+            val m = HOURS.find(text) ?: return null
+            val (h1, m1, h2, m2) = m.destructured
+            val open = h1.toInt() * 60 + (m1.toIntOrNull() ?: 0)
+            val close = h2.toInt() * 60 + (m2.toIntOrNull() ?: 0)
+            if (open !in 0..DAY || close !in 0..DAY) return null
+            return if ((open == 0 && close == DAY) || open == close) ALL_DAY else OpenHours(open % DAY, close % DAY)
+        }
+    }
+}
+
 /** 경로 위에 있는 충전소 한 곳의 정보. 추천 엔진이 이 목록을 비교해 1순위를 고른다. */
 data class ChargingStation(
     val id: String,
     val name: String,
     val location: GeoPoint,
-    val isRestStop: Boolean,          // 고속도로 휴게소인지 여부
-    val distanceAlongRouteKm: Double, // 현재 위치 기준 경로상 거리
-    val detourKm: Double,             // 경로 이탈 추가 거리(휴게소는 보통 0~소량)
+    val kind: StationKind,            // 시설 종류(휴게소, 쉼터, 상업시설 등)
+    val distanceAlongRouteKm: Double, // 현재 위치 기준 경로상 거리(경로에서 빠지는 지점까지)
+    val detourKm: Double,             // 경로에서 충전소까지 편도 거리. 다시 경로로 돌아오므로 엔진은 왕복으로 센다(휴게소는 0)
     val maxKw: Double,                // 해당 소의 최대 출력
     val totalChargers: Int,           // 전체 충전기 대수
     val availableChargers: Int?,      // null = 실시간 미상
@@ -97,8 +149,13 @@ data class ChargingStation(
      * 시간대별 평소 대기(분) 24칸. 0번 = 0시대, 13번 = 13시대. null = 통계 없음.
      * 도착 시각의 대기를 예측할 때 실시간 값과 섞어 쓴다(WaitForecast).
      */
-    val waitByHour: List<Int>? = null
-)
+    val waitByHour: List<Int>? = null,
+    val openHours: OpenHours? = null, // 이용 가능 시간. null = 미상(엔진은 열려 있다고 본다)
+    val parkingFree: Boolean? = null  // 주차 무료 여부. null = 미상
+) {
+    /** 휴게소(고속도로·국도)인지. 화면 문구를 고를 때 쓴다. */
+    val isRestStop: Boolean get() = kind == StationKind.HIGHWAY_REST_STOP || kind == StationKind.LOCAL_REST_STOP
+}
 
 /** 충전소의 실시간 상황(빈 충전기 수, 대기 시간). 주기적으로 새 값이 들어온다. */
 data class StationLiveStatus(
@@ -124,12 +181,17 @@ data class RecommendationConfig(
     // ---- 총 소요 시간 비교(B1) ----
     val defaultSpeedKmh: Double = 100.0,      // 내비가 남은 시간을 주지 않을 때 쓰는 평균 속도
     val stopOverheadMin: Double = 3.0,        // 한 번 들를 때마다 드는 시간(진출입·주차·결제) (가정)
+    // ---- 휴게소 밖 충전소 ----
+    val offRouteKm: Double = 0.5,             // 편도 우회가 이보다 길면 "경로를 벗어나는" 충전소로 본다
+    val offRouteAccessMin: Double = 5.0,      // 경로를 벗어날 때 더 드는 시간(IC 요금소·신호·주차장 찾기) (가정)
+    val nonRoadsidePenaltyMin: Double = 5.0,  // 휴게소·쉼터가 아닌 곳에 더하는 순위 가산(분). 휴게소를 먼저 고르게 한다
+    val minOpenAfterArrivalMin: Int = 30,     // 도착 후 이만큼은 열려 있어야 후보로 둔다(이용 가능 시간을 알 때만)
     val unknownWaitMin: Int = 10,             // 대기를 전혀 모를 때 셈에 넣는 대기 (가정)
     val comfortArrivalSocPercent: Double = 20.0, // 도착 잔량이 이보다 낮으면 불안 비용을 더한다
     val lowSocPenaltyMinPerPercent: Double = 0.5, // 위 기준에서 1% 모자랄 때마다 더하는 분
     val limitRiskPenaltyMin: Double = 15.0,   // 시간 제한 안에 목표를 못 채우는 계획에 더하는 분
     val unreachablePenaltyMin: Double = 60.0, // 두 번 들러도 목적지까지 못 가는 계획에 더하는 분
-    val switchMinutesGap: Double = 5.0,       // 수락한 휴게소를 바꾸려면 이만큼 빨라야 한다(히스테리시스)
+    val switchMinutesGap: Double = 5.0,       // 수락한 충전소를 바꾸려면 이만큼 빨라야 한다(히스테리시스)
     // ---- 충전 곡선(B3) ----
     val stationDeliveryFactor: Double = 0.92, // 충전기가 표시 출력의 몇 %를 실제로 내주는지 (가정)
     // ---- 대기 예측(B4) ----
@@ -149,7 +211,7 @@ data class RecommendContext(
 /** 대기 시간 값을 어디서 얻었는지. 화면에 "예측" 같은 꼬리표를 붙일 때 쓴다. */
 enum class WaitSource { LIVE, BLENDED, FORECAST, UNKNOWN }
 
-/** 두 번째로 들를 휴게소 계획(B2). 첫 번째 휴게소에서 출발한 뒤 다시 추천 엔진이 확인한다. */
+/** 두 번째로 들를 충전소 계획(B2). 첫 번째 충전소에서 출발한 뒤 다시 추천 엔진이 확인한다. */
 data class PlannedStop(
     val station: ChargingStation,
     val arrivalSocPercent: Double,
@@ -171,18 +233,18 @@ data class Recommendation(
     val timeLimitMin: Int?,                   // 충전소 시간 제한(분)
     val willHitTimeLimit: Boolean,            // 목표까지 충전하기 전에 시간 제한에 걸리는지
     val socAtTimeLimitPercent: Double?,       // 제한 시각에 도달 가능한 SoC
-    val needsAnotherStop: Boolean,            // 이 휴게소 다음에 한 번 더 들러야 한다(또는 그래도 못 감)
+    val needsAnotherStop: Boolean,            // 이 충전소 다음에 한 번 더 들러야 한다(또는 그래도 못 감)
     val reasonCodes: List<ReasonCode>,        // 화면에 보여 줄 "추천 이유" 배지 목록
     val waitSource: WaitSource = WaitSource.UNKNOWN, // 대기 값의 출처(실시간/예측)
     val etaMinutes: Double = 0.0,             // 지금부터 목적지 도착까지 걸리는 분(이 계획대로 갈 때)
     val costMinutes: Double = 0.0,            // 순위용 비용(분) = etaMinutes + 위험 가산. 낮을수록 좋다
-    val nextStop: PlannedStop? = null         // 두 번 들르는 계획이면 두 번째 휴게소
+    val nextStop: PlannedStop? = null         // 두 번 들르는 계획이면 두 번째 충전소
 )
 
 /**
  * 추천 이유 배지의 종류.
  * FASTEST_ARRIVAL = 후보 중 목적지에 가장 빨리 도착, MAX_POWER = 후보 중 가장 빠른 충전, LOW_WAIT = 대기가 짧음, ENOUGH_CHARGERS = 빈 충전기 넉넉,
- * LATEST_SAFE_STOP = 안전하게 갈 수 있는 마지막 휴게소, NO_DETOUR = 경로 이탈 없음,
+ * LATEST_SAFE_STOP = 안전하게 갈 수 있는 마지막 충전소, NO_DETOUR = 경로 이탈 없음,
  * TIME_LIMIT_RISK = 시간 제한 안에 목표까지 못 채울 위험
  */
 enum class ReasonCode { FASTEST_ARRIVAL, MAX_POWER, LOW_WAIT, ENOUGH_CHARGERS, LATEST_SAFE_STOP, NO_DETOUR, TIME_LIMIT_RISK }
@@ -203,12 +265,12 @@ sealed interface RecommendationResult {
         val primary: Recommendation,
         val alternatives: List<Recommendation>,
         val congested: Boolean,              // 붐비지 않았다면 골랐을 1순위가 붐벼서 대안 비교 화면을 띄워야 하는지
-        val latestSafeStopId: String         // 늦어도 여기서는 충전해야 하는 휴게소의 id
+        val latestSafeStopId: String         // 늦어도 여기서는 충전해야 하는 충전소의 id
     ) : RecommendationResult
 }
 
 /** 음성 안내의 우선순위. HIGH는 다른 안내를 끊고 먼저 말한다(예: 시간 제한 경고). */
 enum class Priority { LOW, NORMAL, HIGH }
 
-/** 운전자가 말로 할 수 있는 명령. 수락 / 다음 휴게소 / 충전 시작 / 출발 */
+/** 운전자가 말로 할 수 있는 명령. 수락 / 다음 후보 / 충전 시작 / 출발 */
 enum class VoiceCommand { ACCEPT, NEXT_STOP, START_CHARGING, DEPART }

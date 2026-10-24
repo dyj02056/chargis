@@ -1,5 +1,5 @@
 {
-  "note": "가상 경로/좌표. S1 기본, S2 명절 혼잡, S3 충전기 시간 제한, S4 겨울 저녁(실제 전비가 사양보다 나쁨). consumptionFactor는 시뮬레이터 차량의 실제 소비 배율(앱은 모름).",
+  "note": "가상 경로/좌표. S1 기본, S2 명절 혼잡, S3 충전기 시간 제한, S4 겨울 저녁(실제 전비가 사양보다 나쁨), S5 휴게소 밖 충전(휴게소·쉼터가 붐벼 경로 밖 마트를 추천). consumptionFactor는 시뮬레이터 차량의 실제 소비 배율(앱은 모름).",
   "scenarios": [
     {
       "id": "S1",
@@ -61,6 +61,20 @@
       "start": { "lat": 37.55, "lon": 127.05 },
       "destination": { "lat": 38.20, "lon": 128.59 },
       "stationIds": ["rest_a", "rest_b", "rest_c", "rest_d"],
+      "stationOverrides": []
+    },
+    {
+      "id": "S5",
+      "title": "S5 휴게소 밖 충전 · 서울→속초(가상)",
+      "seed": 5,
+      "profileId": "default",
+      "totalDistanceKm": 210.0,
+      "startSoc": 55.0,
+      "speedKmh": 90.0,
+      "startHour": 11,
+      "start": { "lat": 37.55, "lon": 127.05 },
+      "destination": { "lat": 38.20, "lon": 128.59 },
+      "stationIds": ["rest_g", "shelter_h", "mart_i", "local_j"],
       "stationOverrides": []
     }
   ]

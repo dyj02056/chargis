@@ -4,7 +4,9 @@ import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.DataSource
 import com.chargis.app.domain.model.GeoPoint
+import com.chargis.app.domain.model.OpenHours
 import com.chargis.app.domain.model.RouteState
+import com.chargis.app.domain.model.StationKind
 import com.chargis.app.domain.model.VehicleProfile
 import com.chargis.app.domain.model.VehicleState
 
@@ -36,7 +38,7 @@ fun vehicle(soc: Double) = VehicleState(
     source = DataSource.SIMULATED
 )
 
-// [distanceKm] 앞에 있는 휴게소 충전소. 나머지 값은 평범한 기본값(100kW, 4대 중 2대 빔, 대기 5분)
+// [distanceKm] 앞에 있는 충전소(기본은 고속도로 휴게소). 나머지 값은 평범한 기본값(100kW, 4대 중 2대 빔, 대기 5분)
 fun station(
     id: String,
     distanceKm: Double,
@@ -45,17 +47,20 @@ fun station(
     available: Int? = 2,
     waitMin: Int? = 5,
     detourKm: Double = 0.0,
-    timeLimitMin: Int? = null
+    timeLimitMin: Int? = null,
+    kind: StationKind = StationKind.HIGHWAY_REST_STOP,
+    openHours: OpenHours? = null
 ) = ChargingStation(
     id = id,
     name = "$id 휴게소",
     location = GeoPoint(0.0, 0.0),
-    isRestStop = true,
+    kind = kind,
     distanceAlongRouteKm = distanceKm,
     detourKm = detourKm,
     maxKw = maxKw,
     totalChargers = total,
     availableChargers = available,
     expectedWaitMin = waitMin,
-    rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = null)
+    rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = null),
+    openHours = openHours
 )

@@ -34,7 +34,7 @@ sealed interface DriveCard {
         val primaryEta: String = "",
         val alternativeEta: String = ""
     ) : DriveCard
-    /** 수락한 휴게소로 가는 중 (04-navigating.png) */
+    /** 수락한 충전소로 가는 중 (04-navigating.png) */
     data class Navigating(
         val stationName: String,
         val distanceKm: Double,
@@ -45,7 +45,7 @@ sealed interface DriveCard {
     ) : DriveCard
     /**
      * 평소 주행 상태(남은 거리, 충전 계획) (02-drive-status.png)
-     * [plannedName]/[plannedKm]: 충전이 필요하지만 아직 안내 전인 1순위 휴게소.
+     * [plannedName]/[plannedKm]: 충전이 필요하지만 아직 안내 전인 1순위 충전소.
      */
     data class Status(
         val chargePlanned: Boolean,
@@ -53,7 +53,7 @@ sealed interface DriveCard {
         val plannedKm: Double? = null,
         val plannedTarget: Double? = null,
         val plannedMinutes: Int? = null,
-        /** 두 번 들르는 계획이면 두 번째 휴게소 이름과 목표 %(B2) */
+        /** 두 번 들르는 계획이면 두 번째 충전소 이름과 목표 %(B2) */
         val nextStopName: String? = null,
         val nextStopTarget: Double? = null
     ) : DriveCard
@@ -61,7 +61,7 @@ sealed interface DriveCard {
     data class NoSafeStop(val nearestName: String?, val nearestKm: Double?) : DriveCard
 }
 
-/** 휴게소에 서 있을 때(도착·충전 중·완료) 화면에 보여 줄 숫자들 (05~07 스크린샷) */
+/** 충전소에 서 있을 때(도착·충전 중·완료) 화면에 보여 줄 숫자들 (05~07 스크린샷) */
 data class StopInfo(
     val stationName: String,
     val currentSoc: Double,
@@ -85,7 +85,7 @@ data class StopInfo(
     val canLowerTarget: Boolean = false,
     /** 목표가 80%를 넘어 충전이 크게 느려지는 구간에 들어가는지 (F2 경고) */
     val targetInTaper: Boolean = false,
-    /** 두 번 들르는 계획이면 다음 휴게소 이름과 목표 %(B2) */
+    /** 두 번 들르는 계획이면 다음 충전소 이름과 목표 %(B2) */
     val nextStopName: String? = null,
     val nextStopTarget: Double? = null
 )
@@ -94,12 +94,12 @@ data class StopInfo(
 data class CurveSample(val socPercent: Float, val kw: Float)
 
 /**
- * 경로 띠에 찍히는 휴게소 표시. 지나친 곳도 지우지 않고 상태로 남긴다.
+ * 경로 띠에 찍히는 충전소 표시. 지나친 곳도 지우지 않고 상태로 남긴다.
  * AHEAD = 앞에 있음, TARGET = 지금 향하는 곳, CHARGED = 충전함, DECLINED = 거절함, PASSED = 지나침
  */
 enum class MarkState { AHEAD, TARGET, CHARGED, DECLINED, PASSED }
 
-/** 경로 띠 위 휴게소 하나. [fraction]은 전체 경로 중 위치(0 = 출발, 1 = 도착). */
+/** 경로 띠 위 충전소 하나. [fraction]은 전체 경로 중 위치(0 = 출발, 1 = 도착). */
 data class RouteMark(val id: String, val name: String, val fraction: Float, val state: MarkState)
 
 /** 충전 한 번의 기록. 영수증에 한 줄로 찍힌다. */

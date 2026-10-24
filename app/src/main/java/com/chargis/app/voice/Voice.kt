@@ -31,6 +31,8 @@ interface VoicePhrases {
     fun noSafeStop(): String
     fun planTwoStops(nextName: String, nextTarget: Double): String
     fun targetChanged(target: Double): String
+    /** 경로를 벗어나는 충전소를 추천할 때 덧붙이는 말. [roundTripKm]는 갔다 오는 거리. */
+    fun offRoute(name: String, roundTripKm: Int): String
 }
 
 /** strings.xml에서 문구를 꺼내 숫자·이름을 끼워 넣는 실제 구현체. */
@@ -57,6 +59,7 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
     override fun planTwoStops(nextName: String, nextTarget: Double) =
         s(R.string.tts_plan_two_stops, nextName, nextTarget.roundToInt())
     override fun targetChanged(target: Double) = s(R.string.tts_target_changed, target.roundToInt())
+    override fun offRoute(name: String, roundTripKm: Int) = s(R.string.tts_off_route, name, roundTripKm)
 
     // strings.xml의 문구 [id]에 [args]를 차례로 끼워 넣는다. 예) "%1$s를 추천합니다" → "B 휴게소를 추천합니다"
     private fun s(id: Int, vararg args: Any) = context.getString(id, *args)

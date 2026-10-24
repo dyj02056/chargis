@@ -1,11 +1,11 @@
 {
-  "note": "가상 데이터. 실제 시설명/사업자 상표를 쓰지 않는다. routeKm는 데모 경로 출발점 기준 거리. waitByHour는 시간대(0~23시)별 평소 대기(분) 가정값.",
+  "note": "가상 데이터. 실제 시설명/사업자 상표를 쓰지 않는다. routeKm는 데모 경로 출발점 기준 거리(경로에서 빠지는 지점), detourKm는 경로에서 충전소까지 편도 거리. kind는 StationKind 이름(HIGHWAY_REST_STOP, LOCAL_REST_STOP, SHELTER, COMMERCIAL, PUBLIC, OTHER). useTime은 이용 가능 시간(없으면 미상). waitByHour는 시간대(0~23시)별 평소 대기(분) 가정값.",
   "stations": [
     {
       "id": "rest_a",
       "name": "A 휴게소",
       "lat": 37.62, "lon": 127.33,
-      "routeKm": 40.0, "detourKm": 0.0, "isRestStop": true,
+      "routeKm": 40.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
       "maxKw": 50.0, "totalChargers": 4, "availableChargers": 2, "expectedWaitMin": 5,
       "timeLimitMin": 40, "amountLimitKrw": null
     },
@@ -13,7 +13,7 @@
       "id": "rest_b",
       "name": "B 휴게소",
       "lat": 37.75, "lon": 127.70,
-      "routeKm": 90.0, "detourKm": 0.0, "isRestStop": true,
+      "routeKm": 90.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
       "maxKw": 100.0, "totalChargers": 6, "availableChargers": 4, "expectedWaitMin": 5,
       "timeLimitMin": 40, "amountLimitKrw": null,
       "waitByHour": [2,1,1,1,1,1,2,3,4,5,8,12,14,12,9,8,9,12,14,11,7,5,3,2]
@@ -22,7 +22,7 @@
       "id": "rest_c",
       "name": "C 휴게소",
       "lat": 37.88, "lon": 127.98,
-      "routeKm": 130.0, "detourKm": 0.0, "isRestStop": true,
+      "routeKm": 130.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
       "maxKw": 50.0, "totalChargers": 4, "availableChargers": 1, "expectedWaitMin": 15,
       "timeLimitMin": 40, "amountLimitKrw": null,
       "waitByHour": [1,1,1,1,1,1,1,2,3,4,6,9,10,9,7,6,7,9,11,9,5,4,2,1]
@@ -31,7 +31,7 @@
       "id": "rest_d",
       "name": "D 휴게소",
       "lat": 38.03, "lon": 128.27,
-      "routeKm": 170.0, "detourKm": 0.0, "isRestStop": true,
+      "routeKm": 170.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
       "maxKw": 50.0, "totalChargers": 2, "availableChargers": null, "expectedWaitMin": null,
       "timeLimitMin": null, "amountLimitKrw": null
     },
@@ -39,7 +39,7 @@
       "id": "rest_e",
       "name": "E 휴게소",
       "lat": 37.12, "lon": 127.24,
-      "routeKm": 70.0, "detourKm": 0.0, "isRestStop": true,
+      "routeKm": 70.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
       "maxKw": 25.0, "totalChargers": 4, "availableChargers": 2, "expectedWaitMin": 5,
       "timeLimitMin": 40, "amountLimitKrw": null
     },
@@ -47,8 +47,41 @@
       "id": "rest_f",
       "name": "F 휴게소",
       "lat": 36.41, "lon": 127.77,
-      "routeKm": 180.0, "detourKm": 0.0, "isRestStop": true,
+      "routeKm": 180.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
       "maxKw": 100.0, "totalChargers": 6, "availableChargers": 3, "expectedWaitMin": 5,
+      "timeLimitMin": 40, "amountLimitKrw": null
+    },
+    {
+      "id": "rest_g",
+      "name": "G 휴게소",
+      "lat": 37.70, "lon": 127.48,
+      "routeKm": 60.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
+      "maxKw": 50.0, "totalChargers": 4, "availableChargers": 0, "expectedWaitMin": 35,
+      "timeLimitMin": 40, "amountLimitKrw": null
+    },
+    {
+      "id": "shelter_h",
+      "name": "H 졸음쉼터",
+      "lat": 37.78, "lon": 127.68,
+      "routeKm": 85.0, "detourKm": 0.0, "kind": "SHELTER",
+      "maxKw": 50.0, "totalChargers": 2, "availableChargers": 0, "expectedWaitMin": 25,
+      "timeLimitMin": null, "amountLimitKrw": null
+    },
+    {
+      "id": "mart_i",
+      "name": "I 마트",
+      "lat": 37.83, "lon": 127.74,
+      "routeKm": 95.0, "detourKm": 2.5, "kind": "COMMERCIAL",
+      "maxKw": 200.0, "totalChargers": 8, "availableChargers": 5, "expectedWaitMin": 0,
+      "timeLimitMin": null, "amountLimitKrw": null,
+      "useTime": "10:00~22:00", "parkingFree": true
+    },
+    {
+      "id": "local_j",
+      "name": "J 휴게소",
+      "lat": 37.98, "lon": 128.10,
+      "routeKm": 140.0, "detourKm": 4.0, "kind": "LOCAL_REST_STOP",
+      "maxKw": 100.0, "totalChargers": 4, "availableChargers": 2, "expectedWaitMin": 5,
       "timeLimitMin": 40, "amountLimitKrw": null
     }
   ]

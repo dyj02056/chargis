@@ -69,7 +69,7 @@ import kotlin.math.roundToInt
  *
  * 여행 단계에 따라 다른 화면을 고른다.
  * - Idle → 시나리오 고르기(발권) 화면 (01-home.png)
- * - Arrived → 휴게소 도착 화면 (05-arrived.png)
+ * - Arrived → 충전소 도착 화면 (05-arrived.png)
  * - Charging → 충전 중 화면 (06-charging.png, 13-limit-warning.png)
  * - Done → 충전 완료 화면 (07-charge-done.png, 14-limit-ended.png)
  * - Finished → 정산 영수증 화면 (09-finished.png, 16-limit-receipt.png)
@@ -236,10 +236,10 @@ private fun IssueTicket(option: ScenarioOption, onStart: (String) -> Unit) {
     }
 }
 
-// ---- 휴게소 정차 ----
+// ---- 충전소 정차 ----
 
 /**
- * 휴게소 정차 화면의 공통 틀. 왼쪽 큰 표에는 단계별 본문([body])을,
+ * 충전소 정차 화면의 공통 틀. 왼쪽 큰 표에는 단계별 본문([body])을,
  * 오른쪽 작은 표에는 경로 띠, 후보 비교 표, 지금까지의 여행 기록을 보여 준다.
  */
 @Composable
@@ -276,7 +276,7 @@ private fun TripLines(state: TripUiState) {
     }
 }
 
-/** 휴게소 도착: 지금 %, 목표 %, 예상 충전 시간, 시간 제한. [충전 시작] 또는 [충전 없이 출발]. */
+/** 충전소 도착: 지금 %, 목표 %, 예상 충전 시간, 시간 제한. [충전 시작] 또는 [충전 없이 출발]. */
 @Composable
 private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit, onDepart: () -> Unit, onAdjust: (Int) -> Unit) {
     val c = Ticket.colors
@@ -585,7 +585,7 @@ private fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: M
     }
 }
 
-// 영수증 본문: 출발 → 충전 내역 → 거절한 휴게소 → 도착 → 총 거리 순서로 한 줄씩 찍는다.
+// 영수증 본문: 출발 → 충전 내역 → 거절한 충전소 → 도착 → 총 거리 순서로 한 줄씩 찍는다.
 @Composable
 private fun ReceiptBody(receipt: TripReceipt, title: String) {
     val c = Ticket.colors

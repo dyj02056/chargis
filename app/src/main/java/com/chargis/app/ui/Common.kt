@@ -22,9 +22,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.chargis.app.R
+import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.DataSource
+import com.chargis.app.domain.model.OpenHours
 import com.chargis.app.domain.model.ReasonCode
 import com.chargis.app.domain.model.Recommendation
+import com.chargis.app.domain.model.RecommendationConfig
+import com.chargis.app.domain.model.StationKind
 import com.chargis.app.domain.model.WaitSource
 import com.chargis.app.ui.theme.FigureStyle
 import com.chargis.app.ui.theme.Ticket
@@ -165,6 +169,36 @@ fun reasonLabels(rec: Recommendation, max: Int = 2): List<String> =
         }
     }.take(max).map { stringResource(it) }
 
+/**
+ * 충전소 이름 아래에 붙이는 한 줄. 예) "상업시설 · 왕복 5km 우회 · 10:00~22:00 운영 · 주차 유료"
+ * 본선의 고속도로 휴게소는 설명할 것이 없어 null(지금까지의 화면 그대로).
+ */
+@Composable
+fun stationMeta(station: ChargingStation): String? {
+    val parts = buildList {
+        when (station.kind) {
+            StationKind.HIGHWAY_REST_STOP -> null
+            StationKind.LOCAL_REST_STOP -> R.string.kind_local_rest_stop
+            StationKind.SHELTER -> R.string.kind_shelter
+            StationKind.COMMERCIAL -> R.string.kind_commercial
+            StationKind.PUBLIC -> R.string.kind_public
+            StationKind.OTHER -> R.string.kind_other
+        }?.let { add(stringResource(it)) }
+        if (station.detourKm > OFF_ROUTE_KM) add(stringResource(R.string.meta_round_trip, (2 * station.detourKm).roundToInt()))
+        station.openHours?.takeIf { it != OpenHours.ALL_DAY }?.let {
+            add(stringResource(R.string.meta_hours, clock(it.openMin), clock(it.closeMin)))
+        }
+        if (station.parkingFree == false) add(stringResource(R.string.meta_parking_paid))
+    }
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}
+
+// 엔진이 "경로를 벗어난다"고 보는 편도 우회 거리와 같은 기준
+private val OFF_ROUTE_KM = RecommendationConfig().offRouteKm
+
+// 0시부터 분 → "09:30"
+private fun clock(minuteOfDay: Int) = "%02d:%02d".format(minuteOfDay / 60 % 24, minuteOfDay % 60)
+
 /** 대기 칸 이름에 출처 꼬리표를 붙인다. 예) "대기 · 예측". 실시간이면 꼬리표 없이 "대기". */
 @Composable
 fun waitLabel(source: WaitSource): String {
@@ -177,7 +211,7 @@ fun waitLabel(source: WaitSource): String {
 
 /**
  * 괘선으로만 나눈 비교 표. 미상 값은 "정보 없음".
- * 정차 화면에서 후보 휴게소들을 [휴게소 | 도착 % | 출력 | 빈 충전기 | 대기] 칸으로 나란히 보여 준다.
+ * 정차 화면에서 후보 충전소들을 [충전소 | 도착 % | 출력 | 빈 충전기 | 대기] 칸으로 나란히 보여 준다.
  */
 @Composable
 fun CandidateTable(candidates: List<Recommendation>, modifier: Modifier = Modifier) {
@@ -197,7 +231,11 @@ fun CandidateTable(candidates: List<Recommendation>, modifier: Modifier = Modifi
             val s = r.station
             HairlineH()
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.Bottom) {
-                Text(s.name, style = MaterialTheme.typography.bodyMedium, color = c.ink, maxLines = 1, modifier = Modifier.weight(1.5f))
+                Column(Modifier.weight(1.5f)) {
+                    Text(s.name, style = MaterialTheme.typography.bodyMedium, color = c.ink, maxLines = 1)
+                    // 휴게소가 아니거나 경로를 벗어나는 곳이면 종류·우회를 작게 덧붙인다.
+                    stationMeta(s)?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = c.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                }
                 NumberCell("${r.arrivalSocPercent.roundToInt()}", "%", Modifier.weight(1f))
                 NumberCell("${s.maxKw.roundToInt()}", "kW", Modifier.weight(1f))
                 NumberCell(s.availableChargers?.let { "$it/${s.totalChargers}" }, null, Modifier.weight(1f), unknown)
@@ -221,7 +259,7 @@ private fun NumberCell(value: String?, unit: String?, modifier: Modifier, unknow
     }
 }
 
-// 표의 머리 줄(칸 이름들). 첫 칸(휴게소 이름)은 다른 칸보다 1.5배 넓다.
+// 표의 머리 줄(칸 이름들). 첫 칸(충전소 이름)은 다른 칸보다 1.5배 넓다.
 @Composable
 private fun TableRow(cells: List<String>, header: Boolean = false) {
     val c = Ticket.colors

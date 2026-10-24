@@ -8,9 +8,9 @@ package com.chargis.app.domain.session
  * 기본 흐름
  *   Idle(대기) → TripPlanned(목적지 설정) → Driving(주행)
  *   → AwaitingDecision(추천 안내, 운전자 결정 대기)
- *       ├ 수락 → NavigatingToCharger(휴게소로 이동) → Arrived(도착) → Charging(충전 중) → Done(충전 완료)
+ *       ├ 수락 → NavigatingToCharger(충전소로 이동) → Arrived(도착) → Charging(충전 중) → Done(충전 완료)
  *       │        → Resuming(다시 출발) → Driving
- *       └ 거절 → Driving (다음 휴게소를 기다림)
+ *       └ 거절 → Driving (다음 충전소를 기다림)
  *   목적지에 도착하면 어느 단계에서든 Finished(여행 종료)
  */
 

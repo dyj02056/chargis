@@ -98,7 +98,7 @@ data class SavedSim(
     }
 }
 
-/** 수락한 추천. 휴게소는 id로만 저장하고, 되살릴 때 시나리오 목록에서 다시 찾는다. */
+/** 수락한 추천. 충전소는 id로만 저장하고, 되살릴 때 시나리오 목록에서 다시 찾는다. */
 @Serializable
 data class SavedRec(
     val stationId: String,

@@ -63,7 +63,7 @@ class TripPresenter {
         )
     }
 
-    /** 주행 화면 아래쪽에 띄울 카드를 고른다: 추천 / 혼잡 비교 / 휴게소로 이동 중 / 경고 / 평소 상태 */
+    /** 주행 화면 아래쪽에 띄울 카드를 고른다: 추천 / 혼잡 비교 / 충전소로 이동 중 / 경고 / 평소 상태 */
     private fun buildCard(m: TripMemory, sim: SimState, clock: Clock): DriveCard {
         val o = m.offer
         val acc = m.accepted
@@ -112,7 +112,7 @@ class TripPresenter {
         }
     }
 
-    /** 경로 막대 위에 휴게소 표시를 만든다. 각 휴게소를 충전함/목표/거절/지나침/앞에 있음 중 하나로 칠한다. */
+    /** 경로 막대 위에 충전소 표시를 만든다. 각 충전소를 충전함/목표/거절/지나침/앞에 있음 중 하나로 칠한다. */
     private fun buildMarks(m: TripMemory, sc: Scenario, traveledKm: Double, declinedIds: Set<String>): List<RouteMark> {
         val chargedIds = m.charges.map { it.first }.toSet()
         val targetId = when (m.phase) {
@@ -132,7 +132,7 @@ class TripPresenter {
         }
     }
 
-    /** 통행권 모양 영수증에 들어갈 여행 기록(출발·도착 시각, 충전 내역, 거절한 휴게소). */
+    /** 통행권 모양 영수증에 들어갈 여행 기록(출발·도착 시각, 충전 내역, 거절한 충전소). */
     private fun buildReceipt(m: TripMemory, sc: Scenario, declinedIds: Set<String>, clock: Clock): TripReceipt? {
         if (m.phase == TripPhase.Idle) return null
         val names = sc.stations.associate { it.id to it.name }
@@ -147,7 +147,7 @@ class TripPresenter {
         )
     }
 
-    /** 휴게소 정차 화면(도착·충전 중·완료)에 보여 줄 숫자들. 충전 중에는 실측 보정값을 쓴다. */
+    /** 충전소 정차 화면(도착·충전 중·완료)에 보여 줄 숫자들. 충전 중에는 실측 보정값을 쓴다. */
     private fun buildStop(
         m: TripMemory,
         sim: SimState,
@@ -199,7 +199,7 @@ class TripPresenter {
         )
     }
 
-    // 정차 화면 세 단계가 함께 쓰는 값: 출력 곡선, 목표 조정 가능 여부, 다음 휴게소
+    // 정차 화면 세 단계가 함께 쓰는 값: 출력 곡선, 목표 조정 가능 여부, 다음 충전소
     private class StopCommon(
         val station: ChargingStation,
         val target: Double,
