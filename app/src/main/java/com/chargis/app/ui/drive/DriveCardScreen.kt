@@ -49,7 +49,10 @@ import com.chargis.app.ui.ticket.rememberReduceMotion
 import com.chargis.app.ui.vertical
 import kotlin.math.roundToInt
 
-private val StubWidth = 76.dp
+// 주행 중 화면을 그리는 파일이다. 스크린샷: docs/screenshots/02~04, 08, 10, 12번
+// 화면 구성: [왼쪽 꼬리 칸(표 번호)] ┊ 절취선 ┊ [본문 카드 1장]
+
+private val StubWidth = 76.dp   // 왼쪽 꼬리 칸의 폭
 
 /** 표 머리에 인쇄되는 정보: 표 번호와 발권 시각. */
 data class TicketMeta(val ticketNo: String, val issuedAt: String)
@@ -75,6 +78,7 @@ fun DriveCardScreen(
     TicketStock(modifier.fillMaxSize(), perforationX = StubWidth) {
         Row(Modifier.fillMaxSize()) {
             StubTail(meta)
+            // 카드 종류가 바뀔 때만 부드럽게 바꿔 끼운다(옛 카드는 빨리 사라지고, 새 카드는 살짝 커지며 나타남).
             AnimatedContent(
                 targetState = card,
                 contentKey = { it::class },
@@ -90,6 +94,7 @@ fun DriveCardScreen(
                 label = "drive-card"
             ) { target ->
                 Column(Modifier.fillMaxSize().padding(start = 40.dp, end = 40.dp, top = 28.dp, bottom = 20.dp)) {
+                    // 카드 종류에 따라 알맞은 그리기 함수를 고른다.
                     when (target) {
                         is DriveCard.Recommend -> RecommendStub(target.rec, onAccept, onDecline)
                         is DriveCard.Congested -> CongestedStub(target.primary, target.alternative, onAccept)
@@ -153,16 +158,23 @@ private fun CellPair(left: @Composable () -> Unit, right: @Composable () -> Unit
     }
 }
 
+// 칸 이름 + 중간 크기 숫자. 예) "충전 시간 / 12분"
 @Composable
 private fun Measure(label: String, value: String, unit: String?, color: androidx.compose.ui.graphics.Color = Ticket.colors.ink) {
     Field(label) { Figure(value, unit, FigureStyle.Medium, color = color) }
 }
 
+// 숫자 대신 글자가 들어가는 칸. 예) "시간 제한 / 없음", "대기 / 정보 없음"
 @Composable
 private fun Words(label: String, text: String) {
     Field(label) { Text(text, style = MaterialTheme.typography.headlineMedium, color = Ticket.colors.inkMuted, maxLines = 1) }
 }
 
+/**
+ * 추천 카드 (03-recommend.png).
+ * 왼쪽: "46 km 앞 / B 휴게소 / 추천 이유", 오른쪽: 목표 %, 충전 시간, 시간 제한, 도착 배터리, 대기
+ * 맨 아래: [경유지로 수락] [다음 휴게소] 버튼
+ */
 @Composable
 private fun ColumnScope.RecommendStub(rec: Recommendation, onAccept: (String) -> Unit, onDecline: () -> Unit) {
     val c = Ticket.colors
@@ -192,6 +204,7 @@ private fun ColumnScope.RecommendStub(rec: Recommendation, onAccept: (String) ->
             )
             HairlineH()
             Spacer(Modifier.weight(1f))
+            // 경고 줄: 시간 제한 안에 못 채울 위험 / 한 번 더 충전해야 함
             if (ReasonCode.TIME_LIMIT_RISK in rec.reasonCodes && rec.timeLimitMin != null) {
                 WarnLine(stringResource(R.string.drive_limit_risk, rec.timeLimitMin, (rec.socAtTimeLimitPercent ?: 0.0).roundToInt()))
             }
@@ -199,13 +212,17 @@ private fun ColumnScope.RecommendStub(rec: Recommendation, onAccept: (String) ->
         }
     }
     TearLine(Modifier.padding(vertical = 8.dp))
+    // 수락 버튼을 2배 넓게 해서 주로 누를 버튼이 눈에 띄게 한다.
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         TicketButton(stringResource(R.string.drive_accept), { onAccept(rec.station.id) }, Modifier.weight(2f), stampInk = true)
         TicketButton(stringResource(R.string.drive_next), onDecline, Modifier.weight(1f), primary = false)
     }
 }
 
-/** 혼잡 변형(§7.3): 세로 괘선으로 나뉜 두 칸에 대기와 도착 배터리를 나란히 인쇄한다. */
+/**
+ * 혼잡 변형(§7.3): 세로 괘선으로 나뉜 두 칸에 대기와 도착 배터리를 나란히 인쇄한다. (10-congested.png)
+ * 왼쪽은 붐비는 1순위, 오른쪽은 대안이다. 앱이 마음대로 바꾸지 않고 운전자가 고르게 한다.
+ */
 @Composable
 private fun ColumnScope.CongestedStub(primary: Recommendation, alternative: Recommendation, onAccept: (String) -> Unit) {
     val c = Ticket.colors
@@ -224,6 +241,7 @@ private fun ColumnScope.CongestedStub(primary: Recommendation, alternative: Reco
     }
 }
 
+// 혼잡 비교 카드의 한쪽 칸. [emphasize]가 true인 쪽(대안)을 강조색으로 칠한다.
 @Composable
 private fun ChoiceColumn(rec: Recommendation, emphasize: Boolean, onAccept: (String) -> Unit, modifier: Modifier) {
     val c = Ticket.colors
@@ -257,6 +275,7 @@ private fun ChoiceColumn(rec: Recommendation, emphasize: Boolean, onAccept: (Str
     }
 }
 
+/** 수락한 휴게소로 가는 중 카드 (04-navigating.png). 남은 거리와 "경유지 등록" 도장, 아래에 경로 띠. */
 @Composable
 private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<RouteMark>, progress: Float) {
     val c = Ticket.colors
@@ -287,6 +306,10 @@ private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<R
     RouteStrip(marks, progress)
 }
 
+/**
+ * 평소 주행 카드 (02-drive-status.png). 목적지까지 남은 거리와 충전 계획을 보여 준다.
+ * 계획이 없거나 값을 모르는 칸은 "—"로 둔다.
+ */
 @Composable
 private fun ColumnScope.StatusStub(card: DriveCard.Status, eta: String, remainingKm: Double, marks: List<RouteMark>, progress: Float) {
     val c = Ticket.colors
@@ -336,6 +359,7 @@ private fun ColumnScope.StatusStub(card: DriveCard.Status, eta: String, remainin
     }
 }
 
+/** 안전하게 갈 수 있는 충전소가 없다는 경고 카드. 그나마 가장 가까운 충전소가 있으면 알려 준다. */
 @Composable
 private fun ColumnScope.NoSafeStub(card: DriveCard.NoSafeStop, marks: List<RouteMark>, progress: Float) {
     val c = Ticket.colors
@@ -358,6 +382,7 @@ private fun ColumnScope.NoSafeStub(card: DriveCard.NoSafeStop, marks: List<Route
     RouteStrip(marks, progress)
 }
 
+// 경고 기호 + 호박색 글자 한 줄
 @Composable
 private fun WarnLine(text: String) {
     val c = Ticket.colors

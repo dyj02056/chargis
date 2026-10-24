@@ -310,7 +310,7 @@ class TripController(
                     snapshot = snap
                     val due = scheduler.evaluate(snap)
                     // 충전이 끝나는 경우: 목표 도달, 시간 제한 만료, 또는 충전기가 스스로 멈춤
-                    val finished =snap.reached || snap.limitExpired || !demoCharging()
+                    val finished = snap.reached || snap.limitExpired || !demoCharging()
                     if (finished) {
                         if (demoCharging()) demo.stopCharging()
                         endedByLimit = snap.limitExpired && !snap.reached

@@ -52,7 +52,17 @@ import com.chargis.app.ui.ticket.TicketStock
 import com.chargis.app.ui.ticket.WarnGlyph
 import kotlin.math.roundToInt
 
-/** 정차·충전 중 화면(plan.md §9.3). 상세와 스크롤을 허용한다. */
+/**
+ * 정차·충전 중 화면(plan.md §9.3). 상세와 스크롤을 허용한다.
+ * 차가 멈춰 있을 때는 운전자가 화면을 자세히 볼 수 있으므로, 주행 화면보다 정보를 많이 보여 준다.
+ *
+ * 여행 단계에 따라 다른 화면을 고른다.
+ * - Idle → 시나리오 고르기(발권) 화면 (01-home.png)
+ * - Arrived → 휴게소 도착 화면 (05-arrived.png)
+ * - Charging → 충전 중 화면 (06-charging.png, 13-limit-warning.png)
+ * - Done → 충전 완료 화면 (07-charge-done.png, 14-limit-ended.png)
+ * - Finished → 정산 영수증 화면 (09-finished.png, 16-limit-receipt.png)
+ */
 @Composable
 fun ParkedScreen(
     state: TripUiState,
@@ -70,6 +80,7 @@ fun ParkedScreen(
         stop != null && state.phase == TripPhase.Arrived -> StopScreen(state, stop, modifier) { ArrivedBody(stop, onStartCharging, onDepart) }
         stop != null && state.phase == TripPhase.Charging -> StopScreen(state, stop, modifier) { ChargingBody(stop, onStopCharging) }
         stop != null && state.phase == TripPhase.Done -> StopScreen(state, stop, modifier) { DoneBody(stop, state.socPercent, onDepart) }
+        // 그 밖의 정차(예: 주행 중 잠깐 멈춤)는 간단한 상태 화면
         else -> TicketStock(modifier.fillMaxSize()) {
             Column(Modifier.padding(40.dp)) {
                 Text(stringResource(R.string.parked_status, state.scenarioTitle), style = MaterialTheme.typography.displaySmall, color = Ticket.colors.ink)
@@ -82,6 +93,7 @@ fun ParkedScreen(
 
 // ---- 발권 ----
 
+/** 첫 화면. 왼쪽에 앱 이름과 소개, 오른쪽에 고를 수 있는 시나리오 표들. */
 @Composable
 private fun IssueScreen(options: List<ScenarioOption>, onStart: (String) -> Unit, modifier: Modifier) {
     val c = Ticket.colors
@@ -98,6 +110,7 @@ private fun IssueScreen(options: List<ScenarioOption>, onStart: (String) -> Unit
     }
 }
 
+// 시나리오 하나를 표 한 장으로 그린다: 이름, 거리, 출발 배터리, 출발 시각, [발권] 버튼
 @Composable
 private fun IssueTicket(option: ScenarioOption, onStart: (String) -> Unit) {
     val c = Ticket.colors
@@ -124,6 +137,10 @@ private fun IssueTicket(option: ScenarioOption, onStart: (String) -> Unit) {
 
 // ---- 휴게소 정차 ----
 
+/**
+ * 휴게소 정차 화면의 공통 틀. 왼쪽 큰 표에는 단계별 본문([body])을,
+ * 오른쪽 작은 표에는 경로 띠, 후보 비교 표, 지금까지의 여행 기록을 보여 준다.
+ */
 @Composable
 private fun StopScreen(state: TripUiState, stop: StopInfo, modifier: Modifier, body: @Composable ColumnScope.() -> Unit) {
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -158,6 +175,7 @@ private fun TripLines(state: TripUiState) {
     }
 }
 
+/** 휴게소 도착: 지금 %, 목표 %, 예상 충전 시간, 시간 제한. [충전 시작] 또는 [충전 없이 출발]. */
 @Composable
 private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit, onDepart: () -> Unit) {
     val c = Ticket.colors
@@ -185,6 +203,7 @@ private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit,
     }
 }
 
+// 시간 제한 칸. 제한을 모르면 "정보 없음"으로 표시한다.
 @Composable
 private fun LimitField(limit: Int?, modifier: Modifier) {
     val c = Ticket.colors
@@ -214,6 +233,7 @@ private fun ColumnScope.ChargingBody(stop: StopInfo, onStop: () -> Unit) {
         MeasureField(stringResource(R.string.label_to_target), "${stop.minutesToTarget}", stringResource(R.string.unit_min), FigureStyle.Medium, Modifier.weight(1f))
         HairlineV(Modifier.height(84.dp).padding(end = 24.dp))
         if (stop.minutesToLimit != null) {
+            // 제한 안에 목표를 못 채우고 10분 이내로 남았으면 경고색으로 바꾼다.
             val limitNear = stop.willHitLimit && stop.minutesToLimit <= 10
             MeasureField(
                 stringResource(R.string.label_to_limit),
@@ -244,6 +264,8 @@ private fun CellGauge(current: Double, target: Double) {
     val c = Ticket.colors
     val desc = "${current.roundToInt()}% / ${target.roundToInt()}%"
     Canvas(Modifier.fillMaxWidth().height(40.dp).semantics { contentDescription = desc }) {
+        // 한 칸 = 5%. 칸마다 네 가지 중 하나로 그린다:
+        // 다 찬 칸(잉크), 일부 찬 칸(부분 채움), 목표까지 채울 칸(강조색 테두리), 목표 밖 칸(흐린 테두리)
         val cells = 20
         val gap = 6.dp.toPx()
         val w = (size.width - gap * (cells - 1)) / cells
@@ -266,6 +288,10 @@ private fun CellGauge(current: Double, target: Double) {
     }
 }
 
+/**
+ * 충전 완료: 최종 %와 도장. 목표에 도달했으면 "충전 완료" 도장,
+ * 시간 제한으로 끊겼으면 호박색 "제한 종료" 도장과 안내 문구를 보여 준다.
+ */
 @Composable
 private fun ColumnScope.DoneBody(stop: StopInfo, soc: Double, onDepart: () -> Unit) {
     val c = Ticket.colors
@@ -290,6 +316,7 @@ private fun ColumnScope.DoneBody(stop: StopInfo, soc: Double, onDepart: () -> Un
     TicketButton(stringResource(R.string.parked_depart), onDepart, Modifier.fillMaxWidth(), minHeight = 104.dp)
 }
 
+// 시간 제한 관련 경고 한 줄(경고 기호 + 호박색 글자)
 @Composable
 private fun LimitWarnLine(text: String) {
     val c = Ticket.colors
@@ -308,6 +335,7 @@ private fun chargeValue(r: ChargeRecord): String {
 
 // ---- 정산 영수증 ----
 
+/** 목적지 도착 후 화면. 왼쪽에 요약(충전 횟수, 최종 배터리)과 [다시 발권], 오른쪽에 영수증. */
 @Composable
 private fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: Modifier) {
     val c = Ticket.colors
@@ -335,6 +363,7 @@ private fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: M
     }
 }
 
+// 영수증 본문: 출발 → 충전 내역 → 거절한 휴게소 → 도착 → 총 거리 순서로 한 줄씩 찍는다.
 @Composable
 private fun ReceiptBody(receipt: TripReceipt, title: String) {
     val c = Ticket.colors

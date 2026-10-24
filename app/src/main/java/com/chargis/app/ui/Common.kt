@@ -32,6 +32,8 @@ import com.chargis.app.ui.ticket.HairlineH
 import com.chargis.app.ui.ticket.SpeakerGlyph
 import kotlin.math.roundToInt
 
+// 주행 화면과 정차 화면이 함께 쓰는 화면 조각들을 모은 파일이다.
+
 /** 표 머리: 상표, 구간, 시각, 배터리, 데이터 출처. 주행 중에도 늘 보이는 유일한 상태 줄. */
 @Composable
 fun TicketHeader(state: TripUiState, modifier: Modifier = Modifier) {
@@ -50,6 +52,7 @@ fun TicketHeader(state: TripUiState, modifier: Modifier = Modifier) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
+        // 여행을 시작하기 전(Idle)에는 시각·배터리를 숨긴다.
         if (state.phase != com.chargis.app.domain.session.TripPhase.Idle) {
             Text(state.clock, style = FigureStyle.Small, color = c.ink)
             Row(verticalAlignment = Alignment.Bottom) {
@@ -62,6 +65,7 @@ fun TicketHeader(state: TripUiState, modifier: Modifier = Modifier) {
     }
 }
 
+/** 데이터 출처를 화면 글자로 바꾼다. 예) SIMULATED → "시뮬레이션 데이터". 실제 문구는 res/values/strings.xml에 있다. */
 @Composable
 fun sourceLabel(source: DataSource) = stringResource(
     when (source) {
@@ -71,7 +75,7 @@ fun sourceLabel(source: DataSource) = stringResource(
     }
 )
 
-/** 음성 안내 자막 줄. */
+/** 음성 안내 자막 줄. 소리를 못 들은 동승자도 읽을 수 있게 화면 맨 아래에 띄운다. 자막이 없으면 아무것도 그리지 않는다. */
 @Composable
 fun CaptionBar(caption: String?, modifier: Modifier = Modifier) {
     if (caption.isNullOrBlank()) return
@@ -89,7 +93,10 @@ fun CaptionBar(caption: String?, modifier: Modifier = Modifier) {
     }
 }
 
-/** 세로로 인쇄한 글자(표 꼬리 칸용). */
+/**
+ * 세로로 인쇄한 글자(표 꼬리 칸용).
+ * 글자를 왼쪽으로 90도 눕혀서 그린다. 가로·세로 크기를 서로 바꿔 재고, 돌린 뒤 제자리에 맞춰 놓는다.
+ */
 fun Modifier.vertical() = layout { measurable, constraints ->
     val placeable = measurable.measure(Constraints(maxWidth = constraints.maxHeight, maxHeight = constraints.maxWidth))
     layout(placeable.height, placeable.width) {
@@ -100,6 +107,11 @@ fun Modifier.vertical() = layout { measurable, constraints ->
     }
 }
 
+/**
+ * 추천 이유 배지를 "안전하게 갈 수 있는 마지막 휴게소 · 가장 빠른 충전기" 같은 한 줄 글자로 만든다.
+ * 운전 중에 너무 많이 읽지 않도록 최대 2개만 보여 준다. 보여 줄 이유가 없으면 null.
+ * (경로 이탈 없음, 시간 제한 위험은 다른 곳에서 따로 표시하므로 여기서는 뺀다.)
+ */
 @Composable
 fun reasonText(rec: Recommendation): String? {
     val parts = rec.reasonCodes.mapNotNull {
@@ -114,7 +126,10 @@ fun reasonText(rec: Recommendation): String? {
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
-/** 괘선으로만 나눈 비교 표. 미상 값은 "정보 없음". */
+/**
+ * 괘선으로만 나눈 비교 표. 미상 값은 "정보 없음".
+ * 정차 화면에서 후보 휴게소들을 [휴게소 | 도착 % | 출력 | 빈 충전기 | 대기] 칸으로 나란히 보여 준다.
+ */
 @Composable
 fun CandidateTable(candidates: List<Recommendation>, modifier: Modifier = Modifier) {
     val c = Ticket.colors
@@ -157,6 +172,7 @@ private fun NumberCell(value: String?, unit: String?, modifier: Modifier, unknow
     }
 }
 
+// 표의 머리 줄(칸 이름들). 첫 칸(휴게소 이름)은 다른 칸보다 1.5배 넓다.
 @Composable
 private fun TableRow(cells: List<String>, header: Boolean = false) {
     val c = Ticket.colors

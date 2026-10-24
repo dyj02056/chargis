@@ -50,7 +50,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.chargis.app.ui.theme.Ticket
 
-/** 시스템 "애니메이션 제거"가 켜져 있으면 true. 그때는 모든 전환을 즉시 바꾼다. */
+// 앱 디자인의 바탕인 "고속도로 통행권" 모양 부품들을 모은 파일이다.
+// 표 용지, 절취선, 도장, 버튼, 경고 기호처럼 여러 화면에서 되풀이해 쓰는 조각들이 있다.
+
+/**
+ * 시스템 "애니메이션 제거"가 켜져 있으면 true. 그때는 모든 전환을 즉시 바꾼다.
+ * 움직임에 어지러움을 느끼는 사용자를 위한 접근성 배려다.
+ */
 @Composable
 fun rememberReduceMotion(): Boolean {
     val context = LocalContext.current
@@ -59,7 +65,8 @@ fun rememberReduceMotion(): Boolean {
     }
 }
 
-private val NotchRadius = 14.dp
+private val NotchRadius = 14.dp   // 절취선 양 끝 반원 홈의 반지름
+// 점선 무늬: 14픽셀 긋고 10픽셀 띄우기
 private val Dash = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
 
 /**
@@ -100,12 +107,14 @@ fun TearLine(modifier: Modifier = Modifier) {
     }
 }
 
+/** 1dp 두께의 가는 가로선(칸 구분선). */
 @Composable
 fun HairlineH(modifier: Modifier = Modifier) {
     val c = Ticket.colors
     Box(modifier.fillMaxWidth().height(1.dp).background(c.rule))
 }
 
+/** 1dp 두께의 가는 세로선(칸 구분선). */
 @Composable
 fun HairlineV(modifier: Modifier = Modifier) {
     val c = Ticket.colors
@@ -135,6 +144,7 @@ fun Figure(
     Row(modifier, verticalAlignment = Alignment.Bottom) {
         Text(value, style = style, color = color, maxLines = 1)
         if (unit != null) {
+            // 단위 글자를 숫자 밑선에 맞추려고 글자 크기에 비례해 아래 여백을 준다.
             Text(
                 unit,
                 style = unitStyle,
@@ -152,6 +162,7 @@ fun Figure(
 @Composable
 fun Stamp(text: String, modifier: Modifier = Modifier, color: Color = Ticket.colors.stamp) {
     val reduce = rememberReduceMotion()
+    // 1.35배 크기, 투명한 상태에서 시작해 원래 크기로 "쾅" 찍히듯 줄어든다.
     val scale = remember { Animatable(if (reduce) 1f else 1.35f) }
     val alpha = remember { Animatable(if (reduce) 1f else 0f) }
     LaunchedEffect(text) {
@@ -160,6 +171,7 @@ fun Stamp(text: String, modifier: Modifier = Modifier, color: Color = Ticket.col
             scale.animateTo(1f, tween(260, easing = { t -> 1f - (1f - t) * (1f - t) * (1f - t) }))
         }
     }
+    // 6도 기울이고, 바깥 굵은 테두리 + 안쪽 가는 테두리로 이중 도장을 만든다.
     Box(
         modifier
             .graphicsLayer { scaleX = scale.value; scaleY = scale.value; this.alpha = alpha.value }
@@ -186,10 +198,11 @@ fun TicketButton(
     modifier: Modifier = Modifier,
     primary: Boolean = true,
     stampInk: Boolean = false,
-    minHeight: Dp = 104.dp,
+    minHeight: Dp = 104.dp,   // 운전 중에도 쉽게 누르도록 버튼을 크게 잡았다.
     enabled: Boolean = true
 ) {
     val c = Ticket.colors
+    // 손가락이 버튼을 누르고 있는지 감지한다.
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val shape = RoundedCornerShape(6.dp)
@@ -216,7 +229,7 @@ fun TicketButton(
                 role = Role.Button,
                 onClick = onClick
             )
-            .graphicsLayer { alpha = if (enabled) 1f else 0.4f }
+            .graphicsLayer { alpha = if (enabled) 1f else 0.4f }   // 누를 수 없는 버튼은 흐리게
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -227,6 +240,7 @@ fun TicketButton(
 /** 경고 기호: 그린 삼각형 + 느낌표. 색만으로 뜻을 전하지 않도록 늘 글자와 함께 쓴다. */
 @Composable
 fun WarnGlyph(modifier: Modifier = Modifier, color: Color = Ticket.colors.warn, size: Dp = 28.dp) {
+    // 좌표를 칸 크기에 대한 비율(0~1)로 적어서, 기호 크기를 바꿔도 모양이 그대로 유지된다.
     Canvas(modifier.size(size)) {
         val w = this.size.width
         val h = this.size.height
@@ -250,6 +264,7 @@ fun SpeakerGlyph(modifier: Modifier = Modifier, color: Color = Ticket.colors.ink
             lineTo(w * 0.56f, h * 0.88f); lineTo(w * 0.3f, h * 0.64f); lineTo(w * 0.08f, h * 0.64f); close()
         }
         drawPath(body, color)
+        // 스피커 오른쪽의 소리 물결 두 줄
         drawArc(color, -45f, 90f, false, Offset(w * 0.5f, h * 0.3f), androidx.compose.ui.geometry.Size(w * 0.32f, h * 0.4f), style = Stroke(w * 0.08f, cap = StrokeCap.Round))
         drawArc(color, -50f, 100f, false, Offset(w * 0.46f, h * 0.14f), androidx.compose.ui.geometry.Size(w * 0.52f, h * 0.72f), style = Stroke(w * 0.08f, cap = StrokeCap.Round))
     }
