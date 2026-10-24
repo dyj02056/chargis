@@ -1,7 +1,25 @@
 package com.chargis.app.domain.model
 
+/*
+ * 앱 전체에서 쓰는 "데이터 모양"을 모아 둔 파일이다. 일종의 용어 사전이라고 보면 된다.
+ *
+ * - data class: 값 몇 개를 한 묶음으로 담는 상자. 예) 위도+경도 = GeoPoint
+ * - enum class: 정해진 선택지 중 하나만 고르는 값. 예) 데이터 출처는 SDK/MANUAL/SIMULATED 중 하나
+ * - Double?, Int?: 물음표가 붙으면 "값이 없을 수도 있음(null)"이라는 뜻이다.
+ *
+ * 자주 나오는 단위
+ * - SoC(State of Charge): 배터리 잔량을 %로 나타낸 값. 0이면 방전, 100이면 완충.
+ * - kWh: 배터리에 담긴 에너지의 양(물통 크기). kW: 충전 속도(수도꼭지 세기).
+ * - 전비(km/kWh): 1kWh로 몇 km를 가는지. 내연기관차의 연비와 같은 개념.
+ */
+
+/** 지도 위의 한 점. lat = 위도, lon = 경도. */
 data class GeoPoint(val lat: Double, val lon: Double)
 
+/**
+ * 차종마다 정해진 고정 사양. 주행 중에 바뀌지 않는다.
+ * 예) 배터리 77.4kWh, 전비 5km/kWh, 최대 150kW까지 충전 가능한 차
+ */
 data class VehicleProfile(
     val id: String,
     val displayName: String,
@@ -10,8 +28,13 @@ data class VehicleProfile(
     val maxChargeKw: Double          // 차량 최대 수용 출력
 )
 
+/**
+ * 차량 데이터를 어디서 받았는지 표시한다.
+ * SDK = 실제 차량에서 읽음, MANUAL = 사용자가 직접 입력, SIMULATED = 데모용 가짜 값
+ */
 enum class DataSource { SDK, MANUAL, SIMULATED }
 
+/** 지금 이 순간의 차 상태. 주행하면서 계속 바뀐다. */
 data class VehicleState(
     val socPercent: Double,          // 0..100
     val rangeKm: Double?,            // 주행가능거리(없으면 null)
@@ -19,6 +42,7 @@ data class VehicleState(
     val source: DataSource
 )
 
+/** 내비게이션이 알려 주는 현재 경로 정보. 목적지까지 남은 거리와 시간을 담는다. */
 data class RouteState(
     val current: GeoPoint,
     val destination: GeoPoint?,
@@ -26,40 +50,54 @@ data class RouteState(
     val remainingTimeMin: Int?
 )
 
+/**
+ * 충전소의 운영 규칙. 고속도로 휴게소 급속충전기는 보통 "1회 40분" 같은 시간 제한이 있다.
+ * 제한 시간이 지나면 충전이 자동으로 끊기므로, 앱이 미리 경고해야 한다(F3 기능).
+ */
 data class ChargerRule(
     val timeLimitMin: Int?,          // null = 제한 없음 또는 미상
-    val amountLimitKrw: Int?,
-    val note: String? = null
+    val amountLimitKrw: Int?,        // 1회 충전 금액 제한(원). null = 없음 또는 미상
+    val note: String? = null         // 화면에 그대로 보여 줄 추가 안내 문구
 )
 
+/** 경로 위에 있는 충전소 한 곳의 정보. 추천 엔진이 이 목록을 비교해 1순위를 고른다. */
 data class ChargingStation(
     val id: String,
     val name: String,
     val location: GeoPoint,
-    val isRestStop: Boolean,
+    val isRestStop: Boolean,          // 고속도로 휴게소인지 여부
     val distanceAlongRouteKm: Double, // 현재 위치 기준 경로상 거리
     val detourKm: Double,             // 경로 이탈 추가 거리(휴게소는 보통 0~소량)
     val maxKw: Double,                // 해당 소의 최대 출력
-    val totalChargers: Int,
+    val totalChargers: Int,           // 전체 충전기 대수
     val availableChargers: Int?,      // null = 실시간 미상
     val expectedWaitMin: Int?,        // 실시간 or 시간대별 통계 기반 추정
     val rule: ChargerRule
 )
 
+/** 충전소의 실시간 상황(빈 충전기 수, 대기 시간). 주기적으로 새 값이 들어온다. */
 data class StationLiveStatus(
     val stationId: String,
     val availableChargers: Int?,
     val expectedWaitMin: Int?
 )
 
+/**
+ * 충전소에 점수를 매길 때 항목별로 얼마나 중요하게 볼지 정하는 비율. 다 더하면 1.0이다.
+ * 예) power = 0.25 → 충전 속도가 전체 점수의 25%를 차지한다.
+ */
 data class ScoreWeights(
-    val arrivalSoc: Double = 0.25,
-    val power: Double = 0.25,
-    val availability: Double = 0.20,
-    val detour: Double = 0.10,
-    val wait: Double = 0.20
+    val arrivalSoc: Double = 0.25,    // 도착했을 때 배터리가 많이 남을수록 가점
+    val power: Double = 0.25,         // 충전 속도가 빠를수록 가점
+    val availability: Double = 0.20,  // 빈 충전기 비율이 높을수록 가점
+    val detour: Double = 0.10,        // 경로에서 많이 벗어날수록 감점
+    val wait: Double = 0.20           // 대기 시간이 길수록 감점
 )
 
+/**
+ * 추천 계산에 쓰는 기준값 모음. 숫자를 코드 곳곳에 흩어 두지 않고 여기 한 곳에서 바꿀 수 있게 했다.
+ * 괄호 안 "가정"이라고 적힌 값은 실제 차량 데이터로 다듬어야 하는 추정치다.
+ */
 data class RecommendationConfig(
     val safetyMargin: Double = 0.15,          // 필요 에너지에 곱할 (1+margin)
     val minArrivalSocPercent: Double = 10.0,  // 도착 시 최소 잔량
@@ -73,22 +111,36 @@ data class RecommendationConfig(
     val weights: ScoreWeights = ScoreWeights()
 )
 
+/**
+ * 추천 엔진이 충전소 한 곳을 계산한 결과.
+ * "B 휴게소에 도착하면 25%, 50%까지 충전하면 12분" 같은 안내 문장이 모두 여기서 나온다.
+ */
 data class Recommendation(
     val station: ChargingStation,
-    val arrivalSocPercent: Double,
-    val targetSocPercent: Double,
-    val chargeMinutes: Int,
-    val waitMinutes: Int,
-    val timeLimitMin: Int?,
-    val willHitTimeLimit: Boolean,
+    val arrivalSocPercent: Double,            // 이 충전소에 도착했을 때 예상 배터리 %
+    val targetSocPercent: Double,             // "OO%까지 충전하세요"의 OO
+    val chargeMinutes: Int,                   // 목표까지 충전하는 데 걸리는 분
+    val waitMinutes: Int,                     // 충전기 빌 때까지 기다리는 분
+    val timeLimitMin: Int?,                   // 충전소 시간 제한(분)
+    val willHitTimeLimit: Boolean,            // 목표까지 충전하기 전에 시간 제한에 걸리는지
     val socAtTimeLimitPercent: Double?,       // 제한 시각에 도달 가능한 SoC
     val needsAnotherStop: Boolean,            // 목표(상한) 충전으로도 목적지 미도달
-    val score: Double,
-    val reasonCodes: List<ReasonCode>
+    val score: Double,                        // 비교용 점수. 높을수록 좋은 충전소
+    val reasonCodes: List<ReasonCode>         // 화면에 보여 줄 "추천 이유" 배지 목록
 )
 
+/**
+ * 추천 이유 배지의 종류.
+ * MAX_POWER = 후보 중 가장 빠른 충전, LOW_WAIT = 대기가 짧음, ENOUGH_CHARGERS = 빈 충전기 넉넉,
+ * LATEST_SAFE_STOP = 안전하게 갈 수 있는 마지막 휴게소, NO_DETOUR = 경로 이탈 없음,
+ * TIME_LIMIT_RISK = 시간 제한 안에 목표까지 못 채울 위험
+ */
 enum class ReasonCode { MAX_POWER, LOW_WAIT, ENOUGH_CHARGERS, LATEST_SAFE_STOP, NO_DETOUR, TIME_LIMIT_RISK }
 
+/**
+ * 추천 엔진의 최종 답. 세 가지 경우 중 정확히 하나가 나온다.
+ * (sealed interface = "이 셋 말고 다른 경우는 없다"고 컴파일러에게 약속하는 문법)
+ */
 sealed interface RecommendationResult {
     /** 현재 SoC로 목적지까지 충분하다. */
     data object NotNeeded : RecommendationResult
@@ -96,14 +148,17 @@ sealed interface RecommendationResult {
     /** 도착 잔량 조건을 만족하는 충전소가 없다. [nearest]는 경고용으로 가장 가까운 충전소(없으면 null). */
     data class NoSafeStop(val nearest: ChargingStation?) : RecommendationResult
 
+    /** 충전소를 추천한다. 1순위([primary])와 대안 몇 곳, 혼잡 여부를 함께 담는다. */
     data class Recommended(
         val primary: Recommendation,
         val alternatives: List<Recommendation>,
-        val congested: Boolean,
-        val latestSafeStopId: String
+        val congested: Boolean,              // 1순위가 붐벼서 대안 비교 화면을 띄워야 하는지
+        val latestSafeStopId: String         // 늦어도 여기서는 충전해야 하는 휴게소의 id
     ) : RecommendationResult
 }
 
+/** 음성 안내의 우선순위. HIGH는 다른 안내를 끊고 먼저 말한다(예: 시간 제한 경고). */
 enum class Priority { LOW, NORMAL, HIGH }
 
+/** 운전자가 말로 할 수 있는 명령. 수락 / 다음 휴게소 / 충전 시작 / 출발 */
 enum class VoiceCommand { ACCEPT, NEXT_STOP, START_CHARGING, DEPART }
