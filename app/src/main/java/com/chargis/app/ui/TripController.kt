@@ -41,6 +41,14 @@ import kotlin.math.max
 /**
  * plan.md §8.1 상태머신을 돌리는 여행 코디네이터. 안드로이드 의존이 없어 JVM 테스트로 시나리오를 끝까지 돌릴 수 있다.
  * [demo]는 데모 모드에서 시나리오 시작/충전/출발 같은 "현실에서 운전자가 하는 일"을 흉내 낸다.
+ *
+ * 앱의 "지휘자"다. 하는 일은 크게 세 가지다.
+ * 1. 내비와 차량에서 새 값이 들어올 때마다([onTick]) 지금 단계에 맞는 일을 한다.
+ *    예) 주행 중이면 추천을 계산하고, 충전 중이면 남은 시간과 알림을 계산한다.
+ * 2. 운전자가 버튼을 누르면([accept], [decline], [startCharging], [depart] 등) 단계를 넘긴다.
+ * 3. 화면에 보여 줄 모든 값을 [state] 하나로 묶어 내보낸다([publish]). 화면은 이 값만 보고 그린다.
+ *
+ * 코루틴(CoroutineScope, launch): 화면을 멈추지 않고 뒤에서 동시에 일을 처리하는 코틀린의 방법이다.
  */
 class TripController(
     private val scope: CoroutineScope,
@@ -52,12 +60,13 @@ class TripController(
     private val demo: ScenarioSimulator,
     private val scenarios: List<Scenario>,
     private val config: RecommendationConfig = RecommendationConfig(),
-    captions: Flow<String?>? = null,
-    runClock: Boolean = true
+    captions: Flow<String?>? = null,   // 음성 안내 문구. 화면 하단 자막으로도 띄운다.
+    runClock: Boolean = true           // false면 시뮬레이터 시계를 자동으로 돌리지 않는다(테스트용).
 ) {
     private val engine = RecommendationEngine(config)
     private val gate = AnnouncementGate(config.announceWithinKm)
 
+    // 화면 상태. _state(밑줄)는 이 클래스 안에서만 고칠 수 있고, 바깥(화면)에는 읽기 전용 state로 보여 준다.
     private val _state = MutableStateFlow(
         TripUiState(
             scenarios = scenarios.map {
@@ -67,31 +76,37 @@ class TripController(
     )
     val state: StateFlow<TripUiState> = _state.asStateFlow()
 
-    private var phase = TripPhase.Idle
+    // ---- 여행 진행 중 기억해 두는 값들 ----
+    private var phase = TripPhase.Idle                       // 지금 여행 단계
+    // offer = 안내했지만 아직 답을 받지 못한 추천, accepted = 운전자가 수락한 추천
     private var offer: RecommendationResult.Recommended? = null
     private var accepted: Recommendation? = null
     private var lastResult: RecommendationResult? = null
     private var lastRoute: RouteState? = null
     private var lastVehicle: VehicleState? = null
     private var stations: List<ChargingStation> = emptyList()
-    private var noSafeWarned = false
+    private var noSafeWarned = false                         // "갈 수 있는 충전소 없음" 경고를 이미 했는지
     private var chargeStartSec = 0.0
     private var chargeFromSoc = 0.0
     private val charges = mutableListOf<Pair<String, ChargeRecord>>() // stationId to record
-    private var arrivedAtSec: Double? = null
-    private var captionClear: Job? = null
+    private var arrivedAtSec: Double? = null                 // 목적지 도착 시각(영수증용)
+    private var captionClear: Job? = null                    // 자막을 일정 시간 뒤 지우는 예약 작업
     // F3 충전 세션(§8)
     private var tracker: ChargingSessionTracker? = null
     private var alerts: AlertScheduler? = null
     private var snapshot: ChargingSnapshot? = null
     private var endedByLimit = false
 
+    // 만들어지자마자 실행되는 준비 작업
     init {
+        // 데모 시계를 돌린다(가상의 차가 움직이기 시작).
         if (runClock) scope.launch { demo.run() }
+        // 경로나 차량 값 중 하나라도 바뀌면 둘을 묶어 onTick을 부른다.
         scope.launch {
             combine(navi.routeState, vehicle.vehicleState) { r, v -> r to v }
                 .collect { (r, v) -> onTick(r, v) }
         }
+        // 새 음성 안내가 나오면 자막으로 띄우고, 8초 뒤 자동으로 지운다.
         captions?.let { flow ->
             scope.launch {
                 flow.collect { c ->
@@ -107,7 +122,9 @@ class TripController(
     }
 
     // ---- 사용자 액션 ----
+    // 화면의 버튼을 누르면 불리는 함수들이다.
 
+    /** 시나리오(예: 서울→부산) 하나를 골라 새 여행을 시작한다. */
     fun startScenario(id: String) {
         demo.load(scenarios.first { it.id == id })
         resetTrip()
@@ -115,6 +132,7 @@ class TripController(
         transition(TripEvent.DestinationSet)
     }
 
+    /** 같은 시나리오를 처음 상태로 되돌린다. */
     fun restart() {
         demo.load(demo.scenario)
         resetTrip()
@@ -125,10 +143,12 @@ class TripController(
     fun accept(stationId: String) {
         val current = offer ?: return
         val rec = (listOf(current.primary) + current.alternatives).firstOrNull { it.station.id == stationId } ?: return
+        // 내비에 경유지를 추가한다. 성공하면 수락 처리, 실패하면 음성으로 알린다.
         scope.launch {
             navi.addWaypoint(rec.station)
                 .onSuccess {
                     navi.requestReRoute()
+                    // 1순위 대신 대안을 골랐다면 1순위는 거절한 것으로 친다.
                     if (rec.station.id != current.primary.station.id) gate.markDeclined(current.primary.station.id)
                     gate.markAnnounced(rec.station.id)
                     accepted = rec
@@ -148,10 +168,12 @@ class TripController(
         transition(TripEvent.Declined)
     }
 
+    /** 휴게소에 도착한 뒤 [충전 시작]. 충전 추적기와 알림 스케줄러를 새로 만든다. */
     fun startCharging() {
         val rec = accepted ?: return
         if (phase != TripPhase.Arrived) return
         val soc = lastVehicle?.socPercent ?: return
+        // 이미 목표 이상이면 충전할 필요 없이 바로 완료 처리한다.
         if (rec.targetSocPercent <= soc) {
             transition(TripEvent.ChargingStarted)
             transition(TripEvent.ChargingFinished)
@@ -173,10 +195,12 @@ class TripController(
         // 충전 시작 감지 SDK가 없으므로 버튼으로 시작한다(§8.1). 데모에선 충전기가 제한 시각에 스스로 끊는다.
         demo.startCharging(rec.targetSocPercent, rec.timeLimitMin)
         transition(TripEvent.ChargingStarted)
+        // 시간 제한이 있으면 "이 충전기는 N분 제한입니다" 안내
         val started = scheduler.start()
         scope.launch { started.forEach { speakAlert(it) } }
     }
 
+    /** 운전자가 직접 [충전 종료]를 누른 경우. */
     fun stopCharging() {
         if (phase != TripPhase.Charging) return
         demo.stopCharging()
@@ -196,10 +220,12 @@ class TripController(
             AlertType.TARGET_REACHED -> phrases.targetReached()
             AlertType.LIMIT_SHORTFALL -> s?.let { phrases.limitShortfall(it.currentSoc, it.targetSoc) }
         } ?: return
+        // 시간 제한 5분 전과 충전 끊김은 급한 소식이라 다른 안내보다 먼저 말한다.
         val priority = if (type == AlertType.LIMIT_T5 || type == AlertType.LIMIT_SHORTFALL) Priority.HIGH else Priority.NORMAL
         announcer.announce(text, priority)
     }
 
+    /** [출발]. 충전 관련 기록을 비우고 다시 주행 단계로 돌아간다. */
     fun depart() {
         val charged = phase == TripPhase.Done
         demo.depart()
@@ -213,6 +239,7 @@ class TripController(
     }
 
     // ---- 개발자 오버레이 ----
+    // 시연할 때 쓰는 숨은 도구: 시간 배속, 일시정지, N km 앞으로 순간 이동
 
     fun devSetSpeed(multiplier: Int) = demo.setSpeed(multiplier).also { publish() }
     fun devTogglePause() = demo.togglePause().also { publish() }
@@ -220,6 +247,14 @@ class TripController(
 
     // ---- 내부 ----
 
+    /**
+     * 새 경로·차량 값이 들어올 때마다 불린다. 지금 단계(phase)에 따라 할 일이 다르다.
+     * - TripPlanned: 처음 한 번 전체 계획을 세워 "충전 N번 필요" 안내
+     * - Driving: 목적지 도착 확인, 아니면 추천 계산 후 안내할 때가 됐는지 확인
+     * - AwaitingDecision: 안내한 추천의 거리 정보를 갱신
+     * - NavigatingToCharger: 차가 멈추면 도착 처리, 아니면 더 나은 곳이 생겼는지 확인
+     * - Charging: 남은 시간 계산, 알림 발송, 충전 종료 판단
+     */
     private suspend fun onTick(route: RouteState?, vehicleState: VehicleState) {
         lastVehicle = vehicleState
         if (route == null) {
@@ -231,6 +266,7 @@ class TripController(
         when (phase) {
             TripPhase.TripPlanned -> {
                 val result = evaluate(route, vehicleState)
+                // 충전이 몇 번 필요한지 센다. 한 번으로 모자라면 2번.
                 val stops = when (result) {
                     is RecommendationResult.Recommended -> if (result.primary.needsAnotherStop) 2 else 1
                     is RecommendationResult.NoSafeStop -> 1
@@ -240,6 +276,7 @@ class TripController(
                 announcer.announce(phrases.tripSummary(stops))
             }
             TripPhase.Driving -> {
+                // 남은 거리가 50m 이하면 목적지 도착
                 if (route.remainingDistanceKm <= ARRIVED_KM) {
                     arrivedAtSec = demo.state.value.simTimeSec
                     transition(TripEvent.DestinationReached)
@@ -247,6 +284,7 @@ class TripController(
                     when (val result = evaluate(route, vehicleState)) {
                         is RecommendationResult.Recommended ->
                             if (gate.shouldAnnounce(result.primary)) announce(result)
+                        // 갈 수 있는 충전소가 없다는 경고는 한 번만 한다.
                         is RecommendationResult.NoSafeStop -> if (!noSafeWarned) {
                             noSafeWarned = true
                             announcer.announce(phrases.noSafeStop(), Priority.HIGH)
@@ -257,6 +295,7 @@ class TripController(
             }
             TripPhase.AwaitingDecision -> refreshOffer(route, vehicleState)
             TripPhase.NavigatingToCharger -> {
+                // 차가 멈췄다 = 휴게소에 도착했다고 본다.
                 if (!vehicleState.isDriving) {
                     transition(TripEvent.ArrivedAtStop)
                 } else {
@@ -270,7 +309,8 @@ class TripController(
                     val snap = t.update(demo.state.value.simTimeSec, vehicleState.socPercent)
                     snapshot = snap
                     val due = scheduler.evaluate(snap)
-                    val finished = snap.reached || snap.limitExpired || !demoCharging()
+                    // 충전이 끝나는 경우: 목표 도달, 시간 제한 만료, 또는 충전기가 스스로 멈춤
+                    val finished =snap.reached || snap.limitExpired || !demoCharging()
                     if (finished) {
                         if (demoCharging()) demo.stopCharging()
                         endedByLimit = snap.limitExpired && !snap.reached
@@ -286,11 +326,13 @@ class TripController(
         publish()
     }
 
+    /** 경로상 충전소를 새로 받아(거절한 곳은 빼고) 추천 엔진을 돌린다. */
     private suspend fun evaluate(route: RouteState, v: VehicleState): RecommendationResult {
         stations = chargerData.stationsAlongRoute(route).filter { it.id !in gate.declinedIds }
         return engine.recommend(route, v, stations, demo.scenario.profile).also { lastResult = it }
     }
 
+    /** 추천을 운전자에게 알린다. 1순위가 붐비면 대안과 비교하는 문구로, 아니면 일반 추천 문구로 말한다. */
     private suspend fun announce(result: RecommendationResult.Recommended) {
         offer = result
         gate.markAnnounced(result.primary.station.id)
@@ -314,6 +356,8 @@ class TripController(
             decline()
             return
         }
+        // 1순위가 그대로면 새 계산값을 쓰고(혼잡 여부는 처음 안내한 그대로 유지),
+        // 1순위가 바뀌었으면 화면이 갑자기 바뀌지 않게 기존 추천의 거리만 갱신한다.
         if (result is RecommendationResult.Recommended && result.primary.station.id == current.primary.station.id) {
             offer = result.copy(congested = current.congested)
         } else {
@@ -338,6 +382,7 @@ class TripController(
         }
     }
 
+    // 추천 내용은 그대로 두고 "남은 거리"만 최신 값으로 바꾼다.
     private fun Recommendation.withDistanceFrom(list: List<ChargingStation>): Recommendation {
         val s = list.firstOrNull { it.id == station.id } ?: return this
         return copy(station = station.copy(distanceAlongRouteKm = s.distanceAlongRouteKm))
@@ -345,6 +390,7 @@ class TripController(
 
     private fun demoCharging() = demo.state.value.phase == SimPhase.CHARGING
 
+    // 이번 충전 결과(몇 %→몇 %, 몇 분)를 영수증에 남긴다.
     private fun recordCharge() {
         val rec = accepted ?: return
         val sim = demo.state.value
@@ -357,6 +403,7 @@ class TripController(
         )
     }
 
+    // 상태 머신에 사건을 넣어 다음 단계로 넘어가고, 화면을 갱신한다.
     private fun transition(event: TripEvent) {
         val next = TripStateMachine.reduce(phase, event)
         // 화면이 바뀌면 이전 화면의 자막은 지운다. 새 안내가 나오면 다시 채워진다.
@@ -365,6 +412,7 @@ class TripController(
         publish()
     }
 
+    // 새 여행을 위해 기억해 둔 값을 모두 처음으로 돌린다.
     private fun resetTrip() {
         phase = TripStateMachine.reduce(phase, TripEvent.Reset)
         offer = null
@@ -381,6 +429,7 @@ class TripController(
         announcer.reset()
     }
 
+    /** 지금까지 계산한 모든 값을 화면용 상태([TripUiState]) 하나로 묶어 내보낸다. 화면은 이것만 보고 다시 그린다. */
     private fun publish() {
         val v = lastVehicle
         val route = lastRoute
@@ -414,6 +463,7 @@ class TripController(
         }
     }
 
+    /** 주행 화면 아래쪽에 띄울 카드를 고른다: 추천 / 혼잡 비교 / 휴게소로 이동 중 / 경고 / 평소 상태 */
     private fun buildCard(): DriveCard {
         val o = offer
         val acc = accepted
@@ -447,6 +497,7 @@ class TripController(
         }
     }
 
+    /** 경로 막대 위에 휴게소 표시를 만든다. 각 휴게소를 충전함/목표/거절/지나침/앞에 있음 중 하나로 칠한다. */
     private fun buildMarks(traveledKm: Double): List<RouteMark> {
         val sc = demo.scenario
         val chargedIds = charges.map { it.first }.toSet()
@@ -467,6 +518,7 @@ class TripController(
         }
     }
 
+    /** 통행권 모양 영수증에 들어갈 여행 기록(출발·도착 시각, 충전 내역, 거절한 휴게소). */
     private fun buildReceipt(v: VehicleState?): TripReceipt? {
         if (phase == TripPhase.Idle) return null
         val sc = demo.scenario
@@ -482,6 +534,7 @@ class TripController(
         )
     }
 
+    /** 휴게소 정차 화면(도착·충전 중·완료)에 보여 줄 숫자들. 충전 중에는 실측 보정값을 쓴다. */
     private fun buildStop(v: VehicleState?): StopInfo? {
         val rec = accepted ?: return null
         if (v == null || phase !in STOP_PHASES) return null
@@ -518,6 +571,7 @@ class TripController(
         )
     }
 
+    // 시뮬레이터 경과 초를 "14:05" 같은 시각 글자로 바꾼다. 시나리오 출발 시각에서부터 센다.
     private fun clockText(simSec: Double): String {
         val total = demo.scenario.startHour * 3600 + simSec.toLong()
         val h = (total / 3600) % 24
@@ -526,8 +580,9 @@ class TripController(
     }
 
     private companion object {
-        const val ARRIVED_KM = 0.05
-        const val CAPTION_MS = 8_000L
+        const val ARRIVED_KM = 0.05      // 목적지까지 50m 이내면 도착으로 본다.
+        const val CAPTION_MS = 8_000L    // 자막을 띄워 두는 시간(8초)
+        // 정차 화면을 보여 주는 단계들
         val STOP_PHASES = setOf(TripPhase.Arrived, TripPhase.Charging, TripPhase.Done)
     }
 }
