@@ -147,6 +147,26 @@ app/src/main/assets/                   # 가상 샘플 데이터(휴게소, 경�
 
 **필요한 것:** JDK 17, Android SDK(platform 36, build-tools), Android 9(API 28) 이상 기기 또는 에뮬레이터
 
+**Android Studio 없이 Windows에서 실행하기**
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force; .\scripts\setup-android-sdk.ps1
+```
+
+```powershell
+& "$HOME\Android\Sdk\emulator\emulator.exe" -avd chargis_wide
+```
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force; .\scripts\run-demo.ps1
+```
+
+1. 첫 번째 명령은 처음 한 번만 실행합니다. Android SDK와 에뮬레이터를 `%USERPROFILE%\Android\Sdk`에 설치하고, 가로형 태블릿 에뮬레이터 `chargis_wide`를 만들고, `local.properties`를 설정합니다. 실행하면 Android SDK 라이선스에 동의하게 됩니다.
+2. 두 번째 명령으로 에뮬레이터를 켭니다.
+3. 세 번째 명령은 **다른 터미널**에서 실행합니다. 에뮬레이터 부팅이 끝나기를 기다렸다가 앱을 빌드·설치하고 실행합니다.
+
+**직접 빌드하기**
+
 ```bash
 ./gradlew assembleDebug testDebugUnitTest
 ```
