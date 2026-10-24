@@ -14,6 +14,7 @@
     <string name="tts_rule_notice">이 충전기는 %1$d분 제한이 있습니다.</string>
     <string name="tts_limit_warn">%1$d분 뒤 충전이 종료됩니다. 현재 약 %2$d퍼센트, 종료 시 약 %3$d퍼센트가 예상됩니다.</string>
     <string name="tts_target_soon">곧 목표 충전량입니다. 이동 준비하세요.</string>
+    <string name="tts_limit_shortfall">충전 제한 시간이 끝나 %1$d퍼센트에서 충전이 종료되었습니다. 목표 %2$d퍼센트에 못 미쳐 다음 휴게소에서 한 번 더 충전이 필요합니다.</string>
     <string name="tts_target_reached">목표 충전량에 도달했습니다. 출발할 수 있습니다.</string>
     <string name="tts_resume">충전을 마쳤습니다. 길 안내를 이어 갑니다.</string>
     <string name="tts_no_safe_stop">배터리가 부족합니다. 가장 가까운 충전소에서 충전하세요.</string>
@@ -87,6 +88,7 @@
     <string name="stamp_arrived">도착</string>
     <string name="stamp_charged">충전 완료</string>
     <string name="stamp_settled">정산 완료</string>
+    <string name="stamp_limit">제한 종료</string>
 
     <!-- 정차·충전 -->
     <string name="parked_start_charging">충전 시작</string>
@@ -101,6 +103,8 @@
     <string name="col_available">가용</string>
     <string name="col_wait">대기</string>
     <string name="charging_title">%1$s 충전 중</string>
+    <string name="charging_limit_forecast">제한 시간에 약 %1$d%%에서 충전이 끝날 예정</string>
+    <string name="done_limit_note">목표 %1$d%% 중 %2$d%%까지 충전 · 다음 휴게소에서 한 번 더 충전</string>
     
 
     <!-- 정산 영수증 -->
@@ -111,6 +115,7 @@
     <string name="receipt_arrive">도착</string>
     <string name="receipt_total">총 거리</string>
     <string name="receipt_charge_value">%1$d → %2$d%% · %3$d분</string>
+    <string name="receipt_limit_suffix">%1$s · 제한</string>
     <string name="receipt_soc_value">%1$s · %2$d%%</string>
     <string name="receipt_again">다시 발권</string>
     <string name="finished_title">목적지 도착</string>

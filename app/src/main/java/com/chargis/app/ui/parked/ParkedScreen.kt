@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.chargis.app.R
 import com.chargis.app.domain.session.TripPhase
 import com.chargis.app.ui.CandidateTable
+import com.chargis.app.ui.ChargeRecord
 import com.chargis.app.ui.MeasureField
 import com.chargis.app.ui.ScenarioOption
 import com.chargis.app.ui.StopInfo
@@ -48,6 +49,7 @@ import com.chargis.app.ui.ticket.Stamp
 import com.chargis.app.ui.ticket.TearLine
 import com.chargis.app.ui.ticket.TicketButton
 import com.chargis.app.ui.ticket.TicketStock
+import com.chargis.app.ui.ticket.WarnGlyph
 import kotlin.math.roundToInt
 
 /** 정차·충전 중 화면(plan.md §9.3). 상세와 스크롤을 허용한다. */
@@ -90,7 +92,7 @@ private fun IssueScreen(options: List<ScenarioOption>, onStart: (String) -> Unit
             Spacer(Modifier.height(20.dp))
             Text(stringResource(R.string.idle_lede), style = MaterialTheme.typography.bodyLarge, color = c.inkMuted, modifier = Modifier.widthIn(max = 460.dp))
         }
-        Column(Modifier.weight(1.25f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)) {
+        Column(Modifier.weight(1.25f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
             options.forEach { IssueTicket(it, onStart) }
         }
     }
@@ -101,9 +103,9 @@ private fun IssueTicket(option: ScenarioOption, onStart: (String) -> Unit) {
     val c = Ticket.colors
     TicketStock(Modifier.fillMaxWidth(), perforationX = 180.dp, perforationFromEnd = true) {
         Row(Modifier.fillMaxWidth().padding(start = 28.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f).padding(vertical = 32.dp)) {
+            Column(Modifier.weight(1f).padding(vertical = 22.dp)) {
                 Text(option.title, style = MaterialTheme.typography.headlineMedium, color = c.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
                     MeasureField(stringResource(R.string.label_distance), "${option.distanceKm.roundToInt()}", stringResource(R.string.unit_km), FigureStyle.Medium)
                     MeasureField(stringResource(R.string.label_start_soc), "${option.startSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Medium)
@@ -150,7 +152,7 @@ private fun TripLines(state: TripUiState) {
     state.receipt?.let { r ->
         ReceiptLine(stringResource(R.string.label_issued), stringResource(R.string.receipt_soc_value, r.departAt, r.startSoc.roundToInt()))
         r.charges.forEach {
-            ReceiptLine("${stringResource(R.string.receipt_charge)} · ${it.stationName}", stringResource(R.string.receipt_charge_value, it.fromSoc.roundToInt(), it.toSoc.roundToInt(), it.minutes))
+            ReceiptLine("${stringResource(R.string.receipt_charge)} · ${it.stationName}", chargeValue(it))
         }
         r.declinedNames.forEach { ReceiptLine("${stringResource(R.string.receipt_declined)} · $it", "—", muted = true) }
     }
@@ -212,12 +214,24 @@ private fun ColumnScope.ChargingBody(stop: StopInfo, onStop: () -> Unit) {
         MeasureField(stringResource(R.string.label_to_target), "${stop.minutesToTarget}", stringResource(R.string.unit_min), FigureStyle.Medium, Modifier.weight(1f))
         HairlineV(Modifier.height(84.dp).padding(end = 24.dp))
         if (stop.minutesToLimit != null) {
-            MeasureField(stringResource(R.string.label_to_limit), "${stop.minutesToLimit}", stringResource(R.string.unit_min), FigureStyle.Medium, Modifier.weight(1f))
+            val limitNear = stop.willHitLimit && stop.minutesToLimit <= 10
+            MeasureField(
+                stringResource(R.string.label_to_limit),
+                "${stop.minutesToLimit}",
+                stringResource(R.string.unit_min),
+                FigureStyle.Medium,
+                Modifier.weight(1f),
+                color = if (limitNear) c.warn else c.ink
+            )
         } else {
             LimitField(null, Modifier.weight(1f))
         }
         HairlineV(Modifier.height(84.dp).padding(end = 24.dp))
         MeasureField(stringResource(R.string.label_depart_at), stop.departAt, null, FigureStyle.Large.copy(fontSize = FigureStyle.Medium.fontSize * 1.3f), Modifier.weight(1.3f))
+    }
+    if (stop.willHitLimit && stop.predictedSocAtLimit != null) {
+        Spacer(Modifier.height(16.dp))
+        LimitWarnLine(stringResource(R.string.charging_limit_forecast, stop.predictedSocAtLimit.roundToInt()))
     }
     Spacer(Modifier.weight(1f))
     TearLine(Modifier.padding(vertical = 8.dp))
@@ -259,13 +273,37 @@ private fun ColumnScope.DoneBody(stop: StopInfo, soc: Double, onDepart: () -> Un
     Spacer(Modifier.height(4.dp))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(32.dp)) {
         Figure("${soc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Monumental)
-        Stamp(stringResource(R.string.stamp_charged))
+        if (stop.endedByLimit) {
+            Stamp(stringResource(R.string.stamp_limit), color = c.warn)
+        } else {
+            Stamp(stringResource(R.string.stamp_charged))
+        }
     }
     Spacer(Modifier.height(12.dp))
     CellGauge(soc, stop.targetSoc)
+    if (stop.endedByLimit) {
+        Spacer(Modifier.height(16.dp))
+        LimitWarnLine(stringResource(R.string.done_limit_note, stop.targetSoc.roundToInt(), soc.roundToInt()))
+    }
     Spacer(Modifier.weight(1f))
     TearLine(Modifier.padding(vertical = 8.dp))
     TicketButton(stringResource(R.string.parked_depart), onDepart, Modifier.fillMaxWidth(), minHeight = 104.dp)
+}
+
+@Composable
+private fun LimitWarnLine(text: String) {
+    val c = Ticket.colors
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        WarnGlyph(size = 26.dp)
+        Text(text, style = MaterialTheme.typography.titleMedium, color = c.warn)
+    }
+}
+
+/** 충전 기록 한 줄의 값. 충전기 시간 제한으로 끝났으면 "· 제한"을 붙인다. */
+@Composable
+private fun chargeValue(r: ChargeRecord): String {
+    val base = stringResource(R.string.receipt_charge_value, r.fromSoc.roundToInt(), r.toSoc.roundToInt(), r.minutes)
+    return if (r.endedByLimit) stringResource(R.string.receipt_limit_suffix, base) else base
 }
 
 // ---- 정산 영수증 ----
@@ -309,7 +347,7 @@ private fun ReceiptBody(receipt: TripReceipt, title: String) {
         receipt.charges.forEach {
             ReceiptLine(
                 "${stringResource(R.string.receipt_charge)} · ${it.stationName}",
-                stringResource(R.string.receipt_charge_value, it.fromSoc.roundToInt(), it.toSoc.roundToInt(), it.minutes)
+                chargeValue(it)
             )
         }
         receipt.declinedNames.forEach {

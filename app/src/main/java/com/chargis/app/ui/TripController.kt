@@ -10,6 +10,10 @@ import com.chargis.app.domain.model.RecommendationConfig
 import com.chargis.app.domain.model.RecommendationResult
 import com.chargis.app.domain.model.RouteState
 import com.chargis.app.domain.model.VehicleState
+import com.chargis.app.domain.session.AlertScheduler
+import com.chargis.app.domain.session.AlertType
+import com.chargis.app.domain.session.ChargingSessionTracker
+import com.chargis.app.domain.session.ChargingSnapshot
 import com.chargis.app.domain.session.TripEvent
 import com.chargis.app.domain.session.TripPhase
 import com.chargis.app.domain.session.TripStateMachine
@@ -76,6 +80,11 @@ class TripController(
     private val charges = mutableListOf<Pair<String, ChargeRecord>>() // stationId to record
     private var arrivedAtSec: Double? = null
     private var captionClear: Job? = null
+    // F3 충전 세션(§8)
+    private var tracker: ChargingSessionTracker? = null
+    private var alerts: AlertScheduler? = null
+    private var snapshot: ChargingSnapshot? = null
+    private var endedByLimit = false
 
     init {
         if (runClock) scope.launch { demo.run() }
@@ -150,9 +159,22 @@ class TripController(
         }
         chargeStartSec = demo.state.value.simTimeSec
         chargeFromSoc = soc
-        demo.startCharging(rec.targetSocPercent)
+        endedByLimit = false
+        tracker = ChargingSessionTracker(
+            profile = demo.scenario.profile,
+            config = config,
+            stationMaxKw = rec.station.maxKw,
+            targetSoc = rec.targetSocPercent,
+            timeLimitMin = rec.timeLimitMin,
+            startSec = chargeStartSec
+        )
+        val scheduler = AlertScheduler(rec.timeLimitMin).also { alerts = it }
+        snapshot = tracker?.update(chargeStartSec, soc)
+        // 충전 시작 감지 SDK가 없으므로 버튼으로 시작한다(§8.1). 데모에선 충전기가 제한 시각에 스스로 끊는다.
+        demo.startCharging(rec.targetSocPercent, rec.timeLimitMin)
         transition(TripEvent.ChargingStarted)
-        rec.timeLimitMin?.let { limit -> scope.launch { announcer.announce(phrases.ruleNotice(limit)) } }
+        val started = scheduler.start()
+        scope.launch { started.forEach { speakAlert(it) } }
     }
 
     fun stopCharging() {
@@ -162,11 +184,31 @@ class TripController(
         transition(TripEvent.ChargingFinished)
     }
 
+    /** §8.3 알림을 음성으로 낸다. 문구 속 숫자는 같은 스냅숏에서 가져온다. */
+    private suspend fun speakAlert(type: AlertType) {
+        val s = snapshot
+        val rec = accepted
+        val text = when (type) {
+            AlertType.RULE_NOTICE -> rec?.timeLimitMin?.let(phrases::ruleNotice)
+            AlertType.LIMIT_T10 -> s?.let { phrases.limitWarn(10, it.currentSoc, it.predictedSocAtLimit ?: it.currentSoc) }
+            AlertType.LIMIT_T5 -> s?.let { phrases.limitWarn(5, it.currentSoc, it.predictedSocAtLimit ?: it.currentSoc) }
+            AlertType.TARGET_T5 -> phrases.targetSoon()
+            AlertType.TARGET_REACHED -> phrases.targetReached()
+            AlertType.LIMIT_SHORTFALL -> s?.let { phrases.limitShortfall(it.currentSoc, it.targetSoc) }
+        } ?: return
+        val priority = if (type == AlertType.LIMIT_T5 || type == AlertType.LIMIT_SHORTFALL) Priority.HIGH else Priority.NORMAL
+        announcer.announce(text, priority)
+    }
+
     fun depart() {
         val charged = phase == TripPhase.Done
         demo.depart()
         transition(TripEvent.Depart)
         accepted = null
+        tracker = null
+        alerts = null
+        snapshot = null
+        endedByLimit = false
         if (charged) scope.launch { announcer.announce(phrases.resume()) }
     }
 
@@ -222,10 +264,20 @@ class TripController(
                 }
             }
             TripPhase.Charging -> {
-                if (!demoCharging()) {
-                    recordCharge()
-                    transition(TripEvent.ChargingFinished)
-                    announcer.announce(phrases.targetReached())
+                val t = tracker
+                val scheduler = alerts
+                if (t != null && scheduler != null) {
+                    val snap = t.update(demo.state.value.simTimeSec, vehicleState.socPercent)
+                    snapshot = snap
+                    val due = scheduler.evaluate(snap)
+                    val finished = snap.reached || snap.limitExpired || !demoCharging()
+                    if (finished) {
+                        if (demoCharging()) demo.stopCharging()
+                        endedByLimit = snap.limitExpired && !snap.reached
+                        recordCharge()
+                        transition(TripEvent.ChargingFinished)
+                    }
+                    due.forEach { speakAlert(it) }
                 }
             }
             TripPhase.Resuming -> transition(TripEvent.ResumeComplete)
@@ -300,7 +352,8 @@ class TripController(
             stationName = rec.station.name,
             fromSoc = chargeFromSoc,
             toSoc = sim.soc,
-            minutes = ceil((sim.simTimeSec - chargeStartSec) / 60.0).toInt()
+            minutes = ceil((sim.simTimeSec - chargeStartSec) / 60.0 - 1e-9).toInt(),
+            endedByLimit = endedByLimit
         )
     }
 
@@ -320,6 +373,10 @@ class TripController(
         noSafeWarned = false
         charges.clear()
         arrivedAtSec = null
+        tracker = null
+        alerts = null
+        snapshot = null
+        endedByLimit = false
         gate.reset()
         announcer.reset()
     }
@@ -428,19 +485,36 @@ class TripController(
     private fun buildStop(v: VehicleState?): StopInfo? {
         val rec = accepted ?: return null
         if (v == null || phase !in STOP_PHASES) return null
+        val sim = demo.state.value
+        val snap = snapshot
+        if (phase == TripPhase.Charging && snap != null) {
+            return StopInfo(
+                stationName = rec.station.name,
+                currentSoc = v.socPercent,
+                targetSoc = rec.targetSocPercent,
+                minutesToTarget = ceil(snap.minutesToTarget - 1e-9).toInt(),
+                timeLimitMin = rec.timeLimitMin,
+                minutesToLimit = snap.minutesToLimit?.let { max(0, ceil(it - 1e-9).toInt()) },
+                departAt = clockText(snap.departAtSec),
+                predictedSocAtLimit = snap.predictedSocAtLimit,
+                willHitLimit = snap.willHitLimit
+            )
+        }
+        // 도착(충전 전)·완료: 모델값으로 예상한다.
         val profile = demo.scenario.profile
         val toTarget = ChargeMath.chargeMinutes(v.socPercent, rec.targetSocPercent, rec.station.maxKw, profile, config)
-        val sim = demo.state.value
-        val elapsedMin = if (phase == TripPhase.Charging) (sim.simTimeSec - chargeStartSec) / 60.0 else 0.0
-        val toLimit = rec.timeLimitMin?.let { max(0, ceil(it - elapsedMin).toInt()) }
+        val atLimit = rec.timeLimitMin?.let { ChargeMath.socAfterMinutes(v.socPercent, it.toDouble(), rec.station.maxKw, profile, config) }
         return StopInfo(
             stationName = rec.station.name,
             currentSoc = v.socPercent,
             targetSoc = rec.targetSocPercent,
             minutesToTarget = ceil(toTarget).toInt(),
             timeLimitMin = rec.timeLimitMin,
-            minutesToLimit = toLimit,
-            departAt = clockText(sim.simTimeSec + toTarget * 60)
+            minutesToLimit = rec.timeLimitMin,
+            departAt = clockText(sim.simTimeSec + toTarget * 60),
+            predictedSocAtLimit = atLimit,
+            willHitLimit = rec.timeLimitMin != null && toTarget > rec.timeLimitMin,
+            endedByLimit = phase == TripPhase.Done && endedByLimit
         )
     }
 

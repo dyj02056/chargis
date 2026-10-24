@@ -34,7 +34,13 @@ data class StopInfo(
     val minutesToTarget: Int,
     val timeLimitMin: Int?,
     val minutesToLimit: Int?,
-    val departAt: String
+    val departAt: String,
+    /** 제한 시각에 도달할 것으로 보이는 SoC. 제한 없음이면 null. */
+    val predictedSocAtLimit: Double? = null,
+    /** 제한 안에 목표에 닿지 못할 것으로 보이면 true. */
+    val willHitLimit: Boolean = false,
+    /** 충전기 시간 제한으로 충전이 끝났으면 true(Done 화면용). */
+    val endedByLimit: Boolean = false
 )
 
 /** 경로 띠에 찍히는 휴게소 표시. 지나친 곳도 지우지 않고 상태로 남긴다. */
@@ -46,7 +52,8 @@ data class ChargeRecord(
     val stationName: String,
     val fromSoc: Double,
     val toSoc: Double,
-    val minutes: Int
+    val minutes: Int,
+    val endedByLimit: Boolean = false
 )
 
 /** 도착 시 인쇄하는 정산 영수증. */

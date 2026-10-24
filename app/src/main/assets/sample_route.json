@@ -1,5 +1,5 @@
 {
-  "note": "가상 경로/좌표. S1 기본, S2 명절 혼잡.",
+  "note": "가상 경로/좌표. S1 기본, S2 명절 혼잡, S3 충전기 시간 제한.",
   "scenarios": [
     {
       "id": "S1",
@@ -31,6 +31,20 @@
         { "id": "rest_b", "availableChargers": 0, "expectedWaitMin": 30 },
         { "id": "rest_c", "availableChargers": 3, "expectedWaitMin": 5 }
       ]
+    },
+    {
+      "id": "S3",
+      "title": "S3 충전 제한 · 서울→부산(가상)",
+      "seed": 3,
+      "profileId": "default",
+      "totalDistanceKm": 330.0,
+      "startSoc": 45.0,
+      "speedKmh": 100.0,
+      "startHour": 8,
+      "start": { "lat": 37.55, "lon": 127.05 },
+      "destination": { "lat": 35.18, "lon": 129.07 },
+      "stationIds": ["rest_e", "rest_f"],
+      "stationOverrides": []
     }
   ]
 }

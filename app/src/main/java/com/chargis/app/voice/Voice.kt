@@ -19,6 +19,9 @@ interface VoicePhrases {
     fun waypointAdded(name: String): String
     fun waypointFailed(): String
     fun ruleNotice(limitMin: Int): String
+    fun limitWarn(minutesLeft: Int, nowSoc: Double, endSoc: Double): String
+    fun targetSoon(): String
+    fun limitShortfall(endSoc: Double, targetSoc: Double): String
     fun targetReached(): String
     fun resume(): String
     fun noSafeStop(): String
@@ -36,6 +39,11 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
     override fun waypointAdded(name: String) = s(R.string.tts_waypoint_added, name)
     override fun waypointFailed() = s(R.string.tts_waypoint_failed)
     override fun ruleNotice(limitMin: Int) = s(R.string.tts_rule_notice, limitMin)
+    override fun limitWarn(minutesLeft: Int, nowSoc: Double, endSoc: Double) =
+        s(R.string.tts_limit_warn, minutesLeft, nowSoc.roundToInt(), endSoc.roundToInt())
+    override fun targetSoon() = s(R.string.tts_target_soon)
+    override fun limitShortfall(endSoc: Double, targetSoc: Double) =
+        s(R.string.tts_limit_shortfall, endSoc.roundToInt(), targetSoc.roundToInt())
     override fun targetReached() = s(R.string.tts_target_reached)
     override fun resume() = s(R.string.tts_resume)
     override fun noSafeStop() = s(R.string.tts_no_safe_stop)

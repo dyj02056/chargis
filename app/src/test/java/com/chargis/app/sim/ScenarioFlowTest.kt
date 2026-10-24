@@ -45,6 +45,9 @@ class ScenarioFlowTest {
         override fun waypointAdded(name: String) = "waypoint:$name"
         override fun waypointFailed() = "waypoint_failed"
         override fun ruleNotice(limitMin: Int) = "rule:$limitMin"
+        override fun limitWarn(minutesLeft: Int, nowSoc: Double, endSoc: Double) = "limit_warn:$minutesLeft:${endSoc.toInt()}"
+        override fun targetSoon() = "target_soon"
+        override fun limitShortfall(endSoc: Double, targetSoc: Double) = "limit_shortfall:${endSoc.toInt()}:${targetSoc.toInt()}"
         override fun targetReached() = "target_reached"
         override fun resume() = "resume"
         override fun noSafeStop() = "no_safe"
@@ -124,7 +127,7 @@ class ScenarioFlowTest {
             phases.filter { it != TripPhase.TripPlanned && it != TripPhase.Resuming }
         )
         assertEquals(
-            listOf("summary:1", "recommend:B 휴게소:50", "waypoint:B 휴게소", "rule:40", "target_reached", "resume"),
+            listOf("summary:1", "recommend:B 휴게소:50", "waypoint:B 휴게소", "rule:40", "target_soon", "target_reached", "resume"),
             h.tts.spoken
         )
         assertTrue(h.sim.state.value.soc >= 10.0)
@@ -160,6 +163,47 @@ class ScenarioFlowTest {
         runCurrent()
         drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
         assertEquals(130.0, h.sim.state.value.traveledKm, 1e-6)
+    }
+
+    /**
+     * S3: E 휴게소 40분 제한 안에 목표(80%)에 닿지 못하는 충전.
+     * 규칙 안내 → 제한 10분·5분 전 경고 → 제한 종료(미달) → 출발 후 F 휴게소 재추천.
+     */
+    @Test
+    fun s3_timeLimitWarningsShortfallAndReRecommend() = runTest {
+        val h = harness()
+        h.controller.startScenario("S3")
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        val rec = (h.controller.state.value.card as DriveCard.Recommend).rec
+        assertEquals("rest_e", rec.station.id)
+        assertEquals(80.0, rec.targetSocPercent, 1e-9)
+        assertTrue(rec.willHitTimeLimit)
+
+        h.controller.accept("rest_e")
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
+        h.controller.startCharging()
+        runCurrent()
+
+        // 충전 중 화면: 제한에 걸릴 예정이 표시된다
+        assertTrue(h.controller.state.value.stop?.willHitLimit == true)
+        drive(h) { h.controller.state.value.phase == TripPhase.Done }
+        val stop = h.controller.state.value.stop!!
+        assertTrue(stop.endedByLimit)
+        assertEquals(59.2, h.sim.state.value.soc, 0.2) // T2와 같은 역산: 26.9% + 40분×37.5kW
+        assertEquals(40, h.controller.state.value.receipt!!.charges.single().minutes)
+        assertTrue(h.controller.state.value.receipt!!.charges.single().endedByLimit)
+
+        h.controller.depart()
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        val next = (h.controller.state.value.card as DriveCard.Recommend).rec
+        assertEquals("rest_f", next.station.id)
+
+        val spoken = h.tts.spoken
+        val f3 = spoken.filter { it.startsWith("rule") || it.startsWith("limit") || it.startsWith("target") }
+        assertEquals(listOf("rule:40", "limit_warn:10:59", "limit_warn:5:59", "limit_shortfall:59:80"), f3)
+        assertTrue(spoken.indexOf("limit_shortfall:59:80") < spoken.indexOfFirst { it.startsWith("recommend:F 휴게소") })
     }
 
     @Test

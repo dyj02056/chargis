@@ -15,6 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.sp
 import com.chargis.app.R
@@ -87,6 +88,8 @@ object FigureStyle {
 
 // 한글은 어절 단위로 줄을 바꾼다(API 33+). 그 아래 버전에서는 무시된다.
 private val KoreanLineBreak = LineBreak(LineBreak.Strategy.HighQuality, LineBreak.Strictness.Normal, LineBreak.WordBreak.Phrase)
+// 어절 단위 줄바꿈은 글자의 로캘이 한국어일 때만 동작한다. 기기 언어와 상관없이 한국어로 지정한다.
+private val Korean = LocaleList("ko-KR")
 
 private val baseTypography = Typography(
     displayMedium = TextStyle(fontFamily = SansFamily, fontWeight = FontWeight.ExtraBold, fontSize = 48.sp, lineHeight = 56.sp, letterSpacing = (-1).sp),
@@ -101,13 +104,13 @@ private val baseTypography = Typography(
 )
 
 private val typography = baseTypography.copy(
-    displayMedium = baseTypography.displayMedium.copy(lineBreak = KoreanLineBreak),
-    displaySmall = baseTypography.displaySmall.copy(lineBreak = KoreanLineBreak),
-    headlineMedium = baseTypography.headlineMedium.copy(lineBreak = KoreanLineBreak),
-    titleLarge = baseTypography.titleLarge.copy(lineBreak = KoreanLineBreak),
-    titleMedium = baseTypography.titleMedium.copy(lineBreak = KoreanLineBreak),
-    bodyLarge = baseTypography.bodyLarge.copy(lineBreak = KoreanLineBreak),
-    bodyMedium = baseTypography.bodyMedium.copy(lineBreak = KoreanLineBreak)
+    displayMedium = baseTypography.displayMedium.copy(lineBreak = KoreanLineBreak, localeList = Korean),
+    displaySmall = baseTypography.displaySmall.copy(lineBreak = KoreanLineBreak, localeList = Korean),
+    headlineMedium = baseTypography.headlineMedium.copy(lineBreak = KoreanLineBreak, localeList = Korean),
+    titleLarge = baseTypography.titleLarge.copy(lineBreak = KoreanLineBreak, localeList = Korean),
+    titleMedium = baseTypography.titleMedium.copy(lineBreak = KoreanLineBreak, localeList = Korean),
+    bodyLarge = baseTypography.bodyLarge.copy(lineBreak = KoreanLineBreak, localeList = Korean),
+    bodyMedium = baseTypography.bodyMedium.copy(lineBreak = KoreanLineBreak, localeList = Korean)
 )
 
 private fun TicketPalette.toScheme(): ColorScheme {

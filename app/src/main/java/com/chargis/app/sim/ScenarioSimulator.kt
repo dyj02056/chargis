@@ -40,7 +40,8 @@ data class SimState(
     val paused: Boolean,
     val waypointId: String? = null,
     val stoppedAtId: String? = null,
-    val chargeTargetSoc: Double? = null
+    val chargeTargetSoc: Double? = null,
+    val chargeEndsAtSec: Double? = null    // 충전기 시간 제한이 끊는 시각(없으면 null)
 ) {
     val isDriving: Boolean get() = phase == SimPhase.DRIVING
 }
@@ -79,19 +80,24 @@ class ScenarioSimulator(
         return true
     }
 
-    fun startCharging(targetSoc: Double) = _state.update {
+    /** [limitMinutes]가 있으면 그 시간이 지나면 충전기가 스스로 끊는다(목표 미도달이어도). */
+    fun startCharging(targetSoc: Double, limitMinutes: Int? = null) = _state.update {
         if (it.phase == SimPhase.STOPPED_AT_STATION && targetSoc > it.soc) {
-            it.copy(phase = SimPhase.CHARGING, chargeTargetSoc = targetSoc)
+            it.copy(
+                phase = SimPhase.CHARGING,
+                chargeTargetSoc = targetSoc,
+                chargeEndsAtSec = limitMinutes?.let { m -> it.simTimeSec + m * 60.0 }
+            )
         } else it
     }
 
     fun stopCharging() = _state.update {
-        if (it.phase == SimPhase.CHARGING) it.copy(phase = SimPhase.STOPPED_AT_STATION, chargeTargetSoc = null) else it
+        if (it.phase == SimPhase.CHARGING) it.copy(phase = SimPhase.STOPPED_AT_STATION, chargeTargetSoc = null, chargeEndsAtSec = null) else it
     }
 
     fun depart() = _state.update {
         if (it.phase == SimPhase.STOPPED_AT_STATION) {
-            it.copy(phase = SimPhase.DRIVING, stoppedAtId = null, chargeTargetSoc = null)
+            it.copy(phase = SimPhase.DRIVING, stoppedAtId = null, chargeTargetSoc = null, chargeEndsAtSec = null)
         } else it
     }
 
@@ -155,11 +161,14 @@ class ScenarioSimulator(
     private fun advanceCharging(s: SimState, dtSec: Double) {
         val station = scenario.stations.first { it.id == s.stoppedAtId }
         val target = s.chargeTargetSoc ?: return
-        val soc = ChargeMath.socAfterMinutes(s.soc, dtSec / 60.0, station.maxKw, scenario.profile, config)
-        _state.value = if (soc >= target) {
-            s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = target, simTimeSec = s.simTimeSec + dtSec, chargeTargetSoc = null)
-        } else {
-            s.copy(soc = soc, simTimeSec = s.simTimeSec + dtSec)
+        val step = s.chargeEndsAtSec?.let { minOf(dtSec, it - s.simTimeSec) } ?: dtSec
+        val soc = ChargeMath.socAfterMinutes(s.soc, step / 60.0, station.maxKw, scenario.profile, config)
+        val now = s.simTimeSec + step
+        val cutOff = s.chargeEndsAtSec != null && now >= s.chargeEndsAtSec
+        _state.value = when {
+            soc >= target -> s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = target, simTimeSec = now, chargeTargetSoc = null, chargeEndsAtSec = null)
+            cutOff -> s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = soc, simTimeSec = now, chargeTargetSoc = null, chargeEndsAtSec = null)
+            else -> s.copy(soc = soc, simTimeSec = now)
         }
     }
 

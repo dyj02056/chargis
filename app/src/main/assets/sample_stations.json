@@ -32,6 +32,22 @@
       "routeKm": 170.0, "detourKm": 0.0, "isRestStop": true,
       "maxKw": 50.0, "totalChargers": 2, "availableChargers": null, "expectedWaitMin": null,
       "timeLimitMin": null, "amountLimitKrw": null
+    },
+    {
+      "id": "rest_e",
+      "name": "E 휴게소",
+      "lat": 37.12, "lon": 127.24,
+      "routeKm": 70.0, "detourKm": 0.0, "isRestStop": true,
+      "maxKw": 50.0, "totalChargers": 4, "availableChargers": 2, "expectedWaitMin": 5,
+      "timeLimitMin": 40, "amountLimitKrw": null
+    },
+    {
+      "id": "rest_f",
+      "name": "F 휴게소",
+      "lat": 36.41, "lon": 127.77,
+      "routeKm": 180.0, "detourKm": 0.0, "isRestStop": true,
+      "maxKw": 100.0, "totalChargers": 6, "availableChargers": 3, "expectedWaitMin": 5,
+      "timeLimitMin": 40, "amountLimitKrw": null
     }
   ]
 }
