@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Chargis</string>
+    <string name="ticket_kind">고속도로 충전 통행권</string>
 
     <!-- 음성 문구 (plan.md §11) -->
     <string name="tts_trip_summary">이번 이동은 중간 충전 %1$d회가 필요합니다.</string>
     <string name="tts_trip_no_charge">이번 이동은 중간 충전 없이 도착할 수 있습니다.</string>
-    <string name="tts_recommend">%1$d킬로미터 앞 %2$s에서 충전을 추천합니다. 목적지까지는 %3$d퍼센트면 충분합니다.</string>
+    <string name="tts_recommend">다음 충전은 %1$s를 추천합니다. 목적지까지는 %2$d퍼센트면 충분합니다.</string>
     <string name="tts_need_another">이번 충전만으로는 목적지까지 부족해 다음 충전이 한 번 더 필요합니다.</string>
     <string name="tts_congested">%1$s 대기 약 %2$d분. %3$s 대안과 비교해 선택하세요.</string>
     <string name="tts_waypoint_added">%1$s, 경유지로 추가했습니다.</string>
@@ -17,59 +18,113 @@
     <string name="tts_resume">충전을 마쳤습니다. 길 안내를 이어 갑니다.</string>
     <string name="tts_no_safe_stop">배터리가 부족합니다. 가장 가까운 충전소에서 충전하세요.</string>
 
-    <!-- 주행 카드 -->
-    <string name="card_recommend_headline">%1$dkm 앞 %2$s</string>
-    <string name="card_recommend_sub">%1$d%%까지 충전 · 약 %2$d분</string>
-    <string name="card_need_another">이번 충전 후 한 번 더 충전 필요</string>
-    <string name="card_time_limit_risk">%1$d분 제한 · 제한 내 약 %2$d%%</string>
-    <string name="card_accept">수락</string>
-    <string name="card_next_stop">다음 휴게소</string>
-    <string name="card_congested_title">대기 시간 비교</string>
-    <string name="card_choice_line">대기 %1$s · 도착 %2$d%%</string>
-    <string name="card_choose">이곳으로</string>
-    <string name="card_navigating_headline">%1$s로 안내 중</string>
-    <string name="card_navigating_sub">%1$dkm 남음 · %2$d%%까지 충전</string>
-    <string name="card_no_charge_headline">충전 없이 도착 가능</string>
-    <string name="card_status_sub">배터리 %1$d%% · 목적지까지 %2$dkm</string>
-    <string name="card_charge_planned_headline">충전 계획 중</string>
-    <string name="card_no_safe_headline">배터리 부족</string>
-    <string name="card_no_safe_sub">가장 가까운 충전소: %1$s (%2$dkm)</string>
-    <string name="card_no_safe_none">경로상 도달 가능한 충전소 없음</string>
+    <!-- 칸 이름 -->
+    <string name="label_route">구간</string>
+    <string name="label_distance">거리</string>
+    <string name="label_start_soc">출발 배터리</string>
+    <string name="label_depart">출발</string>
+    <string name="label_next_stop">다음 정차</string>
+    <string name="label_target">목표 충전</string>
+    <string name="label_charge_time">충전</string>
+    <string name="label_limit">제한</string>
+    <string name="label_remaining">남은 거리</string>
+    <string name="label_battery">배터리</string>
+    <string name="label_wait">대기</string>
+    <string name="label_arrival_soc">도착 시</string>
+    <string name="label_now">현재</string>
+    <string name="label_estimate">예상</string>
+    <string name="label_to_target">목표까지</string>
+    <string name="label_to_limit">제한까지</string>
+    <string name="label_depart_at">출발 예정</string>
+    <string name="label_eta">도착 예정</string>
+    <string name="label_planned">충전 예정</string>
+    <string name="label_ticket_no">표 번호</string>
+    <string name="label_issued">발권</string>
+    <string name="label_trip">이번 표</string>
 
-    <!-- 정차/충전 화면 -->
-    <string name="parked_title_idle">데모 시나리오를 고르세요</string>
-    <string name="parked_start_scenario">%1$s 시작</string>
-    <string name="parked_arrived_title">%1$s 도착</string>
-    <string name="parked_arrived_sub">현재 %1$d%% → 목표 %2$d%% · 예상 %3$d분</string>
-    <string name="parked_rule_limit">충전 시간 제한 %1$d분</string>
-    <string name="parked_rule_unknown">충전 시간 제한 정보 없음</string>
+    <!-- 단위 -->
+    <string name="unit_km">km</string>
+    <string name="unit_km_ahead">km 앞</string>
+    <string name="unit_km_left">km 남음</string>
+    <string name="unit_percent">%</string>
+    <string name="unit_min">분</string>
+    <string name="unit_kw">kW</string>
+    <string name="value_none">없음</string>
+    <string name="value_not_needed">필요 없음</string>
+    <string name="unit_km_point">km 지점</string>
+    <string name="unknown">정보 없음</string>
+    <string name="available_fmt">%1$d/%2$d</string>
+
+    <!-- 발권(시작) -->
+    <string name="idle_lede">경로와 배터리를 읽고, 어느 휴게소에서 몇 %까지 충전할지 먼저 알려 드립니다.</string>
+    <string name="idle_issue">발권</string>
+    
+
+    <!-- 주행 -->
+    <string name="drive_accept">경유지로 수락</string>
+    <string name="drive_next">다음 휴게소</string>
+    <string name="drive_choose">%1$s에서 충전</string>
+    <string name="drive_no_charge">충전 없이 도착할 수 있습니다</string>
+    <string name="drive_charge_planned">휴게소가 가까워지면 알려 드립니다</string>
+    <string name="drive_need_another">이번 충전 후 한 번 더 충전 필요</string>
+    <string name="drive_limit_risk">%1$d분 제한 안에 약 %2$d%%까지 충전</string>
+    <string name="drive_congested_title">%1$s 대기</string>
+    <string name="drive_congested_sub">대기 시간과 도착 배터리를 비교해 고르세요</string>
+    <string name="drive_navigating">%1$s로 안내 중</string>
+    <string name="drive_no_safe_title">배터리 부족</string>
+    <string name="drive_no_safe_sub">가장 가까운 충전소 %1$s · %2$d km</string>
+    <string name="drive_no_safe_none">경로상 도달할 수 있는 충전소가 없습니다</string>
+
+    <!-- 추천 이유 -->
+    <string name="reason_max_power">가장 빠른 충전기</string>
+    <string name="reason_low_wait">대기 짧음</string>
+    <string name="reason_enough">충전기 여유</string>
+    <string name="reason_latest_safe">안전하게 갈 수 있는 마지막 휴게소</string>
+    <string name="reason_no_detour">경로 이탈 없음</string>
+
+    <!-- 도장 -->
+    <string name="stamp_waypoint">경유지 등록</string>
+    <string name="stamp_arrived">도착</string>
+    <string name="stamp_charged">충전 완료</string>
+    <string name="stamp_settled">정산 완료</string>
+
+    <!-- 정차·충전 -->
     <string name="parked_start_charging">충전 시작</string>
     <string name="parked_skip_charging">충전 없이 출발</string>
-    <string name="parked_charging_title">%1$s 충전 중</string>
-    <string name="parked_to_target">목표까지 %1$d분</string>
-    <string name="parked_to_limit">제한까지 %1$d분</string>
-    <string name="parked_no_limit">제한 없음</string>
-    <string name="parked_depart_at">출발 예정 %1$s</string>
     <string name="parked_stop_charging">충전 중단</string>
-    <string name="parked_done_title">충전 완료 · %1$d%%</string>
     <string name="parked_depart">출발</string>
-    <string name="parked_finished_title">목적지 도착 · 배터리 %1$d%%</string>
-    <string name="parked_restart">처음으로</string>
-    <string name="parked_candidates">후보 비교</string>
-    <string name="parked_col_station">휴게소</string>
-    <string name="parked_col_arrival">도착 SoC</string>
-    <string name="parked_col_power">출력</string>
-    <string name="parked_col_available">가용</string>
-    <string name="parked_col_wait">대기</string>
-    <string name="unknown">정보 없음</string>
-    <string name="minutes_short">%1$d분</string>
-    <string name="kw_short">%1$dkW</string>
-    <string name="available_fmt">%1$d/%2$d</string>
+    <string name="parked_compare">앞으로의 휴게소</string>
+    <string name="parked_status">%1$s · 정차 중</string>
+    <string name="col_station">휴게소</string>
+    <string name="col_arrival">도착 시</string>
+    <string name="col_power">출력</string>
+    <string name="col_available">가용</string>
+    <string name="col_wait">대기</string>
+    <string name="charging_title">%1$s 충전 중</string>
+    
+
+    <!-- 정산 영수증 -->
+    <string name="receipt_title">정산 영수증</string>
+    <string name="receipt_depart">출발</string>
+    <string name="receipt_charge">충전</string>
+    <string name="receipt_declined">지나침</string>
+    <string name="receipt_arrive">도착</string>
+    <string name="receipt_total">총 거리</string>
+    <string name="receipt_charge_value">%1$d → %2$d%% · %3$d분</string>
+    <string name="receipt_soc_value">%1$s · %2$d%%</string>
+    <string name="receipt_again">다시 발권</string>
+    <string name="finished_title">목적지 도착</string>
+    <string name="finished_charges">충전</string>
+    <string name="unit_times">회</string>
+    <string name="finished_battery">남은 배터리</string>
+
+    <!-- 데이터 출처 -->
     <string name="source_simulated">시뮬레이션 데이터</string>
     <string name="source_manual">직접 입력</string>
     <string name="source_sdk">차량 데이터</string>
 
     <!-- 개발자 오버레이 -->
+    <string name="dev_toggle">DEV</string>
     <string name="dev_pause">일시정지</string>
     <string name="dev_resume">재생</string>
     <string name="dev_jump">+%1$dkm</string>

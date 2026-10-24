@@ -13,3 +13,5 @@ captures/
 *.keystore
 *.jks
 scripts/privacy_patterns.local
+.impeccable/review/
+.impeccable/build/

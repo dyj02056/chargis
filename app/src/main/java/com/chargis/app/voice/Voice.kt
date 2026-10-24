@@ -28,7 +28,8 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
     override fun tripSummary(stops: Int) =
         if (stops == 0) s(R.string.tts_trip_no_charge) else s(R.string.tts_trip_summary, stops)
     override fun recommend(km: Double, name: String, targetSoc: Double) =
-        s(R.string.tts_recommend, km.roundToInt(), name, targetSoc.roundToInt())
+        // 거리는 말하지 않는다: 자막이 남아 있는 동안 화면의 거리와 어긋나기 때문.
+        s(R.string.tts_recommend, name, targetSoc.roundToInt())
     override fun needAnother() = s(R.string.tts_need_another)
     override fun congested(name: String, waitMin: Int, altName: String) =
         s(R.string.tts_congested, name, waitMin, altName)

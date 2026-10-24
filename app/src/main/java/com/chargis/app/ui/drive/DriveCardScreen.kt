@@ -1,82 +1,101 @@
 package com.chargis.app.ui.drive
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chargis.app.R
 import com.chargis.app.domain.model.ReasonCode
 import com.chargis.app.domain.model.Recommendation
-import com.chargis.app.ui.BigButton
 import com.chargis.app.ui.DriveCard
-import com.chargis.app.ui.theme.ChargisColors
+import com.chargis.app.ui.RouteMark
+import com.chargis.app.ui.reasonText
+import com.chargis.app.ui.theme.FigureStyle
+import com.chargis.app.ui.theme.Ticket
+import com.chargis.app.ui.ticket.Field
+import com.chargis.app.ui.ticket.Figure
+import com.chargis.app.ui.ticket.HairlineH
+import com.chargis.app.ui.ticket.HairlineV
+import com.chargis.app.ui.ticket.RouteStrip
+import com.chargis.app.ui.ticket.Stamp
+import com.chargis.app.ui.ticket.TearLine
+import com.chargis.app.ui.ticket.TicketButton
+import com.chargis.app.ui.ticket.TicketStock
+import com.chargis.app.ui.ticket.WarnGlyph
+import com.chargis.app.ui.ticket.rememberReduceMotion
+import com.chargis.app.ui.vertical
 import kotlin.math.roundToInt
 
+private val StubWidth = 76.dp
+
+/** 표 머리에 인쇄되는 정보: 표 번호와 발권 시각. */
+data class TicketMeta(val ticketNo: String, val issuedAt: String)
+
 /**
- * 주행 중 화면(plan.md §9.2): 카드 1장 + 큰 버튼만. 스크롤·텍스트 입력·리스트 없음.
+ * 주행 중 화면(plan.md §9.2): 표 한 칸이 화면 전체를 차지한다. 스크롤·입력·목록 없음.
+ * 왼쪽 칸은 거리 하나가 주인이고, 오른쪽 칸은 괘선으로 나뉜 인쇄 칸이다.
+ * 카드가 바뀔 때만 Material fade-through로 넘어가고, 그 밖에는 움직이지 않는다.
  */
 @Composable
 fun DriveCardScreen(
     card: DriveCard,
-    soc: Double,
+    eta: String,
     remainingKm: Double,
+    meta: TicketMeta,
+    routeMarks: List<RouteMark>,
+    progress: Float,
     onAccept: (String) -> Unit,
     onDecline: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Surface(
-            modifier = Modifier.widthIn(max = 960.dp).fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            color = ChargisColors.Surface
-        ) {
-            Column(Modifier.padding(36.dp)) {
-                when (card) {
-                    is DriveCard.Recommend -> RecommendCard(card.rec, onAccept, onDecline)
-                    is DriveCard.Congested -> CongestedCard(card.primary, card.alternative, onAccept)
-                    is DriveCard.Navigating -> {
-                        Headline(stringResource(R.string.card_navigating_headline, card.stationName))
-                        Sub(
-                            stringResource(
-                                R.string.card_navigating_sub,
-                                card.distanceKm.roundToInt(),
-                                card.targetSoc.roundToInt()
-                            )
-                        )
+    val reduce = rememberReduceMotion()
+    TicketStock(modifier.fillMaxSize(), perforationX = StubWidth) {
+        Row(Modifier.fillMaxSize()) {
+            StubTail(meta)
+            AnimatedContent(
+                targetState = card,
+                contentKey = { it::class },
+                transitionSpec = {
+                    if (reduce) {
+                        fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                    } else {
+                        (fadeIn(tween(210, delayMillis = 90)) + scaleIn(tween(210, delayMillis = 90), initialScale = 0.96f)) togetherWith
+                            fadeOut(tween(90))
                     }
-                    is DriveCard.Status -> {
-                        Headline(
-                            stringResource(
-                                if (card.chargePlanned) R.string.card_charge_planned_headline
-                                else R.string.card_no_charge_headline
-                            )
-                        )
-                        Sub(stringResource(R.string.card_status_sub, soc.roundToInt(), remainingKm.roundToInt()))
-                    }
-                    is DriveCard.NoSafeStop -> {
-                        Headline(stringResource(R.string.card_no_safe_headline), warn = true)
-                        Sub(
-                            if (card.nearestName != null && card.nearestKm != null) {
-                                stringResource(R.string.card_no_safe_sub, card.nearestName, card.nearestKm.roundToInt())
-                            } else {
-                                stringResource(R.string.card_no_safe_none)
-                            }
-                        )
+                },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                label = "drive-card"
+            ) { target ->
+                Column(Modifier.fillMaxSize().padding(start = 40.dp, end = 40.dp, top = 28.dp, bottom = 20.dp)) {
+                    when (target) {
+                        is DriveCard.Recommend -> RecommendStub(target.rec, onAccept, onDecline)
+                        is DriveCard.Congested -> CongestedStub(target.primary, target.alternative, onAccept)
+                        is DriveCard.Navigating -> NavigatingStub(target, routeMarks, progress)
+                        is DriveCard.Status -> StatusStub(target, eta, remainingKm, routeMarks, progress)
+                        is DriveCard.NoSafeStop -> NoSafeStub(target, routeMarks, progress)
                     }
                 }
             }
@@ -84,89 +103,266 @@ fun DriveCardScreen(
     }
 }
 
+/** 절취선 왼쪽 꼬리 칸: 세로로 인쇄된 표 이름과 표 번호. */
 @Composable
-private fun RecommendCard(rec: Recommendation, onAccept: (String) -> Unit, onDecline: () -> Unit) {
-    Headline(
-        stringResource(
-            R.string.card_recommend_headline,
-            rec.station.distanceAlongRouteKm.roundToInt(),
-            rec.station.name
-        )
-    )
-    Sub(stringResource(R.string.card_recommend_sub, rec.targetSocPercent.roundToInt(), rec.chargeMinutes))
-    if (ReasonCode.TIME_LIMIT_RISK in rec.reasonCodes && rec.timeLimitMin != null) {
-        Note(
-            stringResource(
-                R.string.card_time_limit_risk,
-                rec.timeLimitMin,
-                (rec.socAtTimeLimitPercent ?: 0.0).roundToInt()
-            )
-        )
-    }
-    if (rec.needsAnotherStop) Note(stringResource(R.string.card_need_another))
-    Spacer(Modifier.height(28.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        BigButton(stringResource(R.string.card_accept), { onAccept(rec.station.id) }, Modifier.weight(1f))
-        BigButton(stringResource(R.string.card_next_stop), onDecline, Modifier.weight(1f), primary = false)
+private fun StubTail(meta: TicketMeta) {
+    val c = Ticket.colors
+    Column(
+        Modifier.width(StubWidth).fillMaxHeight().padding(vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(meta.ticketNo, style = FigureStyle.Small.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize), color = c.ink, maxLines = 1, modifier = Modifier.vertical())
+        Text(stringResource(R.string.ticket_kind), style = MaterialTheme.typography.labelMedium, color = c.inkMuted, maxLines = 1, modifier = Modifier.vertical())
+        Text(meta.issuedAt, style = FigureStyle.Small.copy(fontSize = MaterialTheme.typography.labelMedium.fontSize), color = c.inkMuted, maxLines = 1, modifier = Modifier.vertical())
     }
 }
 
-/** 혼잡 변형(§7.3): 대기 시간 vs 도착 시 배터리를 2열 큰 선택지로 비교. */
+/** 왼쪽 칸: 기념비 크기 거리, 그 아래 휴게소 이름, 그 아래 이유. */
 @Composable
-private fun CongestedCard(primary: Recommendation, alternative: Recommendation, onAccept: (String) -> Unit) {
-    Headline(stringResource(R.string.card_congested_title), warn = true)
-    Spacer(Modifier.height(20.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        listOf(primary, alternative).forEach { rec ->
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(
-                        R.string.card_recommend_headline,
-                        rec.station.distanceAlongRouteKm.roundToInt(),
-                        rec.station.name
-                    ),
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Text(
-                    stringResource(
-                        R.string.card_choice_line,
-                        rec.station.expectedWaitMin?.let { stringResource(R.string.minutes_short, it) }
-                            ?: stringResource(R.string.unknown),
-                        rec.arrivalSocPercent.roundToInt()
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = ChargisColors.Muted
-                )
-                Spacer(Modifier.height(16.dp))
-                BigButton(
-                    stringResource(R.string.card_choose),
-                    { onAccept(rec.station.id) },
-                    Modifier.fillMaxWidth(),
-                    primary = rec === alternative
-                )
-            }
+private fun LeadColumn(km: Int, unit: String, name: String, sub: String?, modifier: Modifier, sentence: Boolean = false) {
+    val c = Ticket.colors
+    Column(modifier.fillMaxHeight(), verticalArrangement = Arrangement.Bottom) {
+        Figure("$km", unit, FigureStyle.Monumental)
+        Spacer(Modifier.height(8.dp))
+        // 휴게소 이름은 한 줄, 문장(상태 안내)은 작은 크기로 두 줄까지
+        Text(
+            name,
+            style = if (sentence) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayMedium,
+            color = c.ink,
+            maxLines = if (sentence) 2 else 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (sub != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(sub, style = MaterialTheme.typography.titleMedium, color = c.inkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** 괘선 칸 두 개를 나란히: 위·아래 가로 괘선, 가운데 세로 괘선. */
+@Composable
+private fun CellPair(left: @Composable () -> Unit, right: @Composable () -> Unit) {
+    Column {
+        HairlineH()
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            Box(Modifier.weight(1f).padding(vertical = 16.dp)) { left() }
+            HairlineV(Modifier.padding(end = 20.dp))
+            Box(Modifier.weight(1f).padding(vertical = 16.dp)) { right() }
         }
     }
 }
 
 @Composable
-private fun Headline(text: String, warn: Boolean = false) {
-    Text(
-        text,
-        style = MaterialTheme.typography.displayMedium,
-        color = if (warn) ChargisColors.Warning else ChargisColors.OnSurface,
-        maxLines = 2
-    )
+private fun Measure(label: String, value: String, unit: String?, color: androidx.compose.ui.graphics.Color = Ticket.colors.ink) {
+    Field(label) { Figure(value, unit, FigureStyle.Medium, color = color) }
 }
 
 @Composable
-private fun Sub(text: String) {
-    Spacer(Modifier.height(8.dp))
-    Text(text, style = MaterialTheme.typography.headlineMedium, color = ChargisColors.Accent, maxLines = 1)
+private fun Words(label: String, text: String) {
+    Field(label) { Text(text, style = MaterialTheme.typography.headlineMedium, color = Ticket.colors.inkMuted, maxLines = 1) }
 }
 
 @Composable
-private fun Note(text: String) {
-    Spacer(Modifier.height(6.dp))
-    Text("⚠ $text", style = MaterialTheme.typography.titleLarge, color = ChargisColors.Warning, maxLines = 1)
+private fun ColumnScope.RecommendStub(rec: Recommendation, onAccept: (String) -> Unit, onDecline: () -> Unit) {
+    val c = Ticket.colors
+    val min = stringResource(R.string.unit_min)
+    Row(Modifier.weight(1f).fillMaxWidth()) {
+        LeadColumn(rec.station.distanceAlongRouteKm.roundToInt(), stringResource(R.string.unit_km_ahead), rec.station.name, reasonText(rec), Modifier.weight(1.3f))
+        HairlineV(Modifier.padding(horizontal = 32.dp))
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            Field(stringResource(R.string.label_target)) {
+                Figure("${rec.targetSocPercent.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
+            }
+            Spacer(Modifier.height(16.dp))
+            CellPair(
+                { Measure(stringResource(R.string.label_charge_time), "${rec.chargeMinutes}", min) },
+                {
+                    if (rec.timeLimitMin != null) Measure(stringResource(R.string.label_limit), "${rec.timeLimitMin}", min)
+                    else Words(stringResource(R.string.label_limit), stringResource(R.string.value_none))
+                }
+            )
+            CellPair(
+                { Measure(stringResource(R.string.label_arrival_soc), "${rec.arrivalSocPercent.roundToInt()}", stringResource(R.string.unit_percent)) },
+                {
+                    val wait = rec.station.expectedWaitMin
+                    if (wait != null) Measure(stringResource(R.string.label_wait), "$wait", min)
+                    else Words(stringResource(R.string.label_wait), stringResource(R.string.unknown))
+                }
+            )
+            HairlineH()
+            Spacer(Modifier.weight(1f))
+            if (ReasonCode.TIME_LIMIT_RISK in rec.reasonCodes && rec.timeLimitMin != null) {
+                WarnLine(stringResource(R.string.drive_limit_risk, rec.timeLimitMin, (rec.socAtTimeLimitPercent ?: 0.0).roundToInt()))
+            }
+            if (rec.needsAnotherStop) WarnLine(stringResource(R.string.drive_need_another))
+        }
+    }
+    TearLine(Modifier.padding(vertical = 8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        TicketButton(stringResource(R.string.drive_accept), { onAccept(rec.station.id) }, Modifier.weight(2f), stampInk = true)
+        TicketButton(stringResource(R.string.drive_next), onDecline, Modifier.weight(1f), primary = false)
+    }
+}
+
+/** 혼잡 변형(§7.3): 세로 괘선으로 나뉜 두 칸에 대기와 도착 배터리를 나란히 인쇄한다. */
+@Composable
+private fun ColumnScope.CongestedStub(primary: Recommendation, alternative: Recommendation, onAccept: (String) -> Unit) {
+    val c = Ticket.colors
+    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        WarnGlyph(size = 34.dp, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(R.string.drive_congested_title, primary.station.name), style = MaterialTheme.typography.displaySmall, color = c.ink)
+        Figure("${primary.waitMinutes}", stringResource(R.string.unit_min), FigureStyle.Medium, color = c.warn)
+    }
+    Text(stringResource(R.string.drive_congested_sub), style = MaterialTheme.typography.titleMedium, color = c.inkMuted)
+    Spacer(Modifier.height(20.dp))
+    HairlineH()
+    Row(Modifier.weight(1f).fillMaxWidth()) {
+        ChoiceColumn(primary, emphasize = false, onAccept = onAccept, modifier = Modifier.weight(1f))
+        Box(Modifier.width(56.dp).fillMaxHeight(), contentAlignment = Alignment.Center) { HairlineV() }
+        ChoiceColumn(alternative, emphasize = true, onAccept = onAccept, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun ChoiceColumn(rec: Recommendation, emphasize: Boolean, onAccept: (String) -> Unit, modifier: Modifier) {
+    val c = Ticket.colors
+    Column(modifier.fillMaxHeight().padding(top = 20.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(rec.station.name, style = MaterialTheme.typography.headlineMedium, color = c.ink, modifier = Modifier.weight(1f))
+            Figure("${rec.station.distanceAlongRouteKm.roundToInt()}", stringResource(R.string.unit_km_ahead), FigureStyle.Small, color = c.inkMuted, unitStyle = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(Modifier.height(16.dp))
+        Row {
+            Box(Modifier.weight(1f)) {
+                val wait = rec.station.expectedWaitMin
+                if (wait != null) {
+                    Field(stringResource(R.string.label_wait)) { Figure("$wait", stringResource(R.string.unit_min), FigureStyle.Large, color = if (emphasize) c.stamp else c.ink) }
+                } else {
+                    Words(stringResource(R.string.label_wait), stringResource(R.string.unknown))
+                }
+            }
+            Box(Modifier.weight(1f)) {
+                Field(stringResource(R.string.label_arrival_soc)) { Figure("${rec.arrivalSocPercent.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large) }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        TicketButton(
+            stringResource(R.string.drive_choose, rec.station.name),
+            { onAccept(rec.station.id) },
+            Modifier.fillMaxWidth(),
+            primary = emphasize,
+            stampInk = emphasize
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<RouteMark>, progress: Float) {
+    val c = Ticket.colors
+    val min = stringResource(R.string.unit_min)
+    Row(Modifier.weight(1f).fillMaxWidth()) {
+        LeadColumn(card.distanceKm.roundToInt(), stringResource(R.string.unit_km_left), stringResource(R.string.drive_navigating, card.stationName), null, Modifier.weight(1.3f))
+        HairlineV(Modifier.padding(horizontal = 32.dp))
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            Field(stringResource(R.string.label_target)) {
+                Figure("${card.targetSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
+            }
+            Spacer(Modifier.height(16.dp))
+            CellPair(
+                { Measure(stringResource(R.string.label_arrival_soc), "${card.arrivalSoc.roundToInt()}", stringResource(R.string.unit_percent)) },
+                { Measure(stringResource(R.string.label_charge_time), "${card.chargeMinutes}", min) }
+            )
+            CellPair(
+                {
+                    if (card.timeLimitMin != null) Measure(stringResource(R.string.label_limit), "${card.timeLimitMin}", min)
+                    else Words(stringResource(R.string.label_limit), stringResource(R.string.value_none))
+                },
+                { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Stamp(stringResource(R.string.stamp_waypoint)) } }
+            )
+            HairlineH()
+        }
+    }
+    Spacer(Modifier.height(20.dp))
+    RouteStrip(marks, progress)
+}
+
+@Composable
+private fun ColumnScope.StatusStub(card: DriveCard.Status, eta: String, remainingKm: Double, marks: List<RouteMark>, progress: Float) {
+    val c = Ticket.colors
+    val min = stringResource(R.string.unit_min)
+    // 구간 띠를 표 머리에 인쇄해 위쪽 칸을 채운다.
+    Field(stringResource(R.string.label_route)) { RouteStrip(marks, progress) }
+    Spacer(Modifier.height(16.dp))
+    HairlineH()
+    Row(Modifier.weight(1f).fillMaxWidth().padding(top = 20.dp)) {
+        LeadColumn(
+            remainingKm.roundToInt(),
+            stringResource(R.string.unit_km_left),
+            stringResource(if (card.chargePlanned) R.string.drive_charge_planned else R.string.drive_no_charge),
+            null,
+            Modifier.weight(1.3f),
+            sentence = true
+        )
+        HairlineV(Modifier.padding(horizontal = 32.dp))
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Bottom) {
+            Field(stringResource(R.string.label_planned)) {
+                if (card.chargePlanned && card.plannedName != null) {
+                    Text(card.plannedName, style = MaterialTheme.typography.displaySmall, color = c.ink, maxLines = 1)
+                } else {
+                    Text(stringResource(R.string.value_not_needed), style = MaterialTheme.typography.displaySmall, color = c.inkMuted, maxLines = 1)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            CellPair(
+                {
+                    if (card.plannedKm != null) Measure(stringResource(R.string.label_distance), "${card.plannedKm.roundToInt()}", stringResource(R.string.unit_km_ahead))
+                    else Words(stringResource(R.string.label_distance), "—")
+                },
+                { Field(stringResource(R.string.label_eta)) { Figure(eta, null, FigureStyle.Medium) } }
+            )
+            CellPair(
+                {
+                    if (card.plannedTarget != null) Measure(stringResource(R.string.label_target), "${card.plannedTarget.roundToInt()}", stringResource(R.string.unit_percent))
+                    else Words(stringResource(R.string.label_target), "—")
+                },
+                {
+                    if (card.plannedMinutes != null) Measure(stringResource(R.string.label_charge_time), "${card.plannedMinutes}", min)
+                    else Words(stringResource(R.string.label_charge_time), "—")
+                }
+            )
+            HairlineH()
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.NoSafeStub(card: DriveCard.NoSafeStop, marks: List<RouteMark>, progress: Float) {
+    val c = Ticket.colors
+    Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            WarnGlyph(size = 48.dp)
+            Text(stringResource(R.string.drive_no_safe_title), style = MaterialTheme.typography.displayMedium, color = c.warn)
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            if (card.nearestName != null && card.nearestKm != null) {
+                stringResource(R.string.drive_no_safe_sub, card.nearestName, card.nearestKm.roundToInt())
+            } else {
+                stringResource(R.string.drive_no_safe_none)
+            },
+            style = MaterialTheme.typography.headlineMedium,
+            color = c.ink
+        )
+    }
+    RouteStrip(marks, progress)
+}
+
+@Composable
+private fun WarnLine(text: String) {
+    val c = Ticket.colors
+    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        WarnGlyph(size = 24.dp)
+        Text(text, style = MaterialTheme.typography.titleMedium, color = c.warn, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }

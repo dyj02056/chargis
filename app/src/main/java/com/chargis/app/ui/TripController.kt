@@ -22,6 +22,8 @@ import com.chargis.app.sim.SimPhase
 import com.chargis.app.voice.VoiceAnnouncer
 import com.chargis.app.voice.VoicePhrases
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +55,11 @@ class TripController(
     private val gate = AnnouncementGate(config.announceWithinKm)
 
     private val _state = MutableStateFlow(
-        TripUiState(scenarios = scenarios.map { ScenarioOption(it.id, it.title) })
+        TripUiState(
+            scenarios = scenarios.map {
+                ScenarioOption(it.id, it.title, it.totalDistanceKm, it.startSoc, "%02d:00".format(it.startHour))
+            }
+        )
     )
     val state: StateFlow<TripUiState> = _state.asStateFlow()
 
@@ -66,6 +72,10 @@ class TripController(
     private var stations: List<ChargingStation> = emptyList()
     private var noSafeWarned = false
     private var chargeStartSec = 0.0
+    private var chargeFromSoc = 0.0
+    private val charges = mutableListOf<Pair<String, ChargeRecord>>() // stationId to record
+    private var arrivedAtSec: Double? = null
+    private var captionClear: Job? = null
 
     init {
         if (runClock) scope.launch { demo.run() }
@@ -73,7 +83,18 @@ class TripController(
             combine(navi.routeState, vehicle.vehicleState) { r, v -> r to v }
                 .collect { (r, v) -> onTick(r, v) }
         }
-        captions?.let { flow -> scope.launch { flow.collect { c -> _state.update { it.copy(caption = c) } } } }
+        captions?.let { flow ->
+            scope.launch {
+                flow.collect { c ->
+                    _state.update { it.copy(caption = c) }
+                    captionClear?.cancel()
+                    if (c != null) captionClear = scope.launch {
+                        delay(CAPTION_MS)
+                        _state.update { s -> if (s.caption == c) s.copy(caption = null) else s }
+                    }
+                }
+            }
+        }
     }
 
     // ---- 사용자 액션 ----
@@ -128,6 +149,7 @@ class TripController(
             return
         }
         chargeStartSec = demo.state.value.simTimeSec
+        chargeFromSoc = soc
         demo.startCharging(rec.targetSocPercent)
         transition(TripEvent.ChargingStarted)
         rec.timeLimitMin?.let { limit -> scope.launch { announcer.announce(phrases.ruleNotice(limit)) } }
@@ -136,6 +158,7 @@ class TripController(
     fun stopCharging() {
         if (phase != TripPhase.Charging) return
         demo.stopCharging()
+        recordCharge()
         transition(TripEvent.ChargingFinished)
     }
 
@@ -176,6 +199,7 @@ class TripController(
             }
             TripPhase.Driving -> {
                 if (route.remainingDistanceKm <= ARRIVED_KM) {
+                    arrivedAtSec = demo.state.value.simTimeSec
                     transition(TripEvent.DestinationReached)
                 } else {
                     when (val result = evaluate(route, vehicleState)) {
@@ -199,6 +223,7 @@ class TripController(
             }
             TripPhase.Charging -> {
                 if (!demoCharging()) {
+                    recordCharge()
                     transition(TripEvent.ChargingFinished)
                     announcer.announce(phrases.targetReached())
                 }
@@ -268,8 +293,22 @@ class TripController(
 
     private fun demoCharging() = demo.state.value.phase == SimPhase.CHARGING
 
+    private fun recordCharge() {
+        val rec = accepted ?: return
+        val sim = demo.state.value
+        charges += rec.station.id to ChargeRecord(
+            stationName = rec.station.name,
+            fromSoc = chargeFromSoc,
+            toSoc = sim.soc,
+            minutes = ceil((sim.simTimeSec - chargeStartSec) / 60.0).toInt()
+        )
+    }
+
     private fun transition(event: TripEvent) {
-        phase = TripStateMachine.reduce(phase, event)
+        val next = TripStateMachine.reduce(phase, event)
+        // 화면이 바뀌면 이전 화면의 자막은 지운다. 새 안내가 나오면 다시 채워진다.
+        if (next != phase) _state.update { it.copy(caption = null) }
+        phase = next
         publish()
     }
 
@@ -279,6 +318,8 @@ class TripController(
         accepted = null
         lastResult = null
         noSafeWarned = false
+        charges.clear()
+        arrivedAtSec = null
         gate.reset()
         announcer.reset()
     }
@@ -294,6 +335,14 @@ class TripController(
                 socPercent = v?.socPercent ?: 0.0,
                 dataSource = v?.source ?: it.dataSource,
                 remainingKm = route?.remainingDistanceKm ?: 0.0,
+                scenarioTitle = demo.scenario.title,
+                ticketNo = "%s-%02d00".format(demo.scenario.id, demo.scenario.startHour),
+                departAt = clockText(0.0),
+                clock = clockText(sim.simTimeSec),
+                eta = route?.remainingTimeMin?.let { min -> clockText(sim.simTimeSec + min * 60) } ?: it.eta,
+                routeMarks = buildMarks(sim.traveledKm),
+                progress = (sim.traveledKm / demo.scenario.totalDistanceKm).toFloat().coerceIn(0f, 1f),
+                receipt = buildReceipt(v),
                 card = buildCard(),
                 stop = buildStop(v),
                 candidates = (lastResult as? RecommendationResult.Recommended)
@@ -317,14 +366,63 @@ class TripController(
                 if (o.congested && alt != null) DriveCard.Congested(o.primary, alt) else DriveCard.Recommend(o.primary)
             }
             phase == TripPhase.NavigatingToCharger && acc != null ->
-                DriveCard.Navigating(acc.station.name, acc.station.distanceAlongRouteKm, acc.targetSocPercent)
+                DriveCard.Navigating(
+                    stationName = acc.station.name,
+                    distanceKm = acc.station.distanceAlongRouteKm,
+                    targetSoc = acc.targetSocPercent,
+                    arrivalSoc = acc.arrivalSocPercent,
+                    chargeMinutes = acc.chargeMinutes,
+                    timeLimitMin = acc.timeLimitMin
+                )
             else -> when (val r = lastResult) {
                 is RecommendationResult.NoSafeStop ->
                     DriveCard.NoSafeStop(r.nearest?.name, r.nearest?.distanceAlongRouteKm)
-                is RecommendationResult.Recommended -> DriveCard.Status(chargePlanned = true)
+                is RecommendationResult.Recommended ->
+                    DriveCard.Status(
+                        chargePlanned = true,
+                        plannedName = r.primary.station.name,
+                        plannedKm = r.primary.station.distanceAlongRouteKm,
+                        plannedTarget = r.primary.targetSocPercent,
+                        plannedMinutes = r.primary.chargeMinutes
+                    )
                 else -> DriveCard.Status(chargePlanned = false)
             }
         }
+    }
+
+    private fun buildMarks(traveledKm: Double): List<RouteMark> {
+        val sc = demo.scenario
+        val chargedIds = charges.map { it.first }.toSet()
+        val targetId = when (phase) {
+            TripPhase.AwaitingDecision -> offer?.primary?.station?.id
+            TripPhase.NavigatingToCharger, TripPhase.Arrived, TripPhase.Charging -> accepted?.station?.id
+            else -> null
+        }
+        return sc.stations.map { s ->
+            val state = when {
+                s.id in chargedIds -> MarkState.CHARGED
+                s.id == targetId -> MarkState.TARGET
+                s.id in gate.declinedIds -> MarkState.DECLINED
+                s.distanceAlongRouteKm < traveledKm -> MarkState.PASSED
+                else -> MarkState.AHEAD
+            }
+            RouteMark(s.id, s.name, (s.distanceAlongRouteKm / sc.totalDistanceKm).toFloat(), state)
+        }
+    }
+
+    private fun buildReceipt(v: VehicleState?): TripReceipt? {
+        if (phase == TripPhase.Idle) return null
+        val sc = demo.scenario
+        val names = sc.stations.associate { it.id to it.name }
+        return TripReceipt(
+            departAt = clockText(0.0),
+            startSoc = sc.startSoc,
+            arriveAt = arrivedAtSec?.let(::clockText),
+            endSoc = if (phase == TripPhase.Finished) v?.socPercent else null,
+            distanceKm = sc.totalDistanceKm,
+            charges = charges.map { it.second },
+            declinedNames = gate.declinedIds.mapNotNull { names[it] }
+        )
     }
 
     private fun buildStop(v: VehicleState?): StopInfo? {
@@ -355,6 +453,7 @@ class TripController(
 
     private companion object {
         const val ARRIVED_KM = 0.05
+        const val CAPTION_MS = 8_000L
         val STOP_PHASES = setOf(TripPhase.Arrived, TripPhase.Charging, TripPhase.Done)
     }
 }

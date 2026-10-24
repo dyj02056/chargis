@@ -1,0 +1,55 @@
+# Product
+
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+android
+
+## Users
+
+Drivers of Pleos Connect-equipped electric vehicles on long highway trips, typically weekends and national holidays when rest-stop chargers are crowded. While driving they glance at an in-vehicle landscape display; while parked and charging, passengers also read the same screen to know when the car will leave. The redesign optimizes for the real driver first, not for demo viewers.
+
+## Product Purpose
+
+Chargis reads the navigation route and battery state and tells the driver, before they have to ask, which rest stop to charge at, to what percentage, and for how long. It adds the chosen rest stop as a navigation waypoint and keeps track of the charger's time limit so a session does not end short of the target. Success means the driver makes one glance-and-tap decision per stop and arrives with a safe margin.
+
+## Positioning
+
+Map and charging apps show where chargers are. Chargis computes how much and how long from the car's own data and the route, and the car speaks first. It answers "how much, how long", not "where".
+
+## Operating Context
+
+- In-vehicle, landscape infotainment display (Pleos Connect, Android-based). Day and night highway driving.
+- Two states: driving (one card plus voice only, no scrolling, no text input, large touch targets) and parked or charging (detail views allowed, passengers read the screen).
+- Voice announcements (TTS) accompany every driving-state prompt; on-screen captions mirror them.
+- Contest deliverable: a demo recorded on the Pleos Connect emulator, reproduced through the built-in scenario simulator.
+
+## Capabilities and Constraints
+
+- F1 rest-stop recommendation, F2 target-charge coaching, F3 charger time-limit alerts, F4 waypoint addition. F3 limit warnings and real SDK integration are still in progress.
+- All rest-stop names, coordinates, and charger data are fictional ("A 휴게소" style). No real facility or operator trademarks.
+- Unknown data is shown as unknown ("정보 없음"), never hidden; data source (simulated, manual, vehicle) is always labeled.
+- Kotlin + Jetpack Compose, minSdk 28. Strings live in `strings.xml` (Korean first).
+- Vehicle SDK availability (SoC, range, driving state) is unconfirmed; manual input is the fallback.
+
+## Brand Commitments
+
+- Product name: Chargis (차지스). Everything else about the visual identity may change.
+
+## Evidence on Hand
+
+- Working demo app with two scenarios (S1 basic, S2 holiday congestion) and screenshots in `docs/screenshots/`.
+- No real users, testimonials, partner logos, or measured outcomes exist; none may be invented.
+
+## Product Principles
+
+1. The driver's eyes return to the road within one glance; anything that needs reading time waits until the car stops.
+2. Say the number that matters (target %, minutes, distance) and nothing that does not change the decision.
+3. Be honest about uncertainty: label estimated and unknown data instead of guessing silently.
+4. The car speaks first; the screen confirms what the voice said.
+
+## Accessibility & Inclusion
+
+- In-vehicle legibility in day and night: high contrast, large type, touch targets well above phone minimums.
+- Meaning never depends on color alone.

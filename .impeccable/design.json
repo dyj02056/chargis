@@ -1,0 +1,484 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T11:33:44+00:00",
+  "title": "Design System: Chargis",
+  "extensions": {
+    "colorMeta": {
+      "night-ground": {
+        "role": "neutral",
+        "displayName": "Charcoal Ground",
+        "canonical": "#0F0E0D",
+        "tonalRamp": [
+          "#292624",
+          "#48433F",
+          "#67615A",
+          "#877E75",
+          "#A29B94",
+          "#BDB8B3",
+          "#D8D5D2",
+          "#F3F2F1"
+        ]
+      },
+      "night-stock": {
+        "role": "neutral",
+        "displayName": "Warm Charcoal Stock",
+        "canonical": "#1A1917",
+        "tonalRamp": [
+          "#292724",
+          "#48453F",
+          "#66635B",
+          "#858076",
+          "#A19D95",
+          "#BCB9B4",
+          "#D8D6D3",
+          "#F3F3F1"
+        ]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Off-White Ink",
+        "canonical": "#EDE9E2",
+        "tonalRamp": [
+          "#2F291D",
+          "#534834",
+          "#77674A",
+          "#9B8660",
+          "#B2A183",
+          "#C9BCA7",
+          "#DFD8CB",
+          "#F5F3EF"
+        ]
+      },
+      "night-ink-muted": {
+        "role": "neutral",
+        "displayName": "Thermal Fade (Night)",
+        "canonical": "#A19C93",
+        "tonalRamp": [
+          "#292724",
+          "#48453F",
+          "#67625A",
+          "#868075",
+          "#A29D94",
+          "#BDB9B3",
+          "#D8D6D2",
+          "#F3F3F1"
+        ]
+      },
+      "night-rule": {
+        "role": "neutral",
+        "displayName": "Hairline Rule (Night)",
+        "canonical": "#3B3833",
+        "tonalRamp": [
+          "#292723",
+          "#48453E",
+          "#68625A",
+          "#878075",
+          "#A29D94",
+          "#BDB9B3",
+          "#D8D6D2",
+          "#F3F2F1"
+        ]
+      },
+      "night-stamp": {
+        "role": "primary",
+        "displayName": "Night Cobalt Stamp Ink",
+        "canonical": "#8FB2EE",
+        "tonalRamp": [
+          "#0A1F42",
+          "#123675",
+          "#194EA8",
+          "#2165DA",
+          "#5187E5",
+          "#84AAEC",
+          "#B6CDF4",
+          "#E9F0FC"
+        ]
+      },
+      "night-on-stamp": {
+        "role": "primary",
+        "displayName": "On Stamp (Night)",
+        "canonical": "#0F1A2E",
+        "tonalRamp": [
+          "#13213A",
+          "#213966",
+          "#2F5292",
+          "#3E6BBE",
+          "#688CCE",
+          "#94ADDC",
+          "#C0CFEA",
+          "#ECF0F9"
+        ]
+      },
+      "night-warn": {
+        "role": "secondary",
+        "displayName": "Thermal Amber (Night)",
+        "canonical": "#E8AE4A",
+        "tonalRamp": [
+          "#442E09",
+          "#78510F",
+          "#AB7416",
+          "#DF981C",
+          "#E8AF4D",
+          "#EFC781",
+          "#F6DEB5",
+          "#FCF5E8"
+        ]
+      },
+      "day-ground": {
+        "role": "neutral",
+        "displayName": "Cool Grey Ground",
+        "canonical": "#E1E5E8",
+        "tonalRamp": [
+          "#21272B",
+          "#3A454C",
+          "#54626D",
+          "#6D808E",
+          "#8E9DA8",
+          "#AFB9C1",
+          "#D0D6DB",
+          "#F1F2F4"
+        ]
+      },
+      "day-stock": {
+        "role": "neutral",
+        "displayName": "Thermal-White Stock",
+        "canonical": "#F3F5F6",
+        "tonalRamp": [
+          "#21282C",
+          "#3A474D",
+          "#53656E",
+          "#6C8490",
+          "#8DA0A9",
+          "#AEBBC2",
+          "#CFD7DB",
+          "#F0F3F4"
+        ]
+      },
+      "day-ink": {
+        "role": "neutral",
+        "displayName": "Near-Black Ink",
+        "canonical": "#181B1E",
+        "tonalRamp": [
+          "#22262A",
+          "#3C434B",
+          "#56616B",
+          "#707E8C",
+          "#909BA6",
+          "#B0B8C0",
+          "#D0D5DA",
+          "#F1F2F4"
+        ]
+      },
+      "day-ink-muted": {
+        "role": "neutral",
+        "displayName": "Thermal Fade (Day)",
+        "canonical": "#57606A",
+        "tonalRamp": [
+          "#22262A",
+          "#3D434A",
+          "#57606A",
+          "#717D8A",
+          "#919AA5",
+          "#B1B8BF",
+          "#D1D5D9",
+          "#F1F2F4"
+        ]
+      },
+      "day-rule": {
+        "role": "neutral",
+        "displayName": "Hairline Rule (Day)",
+        "canonical": "#C4CACF",
+        "tonalRamp": [
+          "#22272A",
+          "#3C444A",
+          "#57616A",
+          "#717F8B",
+          "#919CA5",
+          "#B1B9BF",
+          "#D1D5D9",
+          "#F1F2F4"
+        ]
+      },
+      "day-stamp": {
+        "role": "primary",
+        "displayName": "Day Cobalt Stamp Ink",
+        "canonical": "#2448A6",
+        "tonalRamp": [
+          "#0E1B3F",
+          "#18306F",
+          "#22459F",
+          "#2D5ACF",
+          "#5A7EDB",
+          "#8AA4E6",
+          "#BAC9F0",
+          "#EAEFFA"
+        ]
+      },
+      "day-on-stamp": {
+        "role": "primary",
+        "displayName": "On Stamp (Day)",
+        "canonical": "#F3F5F6",
+        "tonalRamp": [
+          "#21282C",
+          "#3A474D",
+          "#53656E",
+          "#6C8490",
+          "#8DA0A9",
+          "#AEBBC2",
+          "#CFD7DB",
+          "#F0F3F4"
+        ]
+      },
+      "day-warn": {
+        "role": "secondary",
+        "displayName": "Thermal Amber (Day)",
+        "canonical": "#8A5300",
+        "tonalRamp": [
+          "#4C2E00",
+          "#875100",
+          "#C17400",
+          "#FB9700",
+          "#FFAF37",
+          "#FFC671",
+          "#FFDEAB",
+          "#FFF5E6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "figure-monumental": {
+        "displayName": "Figure Monumental",
+        "purpose": "The one number that owns the driving stub (distance)."
+      },
+      "figure-large": {
+        "displayName": "Figure Large",
+        "purpose": "Target percent; headline measurement of a choice."
+      },
+      "figure-medium": {
+        "displayName": "Figure Medium",
+        "purpose": "Measurements inside ruled cells."
+      },
+      "figure-small": {
+        "displayName": "Figure Small",
+        "purpose": "Header clock and battery, receipt values, table numbers."
+      },
+      "figure-unit": {
+        "displayName": "Figure Unit",
+        "purpose": "Sans unit set beside a Mono figure."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Rest-stop name under the monumental figure; screen titles."
+      },
+      "display-small": {
+        "displayName": "Display Small",
+        "purpose": "Status sentences, congestion title, planned stop name."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Station names in parked and choice views; unknown values in cells."
+      },
+      "title-large": {
+        "displayName": "Title Large",
+        "purpose": "Wordmark in the ticket header."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Reasons, sub-lines, stamp text, table titles."
+      },
+      "body-large": {
+        "displayName": "Body Large",
+        "purpose": "Voice captions and receipt lines."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Table cells, scenario title."
+      },
+      "label-large": {
+        "displayName": "Label Large",
+        "purpose": "Button text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Printed field labels, route-strip stop names, source labels."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "stamp-thunk",
+        "value": "fade 90ms, then scale 1.35 -> 1.0 over 260ms, cubic ease-out 1-(1-t)^3",
+        "purpose": "First appearance of a Stamp; the only flourish."
+      },
+      {
+        "name": "card-fade-through",
+        "value": "enter fadeIn 210ms + scaleIn from 0.96, delay 90ms; exit fadeOut 90ms",
+        "purpose": "Switching between driving cards only."
+      },
+      {
+        "name": "press",
+        "value": "scale 0.98 while pressed + ripple in text colour",
+        "purpose": "TicketButton press feedback."
+      },
+      {
+        "name": "reduce-motion",
+        "value": "all durations 0 when ANIMATOR_DURATION_SCALE == 0",
+        "purpose": "Honour the system remove-animations setting."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "landscape-display",
+        "value": "single in-vehicle landscape layout; no breakpoints in the build"
+      }
+    ],
+    "perforation": {
+      "dash": "14 on / 10 off, 2px rule",
+      "notchRadius": "14dp, ground colour",
+      "receiptLeader": "3 on / 7 off, 2px rule",
+      "doubleRule": "two 1dp rules, 3dp apart"
+    },
+    "palettes": {
+      "night": "night-* tokens, system dark mode",
+      "day": "day-* tokens, system light mode"
+    }
+  },
+  "components": [
+    {
+      "name": "Stamp Ink Button",
+      "kind": "button",
+      "refersTo": "button-stamp",
+      "description": "Cobalt-filled action that stamps a stop onto the ticket (accept as waypoint, choose this stop). Wide, weight 2 on the tear strip.",
+      "html": "<button class=\"ds-btn ds-btn-stamp\">경유지로 수락</button>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-btn{font-family:var(--sans);font-weight:700;font-size:26px;line-height:30px;min-height:104px;padding:0 24px;border-radius:6px;border:none;cursor:pointer;transition:transform .1s, filter .1s}.ds-btn:active{transform:scale(.98)}.ds-btn:focus-visible{outline:3px solid var(--stamp);outline-offset:4px}.ds-btn:hover{filter:brightness(1.06)}.ds-btn-stamp{background:var(--stamp);color:var(--on-stamp);width:520px}"
+    },
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Ink-filled primary action for everything that is not stamping a stop (depart, reissue).",
+      "html": "<button class=\"ds-btn ds-btn-ink\">다시 발권</button>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-btn{font-family:var(--sans);font-weight:700;font-size:26px;line-height:30px;min-height:104px;padding:0 24px;border-radius:6px;border:none;cursor:pointer;transition:transform .1s, filter .1s}.ds-btn:active{transform:scale(.98)}.ds-btn:focus-visible{outline:3px solid var(--stamp);outline-offset:4px}.ds-btn:hover{filter:brightness(1.06)}.ds-btn-ink{background:var(--ink);color:var(--stock);width:360px}"
+    },
+    {
+      "name": "Ruled Button",
+      "kind": "button",
+      "refersTo": "button-ruled",
+      "description": "Secondary action: transparent with a 2dp ink border. Narrow, weight 1 on the tear strip.",
+      "html": "<button class=\"ds-btn ds-btn-ruled\">다음 휴게소</button>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-btn{font-family:var(--sans);font-weight:700;font-size:26px;line-height:30px;min-height:104px;padding:0 24px;border-radius:6px;border:none;cursor:pointer;transition:transform .1s, filter .1s}.ds-btn:active{transform:scale(.98)}.ds-btn:focus-visible{outline:3px solid var(--stamp);outline-offset:4px}.ds-btn:hover{filter:brightness(1.06)}.ds-btn-ruled{background:transparent;color:var(--ink);border:2px solid var(--ink);width:260px}.ds-btn-ruled:hover{background:rgba(237,233,226,.06);filter:none}"
+    },
+    {
+      "name": "Driving Stub",
+      "kind": "card",
+      "refersTo": "ticket-stock",
+      "description": "Square ticket stock with a vertical perforation and punched notches; lead figure left, ruled cells right, tear line below. Not a card: no radius, no shadow.",
+      "html": "<div class=\"ds-stub\"><div class=\"ds-tail\">S1-0900</div><div class=\"ds-body\"><div class=\"ds-lead\"><div><span class=\"ds-mono ds-mon\">46</span><span class=\"ds-unit\">km 앞</span></div><div class=\"ds-name\">B 휴게소</div><div class=\"ds-sub\">가장 빠른 충전기 · 대기 짧음</div></div><div class=\"ds-cells\"><div class=\"ds-label\">목표 충전</div><div><span class=\"ds-mono ds-lg\">50</span><span class=\"ds-unit ds-st\">%</span></div><div class=\"ds-row\"><div><div class=\"ds-label\">충전</div><span class=\"ds-mono ds-md\">9</span><span class=\"ds-unit\">분</span></div><div><div class=\"ds-label\">제한</div><span class=\"ds-mono ds-md\">40</span><span class=\"ds-unit\">분</span></div></div></div></div><div class=\"ds-tear\"></div></div>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-stub{position:relative;background:var(--stock);color:var(--ink);font-family:var(--sans);display:grid;grid-template-columns:76px 1fr;grid-template-rows:1fr auto;width:900px;min-height:420px}.ds-stub::before,.ds-stub::after{content:'';position:absolute;left:62px;width:28px;height:28px;border-radius:50%;background:var(--ground)}.ds-stub::before{top:-14px}.ds-stub::after{bottom:-14px}.ds-tail{border-right:2px dashed var(--rule);writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--mono);font-size:16px;padding:40px 0;text-align:center;grid-row:1/3}.ds-body{display:grid;grid-template-columns:1.3fr 1fr;padding:28px 40px 20px}.ds-lead{display:flex;flex-direction:column;justify-content:flex-end;border-right:1px solid var(--rule);padding-right:32px}.ds-cells{padding-left:32px}.ds-mono{font-family:var(--mono)}.ds-mon{font-size:112px;line-height:112px;font-weight:600;letter-spacing:-4px}.ds-lg{font-size:72px;line-height:76px;font-weight:600;letter-spacing:-2px;color:var(--stamp)}.ds-md{font-size:40px;font-weight:500}.ds-unit{font-weight:600;font-size:26px;margin-left:6px}.ds-st{color:var(--stamp)}.ds-name{font-size:48px;font-weight:800;line-height:56px}.ds-sub{font-size:20px;font-weight:600;color:var(--ink-muted)}.ds-label{font-size:16px;font-weight:600;color:var(--ink-muted);margin-bottom:6px}.ds-row{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-top:16px}.ds-row>div{padding:16px 0}.ds-row>div:first-child{border-right:1px solid var(--rule)}.ds-row>div:last-child{padding-left:20px}.ds-tear{grid-column:2;border-top:2px dashed var(--rule);margin:8px 20px 24px}"
+    },
+    {
+      "name": "Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Double-bordered rectangular stamp in cobalt, rotated -6deg, dropping from 1.35x on first appearance. The app's only flourish.",
+      "html": "<div class=\"ds-stamp\">정산 완료</div>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}@keyframes ds-thunk{0%{opacity:0;transform:rotate(-6deg) scale(1.35)}25%{opacity:1}100%{opacity:1;transform:rotate(-6deg) scale(1)}}.ds-stamp{display:inline-block;font-family:var(--sans);font-weight:600;font-size:20px;line-height:26px;color:var(--stamp);border:2px solid var(--stamp);border-radius:4px;padding:6px 14px;outline:1px solid var(--stamp);outline-offset:-6px;transform:rotate(-6deg);animation:ds-thunk 350ms cubic-bezier(.33,1,.68,1) both}@media (prefers-reduced-motion:reduce){.ds-stamp{animation:none}}"
+    },
+    {
+      "name": "Printed Field",
+      "kind": "input",
+      "refersTo": "field-label",
+      "description": "A ruled cell: small muted label, then a Mono figure with a Sans unit. Unknown values print as words in thermal fade.",
+      "html": "<div class=\"ds-field\"><div class=\"ds-label\">대기</div><div><span class=\"ds-fig\">5</span><span class=\"ds-u\">분</span></div></div><div class=\"ds-field\"><div class=\"ds-label\">제한</div><div class=\"ds-unknown\">정보 없음</div></div>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-field{display:inline-block;background:var(--stock);color:var(--ink);font-family:var(--sans);padding:16px 20px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:200px;vertical-align:top}.ds-label{font-size:16px;font-weight:600;color:var(--ink-muted);margin-bottom:6px}.ds-fig{font-family:var(--mono);font-size:40px;line-height:44px;font-weight:500;letter-spacing:-1px}.ds-u{font-size:26px;font-weight:600;margin-left:6px}.ds-unknown{font-size:30px;line-height:38px;font-weight:700;color:var(--ink-muted)}"
+    },
+    {
+      "name": "Ticket Header",
+      "kind": "nav",
+      "refersTo": "ticket-header",
+      "description": "Always-visible status row: wordmark, scenario, clock and battery in Mono, data source label.",
+      "html": "<div class=\"ds-hdr\"><span class=\"ds-wm\">Chargis</span><span class=\"ds-sc\">S1 기본 · 서울→속초(가상)</span><span class=\"ds-m\">09:26</span><span><span class=\"ds-l\">배터리</span> <span class=\"ds-m\">49%</span></span><span class=\"ds-l\">시뮬레이션 데이터</span></div>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-hdr{display:flex;align-items:center;gap:20px;padding:14px 28px;background:var(--ground);color:var(--ink);font-family:var(--sans)}.ds-wm{font-size:24px;font-weight:600}.ds-sc{flex:1;font-size:17px;font-weight:500;color:var(--ink-muted)}.ds-m{font-family:var(--mono);font-size:22px;font-weight:500}.ds-l{font-size:16px;font-weight:600;color:var(--ink-muted)}"
+    },
+    {
+      "name": "Warning Line",
+      "kind": "custom",
+      "description": "Amber warning: drawn triangle glyph plus a full sentence. Never colour alone.",
+      "html": "<div class=\"ds-warn\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 1.5 L23.3 22 H0.7 Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linejoin=\"round\"/><line x1=\"12\" y1=\"8.6\" x2=\"12\" y2=\"14.9\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"/><circle cx=\"12\" cy=\"18.5\" r=\"1.3\" fill=\"currentColor\"/></svg><span>제한 40분: 목표 전에 끝날 수 있음</span></div>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-warn{display:flex;align-items:center;gap:10px;color:var(--warn);font-family:var(--sans);font-size:20px;font-weight:600;line-height:26px;background:var(--stock);padding:10px 16px}"
+    },
+    {
+      "name": "Receipt Line",
+      "kind": "custom",
+      "description": "Settlement receipt row: label, dotted leader in rule colour, Mono value; the total sits under a double hairline.",
+      "html": "<div class=\"ds-rcpt\"><div class=\"ds-rl\"><span>출발</span><i></i><b>09:00 · 60%</b></div><div class=\"ds-rl\"><span>충전 · B 휴게소</span><i></i><b>37 → 50% · 9분</b></div><div class=\"ds-dbl\"></div><div class=\"ds-rl ds-tot\"><span>총 거리</span><i></i><b>210 km</b></div></div>",
+      "css": ":host{--ground:#0F0E0D;--stock:#1A1917;--ink:#EDE9E2;--ink-muted:#A19C93;--rule:#3B3833;--stamp:#8FB2EE;--on-stamp:#0F1A2E;--warn:#E8AE4A;--sans:'Wanted Sans',sans-serif;--mono:'Geist Mono',monospace}.ds-rcpt{background:var(--stock);color:var(--ink);font-family:var(--sans);padding:28px 36px;width:640px}.ds-rl{display:flex;align-items:flex-end;padding:10px 0;font-size:20px;font-weight:500}.ds-rl i{flex:1;border-bottom:2px dotted var(--rule);margin:0 10px 6px}.ds-rl b{font-family:var(--mono);font-size:22px;font-weight:500}.ds-dbl{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);height:3px;margin-top:12px}.ds-tot{font-weight:600}.ds-tot b{font-weight:700}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Highway Toll Ticket",
+    "overview": "Chargis prints the trip. Departure issues a ticket, each charging stop is a perforated stub with fixed printed fields, and arrival prints a settlement receipt. The whole system is paper and ink: a stock colour, an ink colour, a faded thermal grey for secondary print, hairline rules, dashed perforations with punched notches, and one stamp ink. Nothing floats, nothing glows; the screen reads like a document the driver can trust at a glance.\n\nDensity follows the driving state. While driving, one stub fills the display: one monumental number owns the left field, ruled cells hold the supporting measurements on the right, and a torn-off strip at the bottom holds at most two actions with targets of 104dp. While parked, the same ticket grammar extends into detail: comparison tables ruled with hairlines, a cell gauge, and a receipt with dotted leaders. Two palettes, night (warm charcoal stock, off-white ink) and day (cool thermal-white stock, near-black ink), follow the system UI mode.\n\nThe world explicitly refuses the EV-app category default: a centered rounded card with a glowing green battery icon. There are no cards, no shadows, no pills, no gradients, and no emoji.",
+    "keyCharacteristics": [
+      "Ticket stock on a darker (night) or greyer (day) ground; square-cornered, never floating.",
+      "Every measured number in Geist Mono; every Korean word in Wanted Sans; units set in Sans beside the mono figure.",
+      "One number owns each field; secondary measurements live in hairline-ruled cells with small muted labels.",
+      "One stamp ink (cobalt), reserved for the active stop, the stamp-the-stop action, and stamps.",
+      "Amber only for warnings, always with a drawn triangle glyph and words.",
+      "Motion is near-absent: a single stamp \"thunk\", a fade-through between driving cards, a 0.98 press."
+    ],
+    "rules": [
+      {
+        "name": "The One Stamp Ink Rule",
+        "body": "Cobalt marks only the stop the driver is heading to and the act of stamping it. If two things on a screen are cobalt, they must be the same stop.",
+        "section": "colors"
+      },
+      {
+        "name": "The Glyph-and-Words Rule",
+        "body": "Amber never appears alone: every amber line carries the drawn warning triangle and a full sentence.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Papers Rule",
+        "body": "Night and day are separate stock and ink pairs, not an inverted palette. Always resolve colours through the active palette, never hard-code one mode.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono-for-Measures Rule",
+        "body": "Any distance, percent, minute count, time, or kW value is set in Geist Mono; its unit is set in Wanted Sans beside it. Words never go in Mono.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Number Owns the Field Rule",
+        "body": "Each field has a single dominant figure; supporting values drop to Figure Medium inside ruled cells.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Scroll Stub Rule",
+        "body": "A driving stub fits the screen: no scrolling, no lists, no text input, two actions at most, each at least 96dp tall (shipped at 104dp).",
+        "section": "layout"
+      },
+      {
+        "name": "The Paper-Lies-Flat Rule",
+        "body": "No elevation, blur, glow, or gradient. If something needs separating, rule it with a hairline or tear it with a perforation.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do set every measured value in Geist Mono with its unit in Wanted Sans beside it.",
+      "Do keep cobalt for the active stop, the stamp action, and stamps only (The One Stamp Ink Rule).",
+      "Do separate content with 1dp hairlines, dashed perforations, and tear lines.",
+      "Do put a tear line directly above the action strip, with the stamp action wide (weight 2) and the secondary narrow and ruled (weight 1).",
+      "Do pair every amber warning with the drawn WarnGlyph and a sentence.",
+      "Do print unknown data as words in thermal fade rather than hiding the field, and label the data source in the header.",
+      "Do honour the system \"remove animations\" setting: stamp and card transitions become instant."
+    ],
+    "donts": [
+      "Don't use cards, drop shadows, glows, gradients, or elevation.",
+      "Don't use pill shapes, rounded containers, or a centered rounded card with a glowing green battery icon.",
+      "Don't use emoji or icon fonts; draw any glyph on canvas.",
+      "Don't introduce a second accent colour or use cobalt for decoration.",
+      "Don't let a driving stub scroll, accept text input, or carry more than two actions or a touch target under 96dp.",
+      "Don't convey state by colour alone; declined stops are struck through, warnings carry glyph and words."
+    ]
+  }
+}

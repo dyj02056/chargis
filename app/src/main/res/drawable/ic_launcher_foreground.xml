@@ -1,11 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 통행권 한 장: 차콜 바탕 위 표 용지, 왼쪽 절취선과 펀치 홈, 도장 잉크 사각 도장. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 번개 모양 -->
+    <!-- 표 용지 -->
     <path
-        android:fillColor="#FF00E0A0"
-        android:pathData="M58,26 L38,58 L52,58 L46,82 L70,46 L56,46 Z" />
+        android:fillColor="#FFEDE9E2"
+        android:pathData="M28,34 L80,34 L80,74 L28,74 Z" />
+    <!-- 펀치 홈 -->
+    <path
+        android:fillColor="#FF1A1917"
+        android:pathData="M37,34 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 M37,74 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+    <!-- 절취선 -->
+    <path
+        android:strokeColor="#FF1A1917"
+        android:strokeWidth="1.4"
+        android:pathData="M37,41 L37,44 M37,48 L37,51 M37,55 L37,58 M37,62 L37,65" />
+    <!-- 인쇄 줄 -->
+    <path
+        android:strokeColor="#FF1A1917"
+        android:strokeWidth="2.6"
+        android:pathData="M44,44 L62,44 M44,52 L56,52" />
+    <!-- 도장 -->
+    <path
+        android:strokeColor="#FF2448A6"
+        android:strokeWidth="2.4"
+        android:pathData="M58,56 L73,53.4 L75.4,67 L60.4,69.6 Z" />
 </vector>
