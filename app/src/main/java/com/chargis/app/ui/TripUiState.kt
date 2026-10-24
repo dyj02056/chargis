@@ -41,7 +41,8 @@ sealed interface DriveCard {
         val targetSoc: Double,
         val arrivalSoc: Double,
         val chargeMinutes: Int,
-        val timeLimitMin: Int?
+        val timeLimitMin: Int?,
+        val timeLimitKnown: Boolean = true   // false면 제한 칸에 "없음" 대신 "정보 없음"
     ) : DriveCard
     /**
      * 평소 주행 상태(남은 거리, 충전 계획) (02-drive-status.png)
@@ -87,7 +88,9 @@ data class StopInfo(
     val targetInTaper: Boolean = false,
     /** 두 번 들르는 계획이면 다음 충전소 이름과 목표 %(B2) */
     val nextStopName: String? = null,
-    val nextStopTarget: Double? = null
+    val nextStopTarget: Double? = null,
+    /** 시간 제한 정보를 확인했는지. false면 제한 칸에 "정보 없음"(제한 없음과 구분) */
+    val timeLimitKnown: Boolean = true
 )
 
 /** 출력 곡선 그래프의 한 점 */

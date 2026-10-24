@@ -75,9 +75,14 @@ data class RouteState(
  * 제한 시간이 지나면 충전이 자동으로 끊기므로, 앱이 미리 경고해야 한다(F3 기능).
  */
 data class ChargerRule(
-    val timeLimitMin: Int?,          // null = 제한 없음 또는 미상
+    val timeLimitMin: Int?,          // null = 제한 없음 또는 미상([timeLimitKnown]으로 구분)
     val amountLimitKrw: Int?,        // 1회 충전 금액 제한(원). null = 없음 또는 미상
-    val note: String? = null         // 화면에 그대로 보여 줄 추가 안내 문구
+    val note: String? = null,        // 화면에 그대로 보여 줄 추가 안내 문구
+    /**
+     * 시간 제한 정보를 확인했는지. false면 [timeLimitMin]이 null이어도 "제한 없음"이 아니라 "정보 없음"이다.
+     * 공공데이터에는 시간 제한 항목이 없어, 분명한 문구나 규칙표(charger_rules.json)가 없으면 false가 된다.
+     */
+    val timeLimitKnown: Boolean = true
 )
 
 /**
@@ -186,6 +191,9 @@ data class RecommendationConfig(
     val offRouteAccessMin: Double = 5.0,      // 경로를 벗어날 때 더 드는 시간(IC 요금소·신호·주차장 찾기) (가정)
     val nonRoadsidePenaltyMin: Double = 5.0,  // 휴게소·쉼터가 아닌 곳에 더하는 순위 가산(분). 휴게소를 먼저 고르게 한다
     val minOpenAfterArrivalMin: Int = 30,     // 도착 후 이만큼은 열려 있어야 후보로 둔다(이용 가능 시간을 알 때만)
+    val includeNonRoadside: Boolean = true,   // false면 휴게소·쉼터만 후보로 둔다(설정 "휴게소만")
+    val offRouteSegmentKm: Double = 20.0,     // 휴게소·쉼터가 아닌 후보를 경로 이 길이마다 몇 곳만 남긴다(계산량 제한)
+    val maxNonRoadsidePerSegment: Int = 2,    // 위 구간마다 남기는 수(우회가 짧고 출력이 큰 순)
     val unknownWaitMin: Int = 10,             // 대기를 전혀 모를 때 셈에 넣는 대기 (가정)
     val comfortArrivalSocPercent: Double = 20.0, // 도착 잔량이 이보다 낮으면 불안 비용을 더한다
     val lowSocPenaltyMinPerPercent: Double = 0.5, // 위 기준에서 1% 모자랄 때마다 더하는 분

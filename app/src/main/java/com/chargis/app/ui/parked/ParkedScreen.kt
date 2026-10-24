@@ -175,6 +175,10 @@ private fun SettingsPanel(state: TripUiState, onSettings: ((UserSettings) -> Use
         ChoiceCell(stringResource(R.string.settings_on), st.voiceCommands) { onSettings { s -> s.copy(voiceCommands = true) } }
         ChoiceCell(stringResource(R.string.settings_off), !st.voiceCommands) { onSettings { s -> s.copy(voiceCommands = false) } }
     }
+    SettingRow(stringResource(R.string.settings_stations), stringResource(R.string.settings_stations_hint)) {
+        ChoiceCell(stringResource(R.string.settings_stations_all), st.includeNonRoadside) { onSettings { s -> s.copy(includeNonRoadside = true) } }
+        ChoiceCell(stringResource(R.string.settings_stations_rest_only), !st.includeNonRoadside) { onSettings { s -> s.copy(includeNonRoadside = false) } }
+    }
 }
 
 // 설정 한 줄: 칸 이름(+ 짧은 설명)과 선택 칸들. 아래에 괘선.
@@ -298,7 +302,7 @@ private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit,
     Spacer(Modifier.height(20.dp))
     Row(Modifier.fillMaxWidth()) {
         MeasureField(stringResource(R.string.label_estimate), "${stop.minutesToTarget}", stringResource(R.string.unit_min), FigureStyle.Medium, Modifier.weight(1f))
-        LimitField(stop.timeLimitMin, Modifier.weight(1f))
+        LimitField(stop.timeLimitMin, stop.timeLimitKnown, Modifier.weight(1f))
     }
     if (stop.targetInTaper) {
         Spacer(Modifier.height(12.dp))
@@ -316,15 +320,15 @@ private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit,
     }
 }
 
-// 시간 제한 칸. 제한을 모르면 "정보 없음"으로 표시한다.
+// 시간 제한 칸. 제한이 없다고 확인했으면 "없음", 확인하지 못했으면 "정보 없음"으로 표시한다.
 @Composable
-private fun LimitField(limit: Int?, modifier: Modifier) {
+private fun LimitField(limit: Int?, known: Boolean, modifier: Modifier) {
     val c = Ticket.colors
     if (limit != null) {
         MeasureField(stringResource(R.string.label_limit), "$limit", stringResource(R.string.unit_min), FigureStyle.Medium, modifier)
     } else {
         Field(stringResource(R.string.label_limit), modifier) {
-            Text(stringResource(R.string.unknown), style = MaterialTheme.typography.headlineMedium, color = c.inkMuted)
+            Text(stringResource(if (known) R.string.value_none else R.string.unknown), style = MaterialTheme.typography.headlineMedium, color = c.inkMuted)
         }
     }
 }
@@ -362,7 +366,7 @@ private fun ColumnScope.ChargingBody(stop: StopInfo, onStop: () -> Unit, onAdjus
                 color = if (limitNear) c.warn else c.ink
             )
         } else {
-            LimitField(null, Modifier.weight(1f))
+            LimitField(null, stop.timeLimitKnown, Modifier.weight(1f))
         }
         HairlineV(Modifier.height(84.dp).padding(end = 24.dp))
         MeasureField(stringResource(R.string.label_depart_at), stop.departAt, null, FigureStyle.Large.copy(fontSize = FigureStyle.Medium.fontSize * 1.3f), Modifier.weight(1.3f))

@@ -20,6 +20,8 @@ class SdkNavi : NaviPort {
     override val routeState: Flow<RouteState?> = emptyFlow()
     override suspend fun addWaypoint(station: ChargingStation): Result<Unit> =
         Result.failure(UnsupportedOperationException("TODO(SDK): NaviHelper.addWaypoint"))
+    override suspend fun removeWaypoint(station: ChargingStation): Result<Unit> =
+        Result.failure(UnsupportedOperationException("TODO(SDK): NaviHelper 경유지 삭제(제공 여부 확인 필요)"))
     override suspend fun requestReRoute(): Result<Unit> =
         Result.failure(UnsupportedOperationException("TODO(SDK): NaviHelper.requestReRoute"))
 }

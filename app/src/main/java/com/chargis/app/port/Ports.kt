@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 interface NaviPort {
     val routeState: Flow<RouteState?>
     suspend fun addWaypoint(station: ChargingStation): Result<Unit>   // F4: 경유지 추가 + 재탐색
+    suspend fun removeWaypoint(station: ChargingStation): Result<Unit> // 수락한 경유지를 다른 곳으로 바꿀 때 이전 것을 지운다
     suspend fun requestReRoute(): Result<Unit>                        // 경로 다시 찾기
 }
 

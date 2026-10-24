@@ -13,6 +13,7 @@ import com.chargis.app.data.fake.FakeTts
 import com.chargis.app.data.fake.FakeVehicle
 import com.chargis.app.domain.model.RecommendationConfig
 import com.chargis.app.port.ChargerDataPort
+import com.chargis.app.data.publicapi.ChargerRuleTable
 import com.chargis.app.data.publicapi.FallbackChargerData
 import com.chargis.app.data.publicapi.PublicChargerData
 import com.chargis.app.data.publicapi.UrlEvChargerHttp
@@ -57,11 +58,16 @@ class AppContainer(context: Context) {
     // 내비, 차량, 충전소, 위치 정보는 모두 시뮬레이터가 만들어 내는 가짜 값을 쓴다.
     val navi: NaviPort = FakeNavi(simulator)
     val vehicle: VehiclePort = FakeVehicle(simulator)
-    // 충전소 정보: 공공데이터 키가 있고 켜 두었으면 공공데이터를 먼저, 실패하면 번들 샘플로 넘어간다(B5).
+    // 충전소 정보: 공공데이터를 켜 두었고 키(개발용 빌드) 또는 프록시 주소가 있으면 공공데이터를 먼저,
+    // 실패하면 번들 샘플로 넘어간다(B5). 조회할 시도는 경로가 지나는 곳으로 그때그때 고른다.
+    private val proxyUrl = BuildConfig.CHARGER_API_BASE_URL.takeIf { it.isNotBlank() }
     val chargerData: ChargerDataPort =
-        if (BuildConfig.USE_PUBLIC_CHARGER_API && BuildConfig.CHARGER_API_KEY.isNotBlank()) {
+        if (BuildConfig.USE_PUBLIC_CHARGER_API && (BuildConfig.CHARGER_API_KEY.isNotBlank() || proxyUrl != null)) {
             FallbackChargerData(
-                primary = PublicChargerData(UrlEvChargerHttp(BuildConfig.CHARGER_API_KEY), zcodes = listOf("11", "41", "51")),
+                primary = PublicChargerData(
+                    UrlEvChargerHttp(BuildConfig.CHARGER_API_KEY, proxyUrl ?: UrlEvChargerHttp.DEFAULT_BASE),
+                    rules = ChargerRuleTable.parse(readAsset("charger_rules.json"))
+                ),
                 fallback = FakeChargerData(simulator)
             )
         } else {

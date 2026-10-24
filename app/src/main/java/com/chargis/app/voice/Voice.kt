@@ -33,6 +33,12 @@ interface VoicePhrases {
     fun targetChanged(target: Double): String
     /** 경로를 벗어나는 충전소를 추천할 때 덧붙이는 말. [roundTripKm]는 갔다 오는 거리. */
     fun offRoute(name: String, roundTripKm: Int): String
+    /** 수락한 경유지를 더 빠른 곳으로 바꿨을 때. [fasterMin]은 목적지에 몇 분 빨리 닿는지. */
+    fun waypointSwitched(fromName: String, toName: String, fasterMin: Int): String
+    /** 수락한 곳이 갈 수 없게 되어 경유지를 바꿨을 때. */
+    fun waypointSwitchedUnreachable(fromName: String, toName: String): String
+    /** 충전을 시작했는데 이 충전기의 시간 제한 정보가 없을 때. */
+    fun ruleUnknown(): String
 }
 
 /** strings.xml에서 문구를 꺼내 숫자·이름을 끼워 넣는 실제 구현체. */
@@ -60,6 +66,11 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
         s(R.string.tts_plan_two_stops, nextName, nextTarget.roundToInt())
     override fun targetChanged(target: Double) = s(R.string.tts_target_changed, target.roundToInt())
     override fun offRoute(name: String, roundTripKm: Int) = s(R.string.tts_off_route, name, roundTripKm)
+    override fun waypointSwitched(fromName: String, toName: String, fasterMin: Int) =
+        s(R.string.tts_waypoint_switched, fromName, toName, fasterMin)
+    override fun waypointSwitchedUnreachable(fromName: String, toName: String) =
+        s(R.string.tts_waypoint_switched_unreachable, fromName, toName)
+    override fun ruleUnknown() = s(R.string.tts_rule_unknown)
 
     // strings.xml의 문구 [id]에 [args]를 차례로 끼워 넣는다. 예) "%1$s를 추천합니다" → "B 휴게소를 추천합니다"
     private fun s(id: Int, vararg args: Any) = context.getString(id, *args)

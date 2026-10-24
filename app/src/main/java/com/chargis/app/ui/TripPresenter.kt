@@ -89,7 +89,8 @@ class TripPresenter {
                     targetSoc = acc.targetSocPercent,
                     arrivalSoc = acc.arrivalSocPercent,
                     chargeMinutes = acc.chargeMinutes,
-                    timeLimitMin = acc.timeLimitMin
+                    timeLimitMin = acc.timeLimitMin,
+                    timeLimitKnown = acc.station.rule.timeLimitKnown
                 )
             else -> when (val r = m.lastResult) {
                 is RecommendationResult.NoSafeStop ->
@@ -215,7 +216,8 @@ class TripPresenter {
             canLowerTarget = target - STEP > v.socPercent + MIN_GAP,
             targetInTaper = target > config.taperStartSocPercent,
             nextStopName = rec.nextStop?.station?.name,
-            nextStopTarget = rec.nextStop?.targetSocPercent
+            nextStopTarget = rec.nextStop?.targetSocPercent,
+            timeLimitKnown = rec.station.rule.timeLimitKnown
         )
     }
 

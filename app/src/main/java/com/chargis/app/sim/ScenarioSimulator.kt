@@ -91,13 +91,28 @@ class ScenarioSimulator(
 
     fun togglePause() = _state.update { it.copy(paused = !it.paused) }
 
-    /** F4 데모: 경유지로 등록된 충전소에 도착하면 자동으로 정차한다. */
-    fun setWaypoint(stationId: String): Boolean {
-        val station = scenario.stations.firstOrNull { it.id == stationId } ?: return false
+    /**
+     * F4 데모: 경유지로 등록된 충전소에 도착하면 자동으로 정차한다.
+     * [station]의 distanceAlongRouteKm는 지금 위치 기준이다(포트가 넘겨주는 값). 시나리오에 없는 충전소
+     * (공공데이터 등)면 출발점 기준 거리로 바꿔 시나리오에 더해 둔다. 그래야 정차·충전·경로 띠가 그 충전소를 찾는다.
+     */
+    fun setWaypoint(station: ChargingStation): Boolean {
+        val traveled = _state.value.traveledKm
+        val known = scenario.stations.firstOrNull { it.id == station.id }
+            ?: station.copy(distanceAlongRouteKm = traveled + station.distanceAlongRouteKm).also(::addStation)
         // 이미 지나친 충전소는 경유지로 등록할 수 없다.
-        if (station.distanceAlongRouteKm <= _state.value.traveledKm) return false
-        _state.update { it.copy(waypointId = stationId) }
+        if (known.distanceAlongRouteKm <= traveled) return false
+        _state.update { it.copy(waypointId = known.id) }
         return true
+    }
+
+    /** 경유지가 [stationId]이면 지운다(다른 충전소로 바꿀 때). */
+    fun clearWaypoint(stationId: String) = _state.update { if (it.waypointId == stationId) it.copy(waypointId = null) else it }
+
+    /** 시나리오에 없는 충전소를 더한다. [station]의 distanceAlongRouteKm는 출발점 기준 거리여야 한다. 이미 있으면 그대로 둔다. */
+    fun addStation(station: ChargingStation) {
+        if (scenario.stations.any { it.id == station.id }) return
+        scenario = scenario.copy(stations = (scenario.stations + station).sortedBy { it.distanceAlongRouteKm })
     }
 
     /** [limitMinutes]가 있으면 그 시간이 지나면 충전기가 스스로 끊는다(목표 미도달이어도). */

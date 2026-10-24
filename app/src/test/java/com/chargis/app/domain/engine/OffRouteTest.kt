@@ -100,6 +100,35 @@ class OffRouteTest {
         assertTrue((listOf(unknown.primary) + unknown.alternatives).any { it.station.id == "mart" })
     }
 
+    /** 8: 설정에서 "휴게소·쉼터만"을 고르면 다른 충전소는 아무리 빨라도 후보에서 빠진다. 쉼터와 국도 휴게소는 남는다. */
+    @Test
+    fun restOnlySetting_excludesNonRoadside() {
+        val restOnly = RecommendationEngine(config.copy(includeNonRoadside = false))
+        val stations = listOf(
+            station("mart", 90.0, maxKw = 200.0, waitMin = 0, kind = StationKind.COMMERCIAL),
+            station("shelter", 100.0, maxKw = 50.0, kind = StationKind.SHELTER),
+            station("local", 120.0, maxKw = 50.0, detourKm = 2.0, kind = StationKind.LOCAL_REST_STOP)
+        )
+        val result = recommended(restOnly.recommend(route(210.0), vehicle(60.0), stations, defaultProfile))
+        val ids = (listOf(result.primary) + result.alternatives).map { it.station.id }.toSet()
+        assertEquals(setOf("shelter", "local"), ids)
+    }
+
+    /** 3: 한 구간(20km)에 상업시설이 많아도 우회가 짧고 출력이 큰 2곳만 계산에 넣는다. 휴게소는 줄이지 않는다. */
+    @Test
+    fun nonRoadside_isCappedPerSegment() {
+        val stations = listOf(
+            station("far", 82.0, waitMin = 0, detourKm = 2.5, kind = StationKind.COMMERCIAL),
+            station("near", 84.0, waitMin = 0, detourKm = 0.6, kind = StationKind.COMMERCIAL),
+            station("mid", 86.0, waitMin = 0, detourKm = 1.0, kind = StationKind.PUBLIC),
+            station("mid_fast", 88.0, maxKw = 200.0, waitMin = 0, detourKm = 1.0, kind = StationKind.COMMERCIAL)
+        )
+        val result = recommended(engine.recommend(route(210.0), vehicle(60.0), stations, defaultProfile))
+        val ids = (listOf(result.primary) + result.alternatives).map { it.station.id }.toSet()
+        // 우회 0.6km인 near, 같은 1.0km 중 출력이 큰 mid_fast만 남는다.
+        assertEquals(setOf("near", "mid_fast"), ids)
+    }
+
     /** 이용 가능 시간: 자정을 넘기는 시간대, 하루 종일, 글자 해석. */
     @Test
     fun openHours_coversAndParses() {

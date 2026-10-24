@@ -32,7 +32,8 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             maxTargetSocPercent = p[MAX_TARGET] ?: UserSettings().maxTargetSocPercent,
             safetyMarginPercent = p[MARGIN] ?: UserSettings().safetyMarginPercent,
             voiceCommands = p[VOICE] ?: false,
-            onboarded = p[ONBOARDED] ?: false
+            onboarded = p[ONBOARDED] ?: false,
+            includeNonRoadside = p[NON_ROADSIDE] ?: true
         )
     }
 
@@ -44,6 +45,7 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             p[MARGIN] = next.safetyMarginPercent
             p[VOICE] = next.voiceCommands
             p[ONBOARDED] = next.onboarded
+            p[NON_ROADSIDE] = next.includeNonRoadside
         }
     }
 
@@ -53,6 +55,7 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
         val MARGIN = intPreferencesKey("safety_margin_pct")
         val VOICE = booleanPreferencesKey("voice_commands")
         val ONBOARDED = booleanPreferencesKey("onboarded")
+        val NON_ROADSIDE = booleanPreferencesKey("include_non_roadside")
     }
 }
 

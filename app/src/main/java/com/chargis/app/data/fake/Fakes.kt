@@ -46,9 +46,15 @@ class FakeNavi(private val sim: ScenarioSimulator) : NaviPort {
         )
     }
 
+    // 시나리오 밖 충전소(공공데이터)도 받는다. 시뮬레이터가 그 충전소를 경로에 올려 두고 거기서 멈춘다.
     override suspend fun addWaypoint(station: ChargingStation): Result<Unit> =
-        if (sim.setWaypoint(station.id)) Result.success(Unit)
+        if (sim.setWaypoint(station)) Result.success(Unit)
         else Result.failure(IllegalStateException("waypoint not on route: ${station.id}"))
+
+    override suspend fun removeWaypoint(station: ChargingStation): Result<Unit> {
+        sim.clearWaypoint(station.id)
+        return Result.success(Unit)
+    }
 
     // 데모에서는 경로가 한 줄뿐이라 다시 찾을 것이 없다. 항상 성공으로 답한다.
     override suspend fun requestReRoute(): Result<Unit> = Result.success(Unit)

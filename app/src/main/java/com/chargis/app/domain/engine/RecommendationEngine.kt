@@ -64,10 +64,10 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
         // 2. 하드 조건 필터
         // 이미 지나친 곳, 목적지보다 먼 곳, 도착할 때 닫혀 있는 곳은 뺀다.
         val speed = speedKmh(route)
-        val ahead = stations.filter {
+        val ahead = limitNonRoadside(stations.filter {
             it.distanceAlongRouteKm > 0 && it.distanceAlongRouteKm < route.remainingDistanceKm &&
                 isOpenOnArrival(it, context, speed)
-        }.sortedBy { it.distanceAlongRouteKm }
+        }).sortedBy { it.distanceAlongRouteKm }
         // 도착했을 때 최소 잔량(10%)이 남는 곳만 "안전한" 후보로 남긴다.
         val safe = ahead.filter { arrivalSoc(soc, it, p) >= config.minArrivalSocPercent }
         if (safe.isEmpty()) {
@@ -138,6 +138,21 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
     // 휴게소·쉼터가 아닌 곳에 붙이는 순위 가산. 도착 시간(eta)에는 넣지 않고 비용에만 넣는다.
     private fun kindPenalty(station: ChargingStation) =
         if (station.kind.isRoadside) 0.0 else config.nonRoadsidePenaltyMin
+
+    /**
+     * 휴게소·쉼터가 아닌 후보를 줄인다. 설정에서 끄면 모두 빼고, 켜 두면 경로 [RecommendationConfig.offRouteSegmentKm]마다
+     * 우회가 짧고 출력이 큰 [RecommendationConfig.maxNonRoadsidePerSegment]곳만 남긴다.
+     * 도심 구간에는 주유소·마트 충전소가 수십 곳씩 있어, 다 넣으면 두 번 들르기 계획 계산이 후보 수의 제곱으로 늘어난다.
+     */
+    private fun limitNonRoadside(stations: List<ChargingStation>): List<ChargingStation> {
+        val (roadside, others) = stations.partition { it.kind.isRoadside }
+        if (!config.includeNonRoadside) return roadside
+        val kept = others
+            .groupBy { (it.distanceAlongRouteKm / config.offRouteSegmentKm).toInt() }
+            .values
+            .flatMap { group -> group.sortedWith(compareBy({ it.detourKm }, { -it.maxKw })).take(config.maxNonRoadsidePerSegment) }
+        return roadside + kept
+    }
 
     /**
      * 이용 가능 시간을 아는 충전소가 도착 시각부터 [RecommendationConfig.minOpenAfterArrivalMin]분 동안 열려 있는지.

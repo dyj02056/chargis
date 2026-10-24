@@ -1,6 +1,10 @@
 package com.chargis.app.data
 
 import com.chargis.app.data.publicapi.ChargerItem
+import com.chargis.app.data.publicapi.ChargerRuleTable
+import com.chargis.app.data.publicapi.RestStopDirection
+import com.chargis.app.data.publicapi.SidoCodes
+import com.chargis.app.data.publicapi.UrlEvChargerHttp
 import com.chargis.app.data.publicapi.ChargerStatus
 import com.chargis.app.data.publicapi.EvChargerParser
 import com.chargis.app.data.publicapi.FallbackChargerData
@@ -39,7 +43,7 @@ class PublicChargerDataTest {
     @Test
     fun parse_skipsInvalidAndReadsStringNumbers() {
         val items = EvChargerParser.parseInfo(body)
-        assertEquals(11, items.size)
+        assertEquals(12, items.size)
         assertEquals(100.0, items.first().outputKw!!, 1e-9)
         assertEquals(2, items.first().stat)
         assertEquals("C001", items.first().kindDetail)
@@ -51,7 +55,7 @@ class PublicChargerDataTest {
     fun aggregate_keepsPublicFastChargersOnly() {
         val stations = StationAggregator.aggregate(EvChargerParser.parseInfo(body), emptyList(), now)
         assertEquals(
-            listOf("PX000001", "PX000002", "PX000003", "PX000004", "PX000007", "PX000009"),
+            listOf("PX000001", "PX000002", "PX000003", "PX000004", "PX000007", "PX000009", "PX000010"),
             stations.map { it.id }.sorted()
         )
         val a = stations.first { it.id == "PX000001" }
@@ -145,6 +149,11 @@ class PublicChargerDataTest {
         val first = data.stationsAlongRoute(route)
         assertEquals(listOf("PX000001", "PX000003", "PX000002", "PX000007", "PX000009"), first.map { it.id })
         assertEquals(40, first.first().rule.timeLimitMin)
+        // 반대 방향 휴게소("가상K휴게소(서울방향)")는 서울→속초 경로에서 뺀다.
+        assertTrue(first.none { it.id == "PX000010" })
+        // 시간 제한: 문구에서 읽은 A는 확인됨, 문구도 규칙표도 없는 B는 "정보 없음"
+        assertTrue(first.first { it.id == "PX000001" }.rule.timeLimitKnown)
+        assertFalse(first.first { it.id == "PX000002" }.rule.timeLimitKnown)
         // 휴게소·쉼터는 본선에 붙어 있으므로 우회 0, 주차장은 직선 경로에서 떨어진 만큼 편도 우회
         assertEquals(0.0, first.first { it.id == "PX000001" }.detourKm, 1e-9)
         assertEquals(0.0, first.first { it.id == "PX000007" }.detourKm, 1e-9)
@@ -155,6 +164,82 @@ class PublicChargerDataTest {
         clock += 3 * 60 * 1000L                    // 상태 캐시(2분)만 만료
         data.stationsAlongRoute(route)
         assertEquals(3, calls)
+    }
+
+    /** 규칙표: 운영기관·종류가 맞는 첫 규칙의 시간 제한을 쓰고, 맞는 규칙이 없으면 "정보 없음"으로 둔다. */
+    @Test
+    fun ruleTable_fillsTimeLimitWhenTextHasNone() = runTest {
+        val rules = ChargerRuleTable.parse(
+            """{"rules":[{"operatorId":"EX","kind":"HIGHWAY_REST_STOP","timeLimitMin":40,"source":"테스트용 가정"}]}"""
+        )
+        assertEquals(40, rules.timeLimitFor("EX", StationKind.HIGHWAY_REST_STOP))
+        assertNull(rules.timeLimitFor("EX", StationKind.COMMERCIAL))
+        assertNull(rules.timeLimitFor(null, StationKind.HIGHWAY_REST_STOP))
+        assertEquals(ChargerRuleTable.EMPTY.timeLimitFor("EX", StationKind.HIGHWAY_REST_STOP), ChargerRuleTable.parse("깨진 JSON").timeLimitFor("EX", StationKind.HIGHWAY_REST_STOP))
+
+        // 반대로 가는 경로(속초→서울)에서는 K휴게소(서울방향)가 남고, 규칙표의 40분이 붙는다.
+        val back = RouteState(GeoPoint(38.20, 128.59), GeoPoint(37.55, 127.05), 210.0, 126)
+        val data = PublicChargerData(
+            http = { op, _ -> if (op == "getChargerInfo") body else """{"resultCode":"00","items":{"item":[]}}""" },
+            zcodes = listOf("11"),
+            corridorKm = 5.0,
+            rules = rules,
+            nowLocal = { now }
+        )
+        val k = data.stationsAlongRoute(back).first { it.id == "PX000010" }
+        assertEquals(40, k.rule.timeLimitMin)
+        assertTrue(k.rule.timeLimitKnown)
+        assertTrue(data.stationsAlongRoute(back).none { it.id == "PX000001" })   // A(속초방향)는 반대편
+    }
+
+    /** 이름의 "(○○방향)" 도시가 진행 방향 뒤쪽이면 반대편 휴게소다. 양방향·표기 없음·모르는 도시는 판단하지 않는다. */
+    @Test
+    fun restStopDirection_usesDirectionCity() {
+        val here = GeoPoint(37.80, 127.60)
+        assertTrue(RestStopDirection.isOpposite("가상휴게소(서울방향)", here, route))
+        assertFalse(RestStopDirection.isOpposite("가상휴게소(속초방향)", here, route))
+        assertFalse(RestStopDirection.isOpposite("가상휴게소(양방향)", here, route))
+        assertFalse(RestStopDirection.isOpposite("가상휴게소", here, route))
+        assertFalse(RestStopDirection.isOpposite("가상휴게소(없는도시방향)", here, route))
+        assertEquals("강릉", RestStopDirection.directionCity("가상휴게소( 강릉 방향 )"))
+    }
+
+    /** 12: 조회할 시도는 경로가 지나는 곳으로 고른다. 서울→부산이면 충청·경상까지, 서울→속초면 강원까지. */
+    @Test
+    fun sidoCodes_followRoute() {
+        val busan = SidoCodes.along(RouteState(GeoPoint(37.55, 127.05), GeoPoint(35.18, 129.07), 330.0, 200))
+        assertTrue(busan.toString(), busan.containsAll(listOf("11", "41", "43", "47", "26")))
+        assertFalse(busan.contains("50"))                       // 제주는 지나지 않는다
+        val sokcho = SidoCodes.along(route)
+        assertTrue(sokcho.toString(), sokcho.containsAll(listOf("11", "41", "51")))
+        assertFalse(sokcho.contains("26"))
+    }
+
+    /** 12: 시도를 고정하지 않으면 경로가 지나는 시도마다 따로 받고, 같은 시도는 캐시로 다시 받지 않는다. */
+    @Test
+    fun publicData_queriesZonesAlongRoute() = runTest {
+        val asked = mutableListOf<String>()
+        val data = PublicChargerData(
+            http = { op, p -> if (op == "getChargerInfo") asked += p.getValue("zcode"); """{"resultCode":"00","items":{"item":[]}}""" },
+            nowMillis = { 0L },
+            nowLocal = { now }
+        )
+        data.stationsAlongRoute(route)
+        assertEquals(SidoCodes.along(route), asked.sorted())
+        asked.clear()
+        data.stationsAlongRoute(route)
+        assertTrue(asked.isEmpty())
+    }
+
+    /** 10: 키가 있으면 주소에 붙이고, 비어 있으면(프록시가 붙이는 경우) 붙이지 않는다. 프록시 주소를 쓸 수 있다. */
+    @Test
+    fun http_addsKeyOnlyWhenPresent() {
+        val direct = UrlEvChargerHttp("abc").urlFor("getChargerInfo", mapOf("zcode" to "11"))
+        assertTrue(direct.startsWith(UrlEvChargerHttp.DEFAULT_BASE + "/getChargerInfo?"))
+        assertTrue(direct.contains("serviceKey=abc"))
+        val proxied = UrlEvChargerHttp("", "https://proxy.example.test/ev/").urlFor("getChargerInfo", mapOf("zcode" to "11"))
+        assertTrue(proxied.startsWith("https://proxy.example.test/ev/getChargerInfo?"))
+        assertFalse(proxied.contains("serviceKey"))
     }
 
     @Test

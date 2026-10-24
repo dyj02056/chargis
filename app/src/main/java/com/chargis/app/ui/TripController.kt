@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -102,6 +103,7 @@ class TripController(
 
     private var captionClear: Job? = null      // 자막을 일정 시간 뒤 지우는 예약 작업
     private var listenJob: Job? = null         // 음성 명령을 듣는 작업(F5)
+    private var acceptJob: Job? = null         // 진행 중인 경유지 추가(수락) 작업
     private var ticksSinceSave = 0
     // 저장 요청 줄. 가장 최근 요청만 남겨(CONFLATED) 오래된 저장이 새 저장을 덮지 않게 한다.
     private val saves = Channel<String?>(Channel.CONFLATED)
@@ -115,8 +117,11 @@ class TripController(
             // 데모 시계를 돌린다(가상의 차가 움직이기 시작).
             if (runClock) launch { demo.run() }
             // 경로나 차량 값 중 하나라도 바뀌면 둘을 묶어 onTick을 부른다.
+            // 데모에서는 두 값이 같은 시뮬레이터 상태에서 나와 한 번 바뀔 때 두 번(새 경로+옛 차량, 새 경로+새 차량) 들어온다.
+            // conflate로 처리하는 동안 쌓인 값은 마지막 것만 남겨, 어긋난 짝으로 한 번 더 계산하지 않게 한다.
             launch {
                 combine(navi.routeState, vehicle.vehicleState) { r, v -> r to v }
+                    .conflate()
                     .collect { (r, v) -> onTick(r, v) }
             }
             // 저장 요청을 하나씩 순서대로 기기에 쓴다.
@@ -160,9 +165,11 @@ class TripController(
     /** 추천 카드의 [수락] 또는 혼잡 비교 카드에서 충전소 선택. */
     fun accept(stationId: String) {
         val current = m.offer ?: return
+        // 버튼을 빠르게 두 번 누르거나 음성과 버튼이 겹쳐도 경유지 추가는 한 번만 한다.
+        if (acceptJob?.isActive == true || m.phase != TripPhase.AwaitingDecision) return
         val rec = (listOf(current.primary) + current.alternatives).firstOrNull { it.station.id == stationId } ?: return
         // 내비에 경유지를 추가한다. 성공하면 수락 처리, 실패하면 음성으로 알린다.
-        scope.launch {
+        acceptJob = scope.launch {
             navi.addWaypoint(rec.station)
                 .onSuccess {
                     navi.requestReRoute()
@@ -205,7 +212,11 @@ class TripController(
         transition(TripEvent.ChargingStarted)
         // 시간 제한이 있으면 "이 충전기는 N분 제한입니다" 안내
         val started = session.start(now, soc)
-        scope.launch { started.forEach { speakAlert(it) } }
+        scope.launch {
+            started.forEach { speakAlert(it) }
+            // 시간 제한을 확인하지 못한 충전기면, 제한이 없다고 넘기지 않고 충전기에서 확인하라고 알린다.
+            if (rec.timeLimitMin == null && !rec.station.rule.timeLimitKnown) announcer.announce(phrases.ruleUnknown())
+        }
     }
 
     /** 운전자가 직접 [충전 종료]를 누른 경우. */
@@ -409,14 +420,39 @@ class TripController(
         return calibrator.factor(ChargeMath.socPerKm(demo.scenario.profile), prior)
     }
 
-    /** 경로상 충전소를 새로 받아(거절한 곳은 빼고) 추천 엔진을 돌린다. 지금 시각과 소비 배율을 함께 넘긴다. */
+    /**
+     * 경로상 충전소를 새로 받아(거절한 곳은 빼고) 추천 엔진을 돌린다. 지금 시각과 소비 배율을 함께 넘긴다.
+     * 화면 틱은 0.2초마다 오지만 계산은 [EVAL_EVERY_KM]을 더 달렸거나 [EVAL_EVERY_SEC]초가 지났거나
+     * 거절·설정이 바뀌었을 때만 새로 한다. 그 사이에는 지난 목록과 결과에서 달린 거리만 뺀다.
+     */
     private suspend fun evaluate(route: RouteState, v: VehicleState): RecommendationResult {
+        val now = demo.state.value.simTimeSec
+        val last = m.lastEval
+        val moved = last?.let { it.remainingKm - route.remainingDistanceKm }
+        if (last != null && moved != null && moved >= 0.0 && moved < EVAL_EVERY_KM &&
+            now - last.simSec < EVAL_EVERY_SEC && last.declinedCount == gate.declinedIds.size
+        ) {
+            m.stations = last.stations.map { it.ahead(moved) }.filter { it.distanceAlongRouteKm > 0 }
+            return last.result.ahead(moved).also { m.lastResult = it }
+        }
         m.stations = chargerData.stationsAlongRoute(route).filter { it.id !in gate.declinedIds }
         val context = RecommendContext(
-            minuteOfDay = TripPresenter.Clock(demo.scenario.startHour).minuteOfDay(demo.state.value.simTimeSec),
+            minuteOfDay = TripPresenter.Clock(demo.scenario.startHour).minuteOfDay(now),
             consumptionFactor = consumptionFactor(route, v)
         )
-        return engine.recommend(route, v, m.stations, demo.scenario.profile, context).also { m.lastResult = it }
+        val result = engine.recommend(route, v, m.stations, demo.scenario.profile, context)
+        m.lastEval = EvalPoint(route.remainingDistanceKm, now, gate.declinedIds.size, m.stations, result)
+        return result.also { m.lastResult = it }
+    }
+
+    // 계산해 둔 값에서 [movedKm]만큼 달린 뒤의 거리로 바꾼다.
+    private fun ChargingStation.ahead(movedKm: Double) = copy(distanceAlongRouteKm = distanceAlongRouteKm - movedKm)
+    private fun Recommendation.ahead(movedKm: Double) =
+        copy(station = station.ahead(movedKm), nextStop = nextStop?.let { it.copy(station = it.station.ahead(movedKm)) })
+    private fun RecommendationResult.ahead(movedKm: Double): RecommendationResult = when (this) {
+        is RecommendationResult.Recommended -> copy(primary = primary.ahead(movedKm), alternatives = alternatives.map { it.ahead(movedKm) })
+        is RecommendationResult.NoSafeStop -> copy(nearest = nearest?.ahead(movedKm))
+        RecommendationResult.NotNeeded -> this
     }
 
     /** 추천을 운전자에게 알린다. 붐비면 대안과 비교하는 문구로, 아니면 일반 추천 문구로 말한다. */
@@ -472,10 +508,22 @@ class TripController(
         if (m.stations.none { it.id == acc.station.id }) return // 도착 직전/직후 — 바꾸지 않는다
         val replacement = gate.replacementFor(acc, result)
         if (replacement != null && replacement.station.id != acc.station.id) {
+            // 바꾼 이유(얼마나 빨리 도착하는지)를 함께 말한다. 수락한 곳이 후보에서 빠졌으면(갈 수 없게 됨) 이유만 다르다.
+            val sameNow = (result as? RecommendationResult.Recommended)
+                ?.let { r -> (listOf(r.primary) + r.alternatives).firstOrNull { it.station.id == acc.station.id } }
+            navi.removeWaypoint(acc.station)
             navi.addWaypoint(replacement.station).onSuccess {
                 m.accepted = replacement
                 gate.markAnnounced(replacement.station.id)
-                announcer.announce(phrases.waypointAdded(replacement.station.name))
+                val text = if (sameNow != null) {
+                    phrases.waypointSwitched(acc.station.name, replacement.station.name, max(1, (sameNow.etaMinutes - replacement.etaMinutes).roundToInt()))
+                } else {
+                    phrases.waypointSwitchedUnreachable(acc.station.name, replacement.station.name)
+                }
+                announcer.announce(text, Priority.HIGH)
+            }.onFailure {
+                // 새 경유지를 못 넣었으면 원래 경유지를 되돌려 둔다.
+                navi.addWaypoint(acc.station)
             }
         } else {
             m.accepted = acc.withDistanceFrom(m.stations)
@@ -569,6 +617,7 @@ class TripController(
         settings = next
         config = next.applyTo(baseConfig)
         engine = RecommendationEngine(config)
+        m.lastEval = null   // 기준이 바뀌었으니 다음 틱에 새로 계산한다
         if (m.phase == TripPhase.Idle) selectedProfile()?.let(demo::useProfile)
         _state.update { it.copy(settings = next) }
         updateListening()
@@ -617,7 +666,11 @@ class TripController(
             profileId = demo.scenario.profile.id,
             sim = SavedSim.of(sim),
             phase = if (awaiting) TripPhase.Driving else m.phase,
-            accepted = m.accepted?.let(SavedRec::of),
+            // 충전소는 시뮬레이터가 들고 있는 출발점 기준 값을 먼저 쓴다(공공데이터 충전소도 수락할 때 올라가 있다).
+            accepted = m.accepted?.let { r ->
+                val routeStation = demo.scenario.stations.firstOrNull { it.id == r.station.id }
+                SavedRec.of(r, routeStation?.let { SavedStation.of(it, 0.0) } ?: SavedStation.of(r.station, sim.traveledKm))
+            },
             charges = m.charges.map { SavedCharge.of(it.first, it.second) },
             handled = gate.handledIds.filter { !(awaiting && it == offeredId) || it in gate.declinedIds },
             declined = gate.declinedIds.toList(),
@@ -651,10 +704,11 @@ class TripController(
         saved.charges.forEach { m.charges += it.toRecord() }
         gate.restore(saved.handled, saved.declined)
         // 수락한 충전소는 시나리오 목록에서 다시 찾아, 지금 위치 기준 거리로 바꿔 넣는다.
+        // 시나리오에 없는 충전소(공공데이터)는 저장해 둔 정보로 되살려 시뮬레이터에 다시 올린다.
         m.accepted = saved.accepted?.let { r ->
-            scenario.stations.firstOrNull { it.id == r.stationId }?.let { st ->
-                r.toRecommendation(st.copy(distanceAlongRouteKm = st.distanceAlongRouteKm - saved.sim.traveledKm))
-            }
+            val st = scenario.stations.firstOrNull { it.id == r.stationId }
+                ?: r.station?.toStation()?.also(demo::addStation)
+            st?.let { r.toRecommendation(it.copy(distanceAlongRouteKm = it.distanceAlongRouteKm - saved.sim.traveledKm)) }
         }
         val rec = m.accepted
         m.charge = saved.charge?.let { c ->
@@ -669,6 +723,8 @@ class TripController(
         const val ARRIVED_KM = 0.05      // 목적지까지 50m 이내면 도착으로 본다.
         const val CAPTION_MS = 8_000L    // 자막을 띄워 두는 시간(8초)
         const val SAVE_EVERY_TICKS = 25  // 진행 상황 저장 간격(0.2초 틱 기준 약 5초)
+        const val EVAL_EVERY_KM = 0.5    // 추천을 새로 계산하는 주행 간격
+        const val EVAL_EVERY_SEC = 30.0  // 추천을 새로 계산하는 시간 간격(가상 시각, 실시간 대기 반영용)
         const val HABIT_TARGET = 80.0    // F4 비교: 습관처럼 채우는 %
         val json = Json { ignoreUnknownKeys = true }
     }

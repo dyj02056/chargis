@@ -55,7 +55,7 @@
       "id": "rest_g",
       "name": "G 휴게소",
       "lat": 37.70, "lon": 127.48,
-      "routeKm": 60.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
+      "routeKm": 55.0, "detourKm": 0.0, "kind": "HIGHWAY_REST_STOP",
       "maxKw": 50.0, "totalChargers": 4, "availableChargers": 0, "expectedWaitMin": 35,
       "timeLimitMin": 40, "amountLimitKrw": null
     },
@@ -63,7 +63,7 @@
       "id": "shelter_h",
       "name": "H 졸음쉼터",
       "lat": 37.78, "lon": 127.68,
-      "routeKm": 85.0, "detourKm": 0.0, "kind": "SHELTER",
+      "routeKm": 75.0, "detourKm": 0.0, "kind": "SHELTER",
       "maxKw": 50.0, "totalChargers": 2, "availableChargers": 0, "expectedWaitMin": 25,
       "timeLimitMin": null, "amountLimitKrw": null
     },
@@ -71,7 +71,7 @@
       "id": "mart_i",
       "name": "I 마트",
       "lat": 37.83, "lon": 127.74,
-      "routeKm": 95.0, "detourKm": 2.5, "kind": "COMMERCIAL",
+      "routeKm": 100.0, "detourKm": 2.5, "kind": "COMMERCIAL",
       "maxKw": 200.0, "totalChargers": 8, "availableChargers": 5, "expectedWaitMin": 0,
       "timeLimitMin": null, "amountLimitKrw": null,
       "useTime": "10:00~22:00", "parkingFree": true
@@ -80,7 +80,7 @@
       "id": "local_j",
       "name": "J 휴게소",
       "lat": 37.98, "lon": 128.10,
-      "routeKm": 140.0, "detourKm": 4.0, "kind": "LOCAL_REST_STOP",
+      "routeKm": 145.0, "detourKm": 4.0, "kind": "LOCAL_REST_STOP",
       "maxKw": 100.0, "totalChargers": 4, "availableChargers": 2, "expectedWaitMin": 5,
       "timeLimitMin": 40, "amountLimitKrw": null
     }

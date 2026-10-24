@@ -27,11 +27,11 @@ Map and charging apps show where chargers are. Chargis computes how much and how
 
 ## Capabilities and Constraints
 
-- F1 charging-stop recommendation (highway rest stops and shelters first; local rest stops, roadside/IC-adjacent, commercial and public chargers as alternatives, with round-trip detour and access time counted), F2 target-charge coaching, F3 charger time-limit alerts, F4 waypoint addition. F3 limit warnings and real SDK integration are still in progress.
+- F1 charging-stop recommendation (highway rest stops and shelters first; local rest stops, roadside/IC-adjacent, commercial and public chargers as alternatives, with round-trip detour and access time counted), F2 target-charge coaching, F3 charger time-limit alerts, F4 waypoint addition. F1–F4 run end to end in the demo simulator. F3 needs a known time limit: the public charger data has no time-limit field, so real-data chargers show the limit as unknown until a sourced rule is added. Real vehicle/navigation SDK integration is still pending.
 - All station names, coordinates, and charger data are fictional ("A 휴게소", "I 마트" style). Chargers that outsiders cannot use (apartments, workplaces, user-restricted) are excluded. No real facility or operator trademarks.
 - Unknown data is shown as unknown ("정보 없음"), never hidden; data source (simulated, manual, vehicle) is always labeled.
 - Kotlin + Jetpack Compose, minSdk 28. Strings live in `strings.xml` (Korean first).
-- Vehicle SDK availability (SoC, range, driving state) is unconfirmed; manual input is the fallback.
+- Vehicle SDK availability (SoC, range, driving state) is unconfirmed; manual SoC input is the planned fallback but is not built yet.
 
 ## Brand Commitments
 

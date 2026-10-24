@@ -5,7 +5,13 @@ import com.chargis.app.data.fake.FakeChargerData
 import com.chargis.app.data.fake.FakeNavi
 import com.chargis.app.data.fake.FakeVehicle
 import com.chargis.app.data.fake.InMemoryTripStore
+import com.chargis.app.domain.model.ChargerRule
+import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.Priority
+import com.chargis.app.domain.model.RouteState
+import com.chargis.app.domain.model.StationLiveStatus
+import com.chargis.app.port.ChargerDataPort
+import com.chargis.app.port.NaviPort
 import com.chargis.app.domain.session.TripPhase
 import com.chargis.app.port.TripStore
 import com.chargis.app.port.TtsPort
@@ -14,6 +20,8 @@ import com.chargis.app.ui.TripController
 import com.chargis.app.voice.VoiceAnnouncer
 import com.chargis.app.voice.VoicePhrases
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -62,19 +70,26 @@ class ScenarioFlowTest {
         override fun planTwoStops(nextName: String, nextTarget: Double) = "two_stops:$nextName:${nextTarget.toInt()}"
         override fun targetChanged(target: Double) = "target_changed:${target.toInt()}"
         override fun offRoute(name: String, roundTripKm: Int) = "off_route:$name:$roundTripKm"
+        override fun waypointSwitched(fromName: String, toName: String, fasterMin: Int) = "switched:$fromName:$toName:$fasterMin"
+        override fun waypointSwitchedUnreachable(fromName: String, toName: String) = "switched_unreachable:$fromName:$toName"
+        override fun ruleUnknown() = "rule_unknown"
     }
 
     // 테스트 한 번에 필요한 부품 묶음(시뮬레이터, 컨트롤러, 가짜 스피커)
     private class Harness(val sim: ScenarioSimulator, val controller: TripController, val tts: Recorder)
 
-    private fun TestScope.harness(store: TripStore? = null): Harness {
+    private fun TestScope.harness(
+        store: TripStore? = null,
+        data: (ScenarioSimulator) -> ChargerDataPort = ::FakeChargerData,
+        navi: (ScenarioSimulator) -> NaviPort = ::FakeNavi
+    ): Harness {
         val sim = ScenarioSimulator(catalog.scenarios.first())
         val tts = Recorder()
         val controller = TripController(
             scope = backgroundScope,
-            navi = FakeNavi(sim),
+            navi = navi(sim),
             vehicle = FakeVehicle(sim),
-            chargerData = FakeChargerData(sim),
+            chargerData = data(sim),
             announcer = VoiceAnnouncer(tts),
             phrases = KeyPhrases,
             demo = sim,
@@ -238,18 +253,17 @@ class ScenarioFlowTest {
         val h = harness()
         h.controller.startScenario("S5")
         drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
-        // G 휴게소 대기 35분 → 혼잡 비교 카드에서 대안으로 I 마트가 나오고, 마트 쪽이 더 빨리 도착한다.
-        val card = h.controller.state.value.card as DriveCard.Congested
-        assertEquals("rest_g", card.primary.station.id)
-        val rec = card.alternative
+        // 휴게소·쉼터가 붐벼서, 순위 가산과 왕복 우회를 넣고도 I 마트가 1순위로 추천된다.
+        val card = h.controller.state.value.card as DriveCard.Recommend
+        val rec = card.rec
         assertEquals("mart_i", rec.station.id)
-        assertTrue(rec.etaMinutes < card.primary.etaMinutes)
+        assertTrue(h.tts.spoken.toString(), h.tts.spoken.contains("recommend:I 마트:${rec.targetSocPercent.toInt()}"))
         assertTrue(h.tts.spoken.toString(), h.tts.spoken.contains("off_route:I 마트:5"))
 
         h.controller.accept("mart_i")
         runCurrent()
         drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
-        // 경로 95km 지점 + 편도 2.5km를 달린 배터리
+        // 경로 100km 지점 + 편도 2.5km를 달린 배터리
         assertEquals(rec.arrivalSocPercent, h.sim.state.value.soc, 0.5)
 
         h.controller.startCharging()
@@ -280,6 +294,90 @@ class ScenarioFlowTest {
         runCurrent()
         drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
         assertEquals(rec.arrivalSocPercent, h.sim.state.value.soc, 1.0)
+    }
+
+    /**
+     * 공공데이터처럼 시나리오에 없는 충전소를 주는 가짜 공급원. 시나리오 충전소를 "pub_" id로 바꾸고 시간 제한은 모른다고 둔다.
+     * 시뮬레이터가 경유지로 올려 둔 pub_ 충전소는 원본과 겹치지 않게 뺀다.
+     */
+    private class PublicLikeData(sim: ScenarioSimulator) : ChargerDataPort {
+        private val inner = FakeChargerData(sim)
+        override suspend fun stationsAlongRoute(route: RouteState) = inner.stationsAlongRoute(route)
+            .filter { !it.id.startsWith("pub_") }
+            .map { it.copy(id = "pub_${it.id}", rule = ChargerRule(timeLimitMin = null, amountLimitKrw = null, timeLimitKnown = false)) }
+        override fun liveStatus(stationId: String): Flow<StationLiveStatus?> = flowOf(null)
+    }
+
+    /** 1·5: 시나리오에 없는 충전소를 수락해도 그 자리에서 서서 충전하고, 앱을 다시 켜도 이어 간다. 시간 제한을 모르면 그렇게 알린다. */
+    @Test
+    fun publicStation_acceptArriveChargeAndRestore() = runTest {
+        val store = InMemoryTripStore()
+        val first = harness(store, data = ::PublicLikeData)
+        first.controller.startScenario("S1")
+        drive(first) { first.controller.state.value.phase == TripPhase.AwaitingDecision }
+        val rec = (first.controller.state.value.card as DriveCard.Recommend).rec
+        assertEquals("pub_rest_b", rec.station.id)
+        first.controller.accept("pub_rest_b")
+        runCurrent()
+        assertEquals(TripPhase.NavigatingToCharger, first.controller.state.value.phase)
+        drive(first) { first.controller.state.value.phase == TripPhase.Arrived }
+        assertEquals(90.0, first.sim.state.value.traveledKm, 1e-6)
+        first.controller.startCharging()
+        runCurrent()
+        assertTrue(first.tts.spoken.contains("rule_unknown"))
+        assertEquals(false, first.controller.state.value.stop?.timeLimitKnown)
+        val start = first.sim.state.value.simTimeSec
+        drive(first) { first.sim.state.value.simTimeSec - start >= 60 }
+
+        // 앱을 다시 켜면 저장해 둔 충전소 정보로 되살려 같은 충전을 이어 간다.
+        val second = harness(store, data = ::PublicLikeData)
+        assertEquals(TripPhase.Charging, second.controller.state.value.phase)
+        assertEquals("B 휴게소", second.controller.state.value.stop?.stationName)
+        drive(second) { second.controller.state.value.phase == TripPhase.Done }
+        assertEquals(50.0, second.sim.state.value.soc, 1e-6)
+    }
+
+    /** 3: 1초마다 상태가 바뀌어도 충전소 목록과 추천은 0.5km(또는 30초)마다만 새로 계산한다. */
+    @Test
+    fun evaluation_isThrottledByDistance() = runTest {
+        var calls = 0
+        val h = harness(data = { sim ->
+            val real = FakeChargerData(sim)
+            object : ChargerDataPort by real {
+                override suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation> {
+                    calls++
+                    return real.stationsAlongRoute(route)
+                }
+            }
+        })
+        h.controller.startScenario("S1")
+        drive(h) { h.sim.state.value.traveledKm >= 20.0 }
+        // 20km를 1초(약 28m)씩 720번 넘게 갱신했지만, 계산은 0.5km마다 한 번꼴(약 40번)이다.
+        assertTrue("calls=$calls", calls in 30..50)
+    }
+
+    /** 7: 수락을 빠르게 두 번 눌러도 내비에 경유지는 한 번만 넣는다. */
+    @Test
+    fun accept_twiceAddsWaypointOnce() = runTest {
+        var adds = 0
+        val h = harness(navi = { sim ->
+            val real = FakeNavi(sim)
+            object : NaviPort by real {
+                override suspend fun addWaypoint(station: ChargingStation): Result<Unit> {
+                    adds++
+                    return real.addWaypoint(station)
+                }
+            }
+        })
+        h.controller.startScenario("S1")
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        h.controller.accept("rest_b")
+        h.controller.accept("rest_b")
+        runCurrent()
+        h.controller.accept("rest_b")   // 이미 수락한 뒤에 다시 눌러도 무시
+        runCurrent()
+        assertEquals(1, adds)
+        assertEquals(TripPhase.NavigatingToCharger, h.controller.state.value.phase)
     }
 
     /** B5: 충전 중에 앱이 꺼졌다 켜져도 같은 휴게소·목표·알림 기록으로 이어 가고, 끝까지 간다. */

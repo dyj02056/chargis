@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -65,7 +66,8 @@ data class ChargerItem(
     val kindDetail: String? = null, // 시설 구분(소) 예) "C001" 고속도로 휴게소, "C003" 쉼터
     val useTime: String? = null,  // 이용 가능 시간. 예) "24시간 이용가능", "09:00~22:00"
     val parkingFree: String? = null, // 주차료 무료 여부 "Y"/"N"
-    val note: String? = null      // 충전소 안내
+    val note: String? = null,     // 충전소 안내
+    val busiId: String? = null    // 운영기관 아이디. 시간 제한 규칙표(charger_rules.json)를 찾을 때 쓴다
 )
 
 /** 충전기 상태 한 줄(getChargerStatus). */
@@ -97,7 +99,8 @@ object EvChargerParser {
             kindDetail = o.str("kindDetail"),
             useTime = o.str("useTime"),
             parkingFree = o.str("parkingFree"),
-            note = o.str("note")
+            note = o.str("note"),
+            busiId = o.str("busiId")
         )
     }
 
@@ -142,8 +145,40 @@ data class PublicStation(
     val timeLimitMin: Int?,
     val note: String?,
     val openHours: OpenHours? = null,
-    val parkingFree: Boolean? = null
+    val parkingFree: Boolean? = null,
+    val operatorId: String? = null
 )
+
+/**
+ * 운영기관·시설 종류별 충전 시간 제한 규칙표(assets/charger_rules.json).
+ * 공공데이터에는 시간 제한 항목이 없어서, 확인한 규칙을 이 표에 출처와 함께 적어 둔다.
+ * 위에서부터 처음 맞는 규칙을 쓴다. operatorId·kind가 비어 있으면 모든 값에 맞는다.
+ * 표에도 없으면 시간 제한은 "정보 없음"이 된다(제한 없음이 아니다).
+ */
+class ChargerRuleTable(private val rules: List<Rule>) {
+    @Serializable
+    data class Rule(
+        val operatorId: String? = null,
+        val kind: StationKind? = null,
+        val timeLimitMin: Int,
+        val source: String            // 이 규칙을 어디서 확인했는지(문서·안내문). 비워 두지 않는다
+    )
+
+    fun timeLimitFor(operatorId: String?, kind: StationKind): Int? =
+        rules.firstOrNull { (it.operatorId == null || it.operatorId == operatorId) && (it.kind == null || it.kind == kind) }?.timeLimitMin
+
+    companion object {
+        val EMPTY = ChargerRuleTable(emptyList())
+
+        @Serializable
+        private data class File(val rules: List<Rule> = emptyList())
+
+        /** 규칙표 JSON을 읽는다. 형식이 틀리면 빈 표로 본다(앱이 멈추지 않게). */
+        fun parse(json: String): ChargerRuleTable =
+            runCatching { ChargerRuleTable(Json { ignoreUnknownKeys = true }.decodeFromString(File.serializer(), json).rules) }
+                .getOrDefault(EMPTY)
+    }
+}
 
 /**
  * 시설 구분 코드(kind/kindDetail)를 [StationKind]로 바꾸고, 외부인이 쓰기 어려운 시설을 가려낸다.
@@ -214,7 +249,8 @@ object StationAggregator {
                     timeLimitMin = chargers.firstNotNullOfOrNull { parseLimit(it.limitDetail) ?: parseLimit(it.note) },
                     note = chargers.firstNotNullOfOrNull { it.limitDetail?.takeIf { d -> d.isNotBlank() } },
                     openHours = chargers.firstNotNullOfOrNull { OpenHours.parse(it.useTime) },
-                    parkingFree = first.parkingFree?.let { if (it == "Y") true else if (it == "N") false else null }
+                    parkingFree = first.parkingFree?.let { if (it == "Y") true else if (it == "N") false else null },
+                    operatorId = first.busiId
                 )
             }
     }
@@ -317,50 +353,72 @@ fun interface EvChargerHttp {
     suspend fun get(operation: String, params: Map<String, String>): String
 }
 
-/** data.go.kr 호출 구현. [serviceKey]는 local.properties의 chargis.chargerApiKey에서 온다. */
-class UrlEvChargerHttp(private val serviceKey: String, private val timeoutMs: Int = 8_000) : EvChargerHttp {
+/**
+ * 충전소 API 호출 구현.
+ * - [baseUrl]: 기본은 data.go.kr. 키를 앱에 넣지 않으려면 키를 붙여 주는 중계 서버(프록시) 주소를 넣는다.
+ * - [serviceKey]: data.go.kr 키. 비어 있으면 붙이지 않는다(프록시가 붙인다고 본다).
+ * 앱에 넣은 키는 APK에서 꺼낼 수 있으므로, 배포용(release) 빌드는 키를 넣지 않고 프록시를 쓴다(app/build.gradle.kts).
+ * 오류 메시지에는 주소를 넣지 않는다(키가 로그에 남지 않게).
+ */
+class UrlEvChargerHttp(
+    private val serviceKey: String?,
+    private val baseUrl: String = DEFAULT_BASE,
+    private val timeoutMs: Int = 8_000
+) : EvChargerHttp {
     override suspend fun get(operation: String, params: Map<String, String>): String = withContext(Dispatchers.IO) {
-        val query = (params + mapOf("serviceKey" to serviceKey, "dataType" to "JSON"))
-            .entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, Charsets.UTF_8.name())}" }
-        val conn = URL("$BASE/$operation?$query").openConnection() as HttpURLConnection
+        val conn = URL(urlFor(operation, params)).openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = timeoutMs
             conn.readTimeout = timeoutMs
-            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
+            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode} ($operation)")
             conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } finally {
             conn.disconnect()
         }
     }
 
-    private companion object {
-        const val BASE = "https://apis.data.go.kr/B552584/EvCharger"
+    /** 호출 주소. 테스트에서 키가 붙는지 확인할 수 있게 따로 뺐다. */
+    fun urlFor(operation: String, params: Map<String, String>): String {
+        val key = serviceKey?.takeIf { it.isNotBlank() }?.let { mapOf("serviceKey" to it) }.orEmpty()
+        val query = (params + key + mapOf("dataType" to "JSON"))
+            .entries.joinToString("&") { (k, v) -> "$k=${URLEncoder.encode(v, Charsets.UTF_8.name())}" }
+        return "${baseUrl.trimEnd('/')}/$operation?$query"
+    }
+
+    companion object {
+        const val DEFAULT_BASE = "https://apis.data.go.kr/B552584/EvCharger"
     }
 }
 
 /**
- * 공공데이터 기반 [ChargerDataPort]. [zcodes]는 경로가 지나는 시도 코드(예: 11 서울, 41 경기, 51 강원).
+ * 공공데이터 기반 [ChargerDataPort].
+ * [zcodes]를 주면 그 시도만, 비워 두면(null) 경로가 지나는 시도를 [SidoCodes]로 그때그때 고른다.
+ * 목록·상태는 시도마다 따로 캐시해서, 경로가 새 시도로 넘어가면 그 시도만 새로 받는다.
  * [nowMillis]는 캐시 만료 판단용 시계(테스트에서 바꿔 끼운다).
  */
 class PublicChargerData(
     private val http: EvChargerHttp,
-    private val zcodes: List<String>,
+    private val zcodes: List<String>? = null,
     private val corridorKm: Double = 3.0,
+    private val rules: ChargerRuleTable = ChargerRuleTable.EMPTY,
     private val infoTtlMs: Long = 12 * 60 * 60 * 1000L,
     private val statusTtlMs: Long = 2 * 60 * 1000L,
     private val nowMillis: () -> Long = System::currentTimeMillis,
     private val nowLocal: () -> LocalDateTime = LocalDateTime::now
 ) : ChargerDataPort {
     private val mutex = Mutex()
-    private var info: Cached<List<ChargerItem>>? = null
-    private var status: Cached<List<ChargerStatus>>? = null
+    private val info = mutableMapOf<String, Cached<List<ChargerItem>>>()
+    private val status = mutableMapOf<String, Cached<List<ChargerStatus>>>()
+    private var lastZones: List<String> = emptyList()
     private var lastStations: List<PublicStation> = emptyList()
 
     private class Cached<T>(val value: T, val at: Long)
 
     override suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation> {
-        val stations = load()
+        val stations = load(zcodes ?: SidoCodes.along(route))
         return stations.mapNotNull { st ->
+            // 반대 방향 휴게소("(서울방향)" 등)는 본선에서 들어갈 수 없으므로 뺀다.
+            if (st.kind.isRoadside && RestStopDirection.isOpposite(st.name, st.location, route)) return@mapNotNull null
             val (along, detour) = RouteProjector.project(route, st.location, corridorKm) ?: return@mapNotNull null
             ChargingStation(
                 id = st.id,
@@ -374,38 +432,50 @@ class PublicChargerData(
                 totalChargers = st.totalChargers,
                 availableChargers = st.availableChargers,
                 expectedWaitMin = st.expectedWaitMin,
-                rule = ChargerRule(timeLimitMin = st.timeLimitMin, amountLimitKrw = null, note = st.note),
+                // 시간 제한: 안내 문구에서 읽은 값 → 규칙표 → 둘 다 없으면 "정보 없음"
+                rule = (st.timeLimitMin ?: rules.timeLimitFor(st.operatorId, st.kind)).let { limit ->
+                    ChargerRule(timeLimitMin = limit, amountLimitKrw = null, note = st.note, timeLimitKnown = limit != null)
+                },
                 openHours = st.openHours,
                 parkingFree = st.parkingFree
             )
         }.sortedBy { it.distanceAlongRouteKm }
     }
 
+    // 실시간 상태는 마지막으로 경로를 받았던 시도들에서 찾는다.
     override fun liveStatus(stationId: String): Flow<StationLiveStatus?> = flow {
-        val st = load().firstOrNull { it.id == stationId }
+        val st = load(zcodes ?: lastZones).firstOrNull { it.id == stationId }
         emit(st?.let { StationLiveStatus(it.id, it.availableChargers, it.expectedWaitMin) })
     }
 
-    // 캐시가 살아 있으면 그대로, 만료됐으면 다시 받는다. 상태만 실패하면 목록 API의 상태로 버틴다.
-    private suspend fun load(): List<PublicStation> = mutex.withLock {
+    /**
+     * [zones] 시도의 충전소. 시도마다 캐시가 살아 있으면 그대로, 만료됐으면 그 시도만 다시 받는다.
+     * 상태만 실패하면 목록 API의 상태로 버틴다. 아무것도 새로 받지 않았고 시도도 같으면 지난 결과를 그대로 쓴다.
+     */
+    private suspend fun load(zones: List<String>): List<PublicStation> = mutex.withLock {
         val now = nowMillis()
-        val infoFresh = info?.takeIf { now - it.at < infoTtlMs }
-        val statusFresh = status?.takeIf { now - it.at < statusTtlMs }
-        if (infoFresh != null && statusFresh != null) return lastStations
-        val items = infoFresh?.value ?: fetchAll("getChargerInfo", EvChargerParser::parseInfo).also { info = Cached(it, now) }
-        val statuses = statusFresh?.value
-            ?: runCatching { fetchAll("getChargerStatus", EvChargerParser::parseStatus, mapOf("period" to "10")) }
-                .getOrDefault(emptyList()).also { status = Cached(it, now) }
-        lastStations = StationAggregator.aggregate(items, statuses, nowLocal())
+        var changed = zones != lastZones
+        val items = zones.flatMap { z ->
+            info[z]?.takeIf { now - it.at < infoTtlMs }?.value
+                ?: fetch(z, "getChargerInfo", EvChargerParser::parseInfo).also { info[z] = Cached(it, now); changed = true }
+        }
+        val statuses = zones.flatMap { z ->
+            status[z]?.takeIf { now - it.at < statusTtlMs }?.value
+                ?: runCatching { fetch(z, "getChargerStatus", EvChargerParser::parseStatus, mapOf("period" to "10")) }
+                    .getOrDefault(emptyList()).also { status[z] = Cached(it, now); changed = true }
+        }
+        if (changed) {
+            lastZones = zones
+            lastStations = StationAggregator.aggregate(items, statuses, nowLocal())
+        }
         lastStations
     }
 
-    private suspend fun <T> fetchAll(op: String, parse: (String) -> List<T>, extra: Map<String, String> = emptyMap()): List<T> =
-        zcodes.flatMap { z ->
-            val body = http.get(op, extra + mapOf("pageNo" to "1", "numOfRows" to "9999", "zcode" to z))
-            EvChargerParser.checkResult(body)
-            parse(body)
-        }
+    private suspend fun <T> fetch(zone: String, op: String, parse: (String) -> List<T>, extra: Map<String, String> = emptyMap()): List<T> {
+        val body = http.get(op, extra + mapOf("pageNo" to "1", "numOfRows" to "9999", "zcode" to zone))
+        EvChargerParser.checkResult(body)
+        return parse(body)
+    }
 }
 
 /**

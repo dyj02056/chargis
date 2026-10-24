@@ -237,7 +237,7 @@ private fun ColumnScope.RecommendStub(card: DriveCard.Recommend, onAccept: (Stri
             )
             CellPair(
                 { Measure(stringResource(R.string.label_arrival_soc), "${rec.arrivalSocPercent.roundToInt()}", stringResource(R.string.unit_percent)) },
-                { LimitCell(rec.timeLimitMin, limitRisk) }
+                { LimitCell(rec.timeLimitMin, rec.station.rule.timeLimitKnown, limitRisk) }
             )
             HairlineH()
             Spacer(Modifier.weight(1f))
@@ -267,12 +267,15 @@ private fun WaitCell(rec: Recommendation) {
     else Words(stringResource(R.string.label_wait), stringResource(R.string.unknown))
 }
 
-/** 시간 제한 칸: 위험하지 않으면 흐리게, 제한 안에 목표를 못 채울 위험이 있으면 경고색 + 기호. */
+/**
+ * 시간 제한 칸: 위험하지 않으면 흐리게, 제한 안에 목표를 못 채울 위험이 있으면 경고색 + 기호.
+ * 제한이 없다고 확인했으면 "없음", 확인하지 못했으면([known] false) "정보 없음".
+ */
 @Composable
-private fun LimitCell(limitMin: Int?, risk: Boolean) {
+private fun LimitCell(limitMin: Int?, known: Boolean, risk: Boolean) {
     val c = Ticket.colors
     when {
-        limitMin == null -> Words(stringResource(R.string.label_limit), stringResource(R.string.value_none))
+        limitMin == null -> Words(stringResource(R.string.label_limit), stringResource(if (known) R.string.value_none else R.string.unknown))
         risk -> Field(stringResource(R.string.label_limit)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 WarnGlyph(size = 28.dp)
@@ -380,7 +383,7 @@ private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<R
             CellPair(
                 {
                     if (card.timeLimitMin != null) Measure(stringResource(R.string.label_limit), "${card.timeLimitMin}", min)
-                    else Words(stringResource(R.string.label_limit), stringResource(R.string.value_none))
+                    else Words(stringResource(R.string.label_limit), stringResource(if (card.timeLimitKnown) R.string.value_none else R.string.unknown))
                 },
                 { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Stamp(stringResource(R.string.stamp_waypoint)) } }
             )

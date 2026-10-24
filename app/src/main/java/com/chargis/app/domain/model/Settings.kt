@@ -14,12 +14,14 @@ data class UserSettings(
     val maxTargetSocPercent: Double = 80.0,
     val safetyMarginPercent: Int = 15,
     val voiceCommands: Boolean = false,
-    val onboarded: Boolean = false
+    val onboarded: Boolean = false,
+    val includeNonRoadside: Boolean = true   // 휴게소·쉼터 밖 충전소(국도변·상업·공공시설)도 후보로 볼지
 ) {
     /** 기본 추천 기준값에 이 설정을 덮어쓴다. */
     fun applyTo(base: RecommendationConfig): RecommendationConfig = base.copy(
         maxTargetSocPercent = maxTargetSocPercent,
-        safetyMargin = safetyMarginPercent / 100.0
+        safetyMargin = safetyMarginPercent / 100.0,
+        includeNonRoadside = includeNonRoadside
     )
 
     companion object {

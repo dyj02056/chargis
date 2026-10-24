@@ -21,6 +21,9 @@
     <string name="tts_plan_two_stops">이어서 %1$s에서 %2$d퍼센트까지 한 번 더 충전하면 가장 빨리 도착합니다.</string>
     <string name="tts_target_changed">목표를 %1$d퍼센트로 바꿨습니다.</string>
     <string name="tts_off_route">%1$s, 경로를 벗어나 왕복 약 %2$d킬로미터를 더 달립니다.</string>
+    <string name="tts_waypoint_switched">경유지를 바꿨습니다. %1$s 대신 %2$s. 목적지에 약 %3$d분 빨리 도착합니다.</string>
+    <string name="tts_waypoint_switched_unreachable">%1$s까지 가기 어려워져 경유지를 바꿨습니다. 새 경유지는 %2$s.</string>
+    <string name="tts_rule_unknown">이 충전기의 시간 제한 정보가 없습니다. 충전기 화면에서 확인해 주세요.</string>
 
     <!-- 칸 이름 -->
     <string name="label_route">구간</string>
@@ -171,6 +174,10 @@
     <string name="settings_margin_hint">높일수록 넉넉하게 계산합니다</string>
     <string name="settings_voice">음성 명령</string>
     <string name="settings_voice_hint">"수락", "다음", "충전 시작", "출발"이라고 말해 답합니다</string>
+    <string name="settings_stations">충전소 범위</string>
+    <string name="settings_stations_hint">휴게소만 고르면 국도변·마트 같은 충전소는 추천하지 않습니다</string>
+    <string name="settings_stations_all">휴게소 밖 포함</string>
+    <string name="settings_stations_rest_only">휴게소·쉼터만</string>
     <string name="settings_on">켬</string>
     <string name="settings_off">끔</string>
     <string name="settings_done">설정 완료</string>

@@ -1,9 +1,13 @@
 package com.chargis.app.ui
 
+import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.GeoPoint
+import com.chargis.app.domain.model.OpenHours
 import com.chargis.app.domain.model.Recommendation
 import com.chargis.app.domain.model.RecommendationResult
 import com.chargis.app.domain.model.RouteState
+import com.chargis.app.domain.model.StationKind
 import com.chargis.app.domain.model.VehicleState
 import com.chargis.app.domain.model.WaitSource
 import com.chargis.app.domain.session.ChargeSession
@@ -32,6 +36,7 @@ class TripMemory {
     var charge: ChargeSession? = null                         // 지금 진행 중인 충전(§8)
     var endedByLimit = false
     var odometerKm = 0.0                                      // 여행 시작 후 달린 거리(전비 실측용, B3)
+    var lastEval: EvalPoint? = null                           // 마지막으로 추천을 새로 계산한 시점(계산 간격 조절)
 
     /** 새 여행을 위해 모두 처음으로 돌린다. */
     fun reset() {
@@ -39,6 +44,7 @@ class TripMemory {
         offer = null
         accepted = null
         lastResult = null
+        lastEval = null
         noSafeWarned = false
         charges.clear()
         arrivedAtSec = null
@@ -47,6 +53,18 @@ class TripMemory {
         odometerKm = 0.0
     }
 }
+
+/**
+ * 추천을 새로 계산한 시점의 기록. 그때의 남은 거리·가상 시각·거절 수와, 그때 받은 충전소 목록·추천 결과(그때 위치 기준 거리)를 담는다.
+ * 다음 계산 전까지는 이 목록과 결과에서 달린 거리만 빼서 쓴다.
+ */
+class EvalPoint(
+    val remainingKm: Double,
+    val simSec: Double,
+    val declinedCount: Int,
+    val stations: List<ChargingStation>,
+    val result: RecommendationResult
+)
 
 // ---- 저장 형식(B5) ----
 // 기기에 JSON으로 저장하는 모양. 화면용 객체를 그대로 저장하지 않고, 되살리는 데 꼭 필요한 값만 담는다.
@@ -98,7 +116,10 @@ data class SavedSim(
     }
 }
 
-/** 수락한 추천. 충전소는 id로만 저장하고, 되살릴 때 시나리오 목록에서 다시 찾는다. */
+/**
+ * 수락한 추천. 되살릴 때 충전소를 시나리오 목록에서 먼저 찾고, 없으면(공공데이터 충전소) [station]으로 되살린다.
+ * [station]이 없는 옛 저장본은 시나리오 충전소만 되살린다.
+ */
 @Serializable
 data class SavedRec(
     val stationId: String,
@@ -112,7 +133,8 @@ data class SavedRec(
     val needsAnotherStop: Boolean = false,
     val waitSource: WaitSource = WaitSource.UNKNOWN,
     val etaMinutes: Double = 0.0,
-    val costMinutes: Double = 0.0
+    val costMinutes: Double = 0.0,
+    val station: SavedStation? = null
 ) {
     fun toRecommendation(station: ChargingStation) = Recommendation(
         station = station,
@@ -131,9 +153,55 @@ data class SavedRec(
     )
 
     companion object {
-        fun of(r: Recommendation) = SavedRec(
+        /** [station]은 출발점 기준 거리로 바꾼 충전소 정보. */
+        fun of(r: Recommendation, station: SavedStation) = SavedRec(
             r.station.id, r.arrivalSocPercent, r.targetSocPercent, r.chargeMinutes, r.waitMinutes, r.timeLimitMin,
-            r.willHitTimeLimit, r.socAtTimeLimitPercent, r.needsAnotherStop, r.waitSource, r.etaMinutes, r.costMinutes
+            r.willHitTimeLimit, r.socAtTimeLimitPercent, r.needsAnotherStop, r.waitSource, r.etaMinutes, r.costMinutes,
+            station
+        )
+    }
+}
+
+/** 충전소 한 곳(출발점 기준 거리). 시나리오에 없는 충전소를 되살릴 때 쓴다. */
+@Serializable
+data class SavedStation(
+    val id: String,
+    val name: String,
+    val lat: Double,
+    val lon: Double,
+    val kind: StationKind,
+    val routeKm: Double,
+    val detourKm: Double,
+    val maxKw: Double,
+    val totalChargers: Int,
+    val timeLimitMin: Int? = null,
+    val timeLimitKnown: Boolean = true,
+    val note: String? = null,
+    val openMin: Int? = null,
+    val closeMin: Int? = null,
+    val parkingFree: Boolean? = null
+) {
+    fun toStation() = ChargingStation(
+        id = id,
+        name = name,
+        location = GeoPoint(lat, lon),
+        kind = kind,
+        distanceAlongRouteKm = routeKm,
+        detourKm = detourKm,
+        maxKw = maxKw,
+        totalChargers = totalChargers,
+        availableChargers = null,
+        expectedWaitMin = null,
+        rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = null, note = note, timeLimitKnown = timeLimitKnown),
+        openHours = if (openMin != null && closeMin != null) OpenHours(openMin, closeMin) else null,
+        parkingFree = parkingFree
+    )
+
+    companion object {
+        fun of(s: ChargingStation, traveledKm: Double) = SavedStation(
+            s.id, s.name, s.location.lat, s.location.lon, s.kind, traveledKm + s.distanceAlongRouteKm, s.detourKm,
+            s.maxKw, s.totalChargers, s.rule.timeLimitMin, s.rule.timeLimitKnown, s.rule.note,
+            s.openHours?.openMin, s.openHours?.closeMin, s.parkingFree
         )
     }
 }
