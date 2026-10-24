@@ -14,3 +14,5 @@
 - 2026-10-24 · 점수 정규화는 후보 집합 안에서 min-max로 한다. 후보가 하나뿐이거나 값이 모두 같으면 그 항은 0.5로 둔다.
 - 2026-10-24 · 혼잡 임계(`congestionWaitThresholdMin`, 기본 20분)를 `RecommendationConfig`에 추가했다.
 - 2026-10-24 · ChargeMath의 cap은 `maxTargetSocPercent`가 아닌 고정 80%(`taperStartSocPercent`)로 둔다. 사용자가 상한을 바꿔도 감쇠 구간은 배터리 특성이므로 그대로다.
+- 2026-10-24 · plan.md §12 T3의 "필요 ≈36.7%"는 오기. 100km×0.2584×1.15+10 = 39.7%로 테스트를 고쳤다(충전 불필요 판단은 동일).
+- 2026-10-24 · `expectedWaitMin == null`(대기 미상)도 가용 대수 미상과 같이 대기 항을 중립값(0.5)으로 둔다.
