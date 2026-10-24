@@ -7,8 +7,8 @@
     <string name="tts_trip_no_charge">이번 이동은 중간 충전 없이 도착할 수 있습니다.</string>
     <string name="tts_recommend">%1$d킬로미터 앞 %2$s에서 충전을 추천합니다. 목적지까지는 %3$d퍼센트면 충분합니다.</string>
     <string name="tts_need_another">이번 충전만으로는 목적지까지 부족해 다음 충전이 한 번 더 필요합니다.</string>
-    <string name="tts_congested">%1$s는 대기가 약 %2$d분입니다. %3$s와 비교해 선택하세요.</string>
-    <string name="tts_waypoint_added">%1$s을 경유지로 추가했습니다.</string>
+    <string name="tts_congested">%1$s 대기 약 %2$d분. %3$s 대안과 비교해 선택하세요.</string>
+    <string name="tts_waypoint_added">%1$s, 경유지로 추가했습니다.</string>
     <string name="tts_waypoint_failed">경유지를 추가하지 못했습니다. 내비게이션에서 직접 추가해 주세요.</string>
     <string name="tts_rule_notice">이 충전기는 %1$d분 제한이 있습니다.</string>
     <string name="tts_limit_warn">%1$d분 뒤 충전이 종료됩니다. 현재 약 %2$d퍼센트, 종료 시 약 %3$d퍼센트가 예상됩니다.</string>

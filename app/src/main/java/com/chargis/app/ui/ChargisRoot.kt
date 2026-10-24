@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,7 +32,8 @@ import com.chargis.app.ui.theme.ChargisColors
 fun ChargisRoot(controller: TripController) {
     val state by controller.state.collectAsStateWithLifecycle()
 
-    Box(Modifier.fillMaxSize().background(ChargisColors.Background).safeDrawingPadding()) {
+    Surface(color = ChargisColors.Background, contentColor = ChargisColors.OnSurface) {
+    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
         Column(Modifier.fillMaxSize()) {
             if (state.isDriving) {
                 StatusStrip(state.socPercent, state.remainingKm, state.dataSource)
@@ -57,8 +59,9 @@ fun ChargisRoot(controller: TripController) {
             CaptionBar(state.caption)
         }
         if (BuildConfig.DEV_OVERLAY) {
-            DevOverlay(state.dev, controller, Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 12.dp))
+            DevOverlay(state.dev, controller, Modifier.align(Alignment.BottomEnd).padding(bottom = 72.dp, end = 12.dp))
         }
+    }
     }
 }
 
