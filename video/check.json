@@ -1,0 +1,374 @@
+[HyperFrames] Not inlining "assets/fonts/wanted_sans_semibold.ttf" (2.2 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.
+[HyperFrames] Not inlining "assets/fonts/wanted_sans_bold.ttf" (2.2 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.
+[HyperFrames] Not inlining "assets/fonts/wanted_sans_extrabold.ttf" (2.2 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.
+[HyperFrames] Not inlining "assets/fonts/wanted_sans_semibold.ttf" (2.2 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.
+[HyperFrames] Not inlining "assets/fonts/wanted_sans_bold.ttf" (2.2 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.
+[HyperFrames] Not inlining "assets/fonts/wanted_sans_extrabold.ttf" (2.2 MB exceeds the 2 MB inline limit). The bundle may not be self-contained.
+[hyperframes] browserGpuMode probe → hardware (WebGL renderer vendor="Google Inc. (Intel)" renderer="ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x000046A6) Direct3D11 vs_5_0 ps_5_0, D3D11)")
+[hyperframes] check: samples 1/9
+[hyperframes] check: samples 2/9
+[hyperframes] check: samples 3/9
+[hyperframes] check: samples 4/9
+[hyperframes] check: samples 5/9
+[hyperframes] check: samples 6/9
+[hyperframes] check: samples 7/9
+[hyperframes] check: samples 8/9
+[hyperframes] check: samples 9/9
+[hyperframes] check: craft 1/152
+[hyperframes] check: craft 2/152
+[hyperframes] check: craft 3/152
+[hyperframes] check: craft 4/152
+[hyperframes] check: craft 5/152
+[hyperframes] check: craft 6/152
+[hyperframes] check: craft 7/152
+[hyperframes] check: craft 8/152
+[hyperframes] check: craft 9/152
+[hyperframes] check: craft 10/152
+[hyperframes] check: craft 11/152
+[hyperframes] check: craft 12/152
+[hyperframes] check: craft 13/152
+[hyperframes] check: craft 14/152
+[hyperframes] check: craft 15/152
+[hyperframes] check: craft 16/152
+[hyperframes] check: craft 17/152
+[hyperframes] check: craft 18/152
+[hyperframes] check: craft 19/152
+[hyperframes] check: craft 20/152
+[hyperframes] check: craft 21/152
+[hyperframes] check: craft 22/152
+[hyperframes] check: craft 23/152
+[hyperframes] check: craft 24/152
+[hyperframes] check: craft 25/152
+[hyperframes] check: craft 26/152
+[hyperframes] check: craft 27/152
+[hyperframes] check: craft 28/152
+[hyperframes] check: craft 29/152
+[hyperframes] check: craft 30/152
+[hyperframes] check: craft 31/152
+[hyperframes] check: craft 32/152
+[hyperframes] check: craft 33/152
+[hyperframes] check: craft 34/152
+[hyperframes] check: craft 35/152
+[hyperframes] check: craft 36/152
+[hyperframes] check: craft 37/152
+[hyperframes] check: craft 38/152
+[hyperframes] check: craft 39/152
+[hyperframes] check: craft 40/152
+[hyperframes] check: craft 41/152
+[hyperframes] check: craft 42/152
+[hyperframes] check: craft 43/152
+[hyperframes] check: craft 44/152
+[hyperframes] check: craft 45/152
+[hyperframes] check: craft 46/152
+[hyperframes] check: craft 47/152
+[hyperframes] check: craft 48/152
+[hyperframes] check: craft 49/152
+[hyperframes] check: craft 50/152
+[hyperframes] check: craft 51/152
+[hyperframes] check: craft 52/152
+[hyperframes] check: craft 53/152
+[hyperframes] check: craft 54/152
+[hyperframes] check: craft 55/152
+[hyperframes] check: craft 56/152
+[hyperframes] check: craft 57/152
+[hyperframes] check: craft 58/152
+[hyperframes] check: craft 59/152
+[hyperframes] check: craft 60/152
+[hyperframes] check: craft 61/152
+[hyperframes] check: craft 62/152
+[hyperframes] check: craft 63/152
+[hyperframes] check: craft 64/152
+[hyperframes] check: craft 65/152
+[hyperframes] check: craft 66/152
+[hyperframes] check: craft 67/152
+[hyperframes] check: craft 68/152
+[hyperframes] check: craft 69/152
+[hyperframes] check: craft 70/152
+[hyperframes] check: craft 71/152
+[hyperframes] check: craft 72/152
+[hyperframes] check: craft 73/152
+[hyperframes] check: craft 74/152
+[hyperframes] check: craft 75/152
+[hyperframes] check: craft 76/152
+[hyperframes] check: craft 77/152
+[hyperframes] check: craft 78/152
+[hyperframes] check: craft 79/152
+[hyperframes] check: craft 80/152
+[hyperframes] check: craft 81/152
+[hyperframes] check: craft 82/152
+[hyperframes] check: craft 83/152
+[hyperframes] check: craft 84/152
+[hyperframes] check: craft 85/152
+[hyperframes] check: craft 86/152
+[hyperframes] check: craft 87/152
+[hyperframes] check: craft 88/152
+[hyperframes] check: craft 89/152
+[hyperframes] check: craft 90/152
+[hyperframes] check: craft 91/152
+[hyperframes] check: craft 92/152
+[hyperframes] check: craft 93/152
+[hyperframes] check: craft 94/152
+[hyperframes] check: craft 95/152
+[hyperframes] check: craft 96/152
+[hyperframes] check: craft 97/152
+[hyperframes] check: craft 98/152
+[hyperframes] check: craft 99/152
+[hyperframes] check: craft 100/152
+[hyperframes] check: craft 101/152
+[hyperframes] check: craft 102/152
+[hyperframes] check: craft 103/152
+[hyperframes] check: craft 104/152
+[hyperframes] check: craft 105/152
+[hyperframes] check: craft 106/152
+[hyperframes] check: craft 107/152
+[hyperframes] check: craft 108/152
+[hyperframes] check: craft 109/152
+[hyperframes] check: craft 110/152
+[hyperframes] check: craft 111/152
+[hyperframes] check: craft 112/152
+[hyperframes] check: craft 113/152
+[hyperframes] check: craft 114/152
+[hyperframes] check: craft 115/152
+[hyperframes] check: craft 116/152
+[hyperframes] check: craft 117/152
+[hyperframes] check: craft 118/152
+[hyperframes] check: craft 119/152
+[hyperframes] check: craft 120/152
+[hyperframes] check: craft 121/152
+[hyperframes] check: craft 122/152
+[hyperframes] check: craft 123/152
+[hyperframes] check: craft 124/152
+[hyperframes] check: craft 125/152
+[hyperframes] check: craft 126/152
+[hyperframes] check: craft 127/152
+[hyperframes] check: craft 128/152
+[hyperframes] check: craft 129/152
+[hyperframes] check: craft 130/152
+[hyperframes] check: craft 131/152
+[hyperframes] check: craft 132/152
+[hyperframes] check: craft 133/152
+[hyperframes] check: craft 134/152
+[hyperframes] check: craft 135/152
+[hyperframes] check: craft 136/152
+[hyperframes] check: craft 137/152
+[hyperframes] check: craft 138/152
+[hyperframes] check: craft 139/152
+[hyperframes] check: craft 140/152
+[hyperframes] check: craft 141/152
+[hyperframes] check: craft 142/152
+[hyperframes] check: craft 143/152
+[hyperframes] check: craft 144/152
+[hyperframes] check: craft 145/152
+[hyperframes] check: craft 146/152
+[hyperframes] check: craft 147/152
+[hyperframes] check: craft 148/152
+[hyperframes] check: craft 149/152
+[hyperframes] check: craft 150/152
+[hyperframes] check: craft 151/152
+[hyperframes] check: craft 152/152
+[hyperframes] check: overlap 1/19
+[hyperframes] check: overlap 2/19
+[hyperframes] check: overlap 3/19
+[hyperframes] check: overlap 4/19
+[hyperframes] check: overlap 5/19
+[hyperframes] check: overlap 6/19
+[hyperframes] check: overlap 7/19
+[hyperframes] check: overlap 8/19
+[hyperframes] check: overlap 9/19
+[hyperframes] check: overlap 10/19
+[hyperframes] check: overlap 11/19
+[hyperframes] check: overlap 12/19
+[hyperframes] check: overlap 13/19
+[hyperframes] check: overlap 14/19
+[hyperframes] check: overlap 15/19
+[hyperframes] check: overlap 16/19
+[hyperframes] check: overlap 17/19
+[hyperframes] check: overlap 18/19
+[hyperframes] check: overlap 19/19
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 8
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 15.833,
+        "selector": "#lim-eta",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 705.33,
+          "top": 847.55,
+          "right": 957.33,
+          "bottom": 956.55,
+          "width": 252,
+          "height": 109
+        },
+        "containerSelector": "#lim-fields > div:nth-of-type(3)",
+        "text": "09:28",
+        "fixHint": "Text is 252px x 109px inside 305px x 130px and overflows by up to 23px; increase the container height to at least ~153px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 679.33,
+          "top": 803.55,
+          "right": 984,
+          "bottom": 933.55,
+          "width": 304.67,
+          "height": 130
+        },
+        "overflow": {
+          "bottom": 23
+        },
+        "dataAttributes": {
+          "data-hf-id": "hf-yhaj"
+        },
+        "sourceFile": "compositions/limit.html",
+        "bbox": {
+          "x": 705.33,
+          "y": 847.55,
+          "width": 252,
+          "height": 109
+        },
+        "firstSeen": 15.833,
+        "lastSeen": 15.833,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.833
+        ]
+      }
+    ],
+    "duration": 19,
+    "samples": [
+      1.056,
+      3.167,
+      5.278,
+      7.389,
+      9.5,
+      11.611,
+      13.722,
+      15.833,
+      17.944
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.056,
+      5.278,
+      9.5,
+      13.722,
+      17.944
+    ],
+    "checked": 69,
+    "passed": 69
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 2,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"이번 이동은 중간 충전 1회가 필요합니다.\" (7 words) is on screen 1.73 s (±0.01 s), under its 1.95 s floor: hold it about 0.5 s + 0.3 s a word (2.60 s here) before it leaves or changes; see references/motion.md.",
+        "text": "이번 이동은 중간 충전 1회가 필요합니다.",
+        "selector": "#route-cap > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/route.html",
+        "bbox": {
+          "x": 148,
+          "y": 1213.5,
+          "width": 599.81,
+          "height": 45
+        },
+        "time": 4.234,
+        "words": 7,
+        "seconds": 1.734,
+        "floorSeconds": 1.95
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"약 59%에서 충전 종료 예정\" (6 words) is on screen 1.37 s (±0.01 s), under its 1.72 s floor: hold it about 0.5 s + 0.3 s a word (2.30 s here) before it leaves or changes; see references/motion.md.",
+        "text": "약 59%에서 충전 종료 예정",
+        "selector": "#lim-warn > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/limit.html",
+        "bbox": {
+          "x": 158,
+          "y": 951,
+          "width": 374.5899999999999,
+          "height": 40
+        },
+        "time": 14.602,
+        "words": 6,
+        "seconds": 1.367,
+        "floorSeconds": 1.725
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 152
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  },
+  "saved": {
+    "id": "d4147169-af54-4f22-87c4-421e2c8fd852",
+    "revision": "dc5c178d-c778-4444-a2bf-0c2a1755af65",
+    "report": "C:\\projects_jsw\\chargis\\video\\shortform\\.hyperframes\\artifacts\\checks\\d4147169-af54-4f22-87c4-421e2c8fd852.json",
+    "attribution": "recorded-revision"
+  },
+  "_meta": {
+    "version": "0.8.192",
+    "latestVersion": "0.8.192",
+    "updateAvailable": false
+  }
+}

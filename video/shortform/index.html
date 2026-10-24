@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --ground: #0f0e0d;
+        --ink: #ede9e2;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--ground);
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: var(--ground);
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-ddde" id="root" data-composition-id="main" data-start="0" data-duration="19" data-width="1080" data-height="1920">
+      <div data-hf-id="hf-pxiu" id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html"
+        data-start="0" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-qxei" id="issue" data-composition-id="issue" data-composition-src="compositions/issue.html"
+        data-start="2" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-p74e" id="route" data-composition-id="route" data-composition-src="compositions/route.html"
+        data-start="4" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-r6ro" id="recommend" data-composition-id="recommend" data-composition-src="compositions/recommend.html"
+        data-start="6" data-duration="5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-jn7b" id="charging" data-composition-id="charging" data-composition-src="compositions/charging.html"
+        data-start="11" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-rzr5" id="limit" data-composition-id="limit" data-composition-src="compositions/limit.html"
+        data-start="14" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-ens3" id="receipt" data-composition-id="receipt" data-composition-src="compositions/receipt.html"
+        data-start="16" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <!-- 음성: 앱의 안내 문장 (HeyGen TTS 여성 음성 + 가벼운 전자음 처리) -->
+      <audio data-hf-id="hf-h6xn" id="vo-1" class="clip" src="assets/voice/v1.wav" data-start="3.65" data-duration="2.78" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-6e0i" id="vo-2" class="clip" src="assets/voice/v2.wav" data-start="6.45" data-duration="2.93" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-x5h8" id="vo-3" class="clip" src="assets/voice/v3.wav" data-start="9.5" data-duration="2.56" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-v8tu" id="vo-4" class="clip" src="assets/voice/v4.wav" data-start="12.3" data-duration="1.7" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-8c6y" id="vo-5" class="clip" src="assets/voice/v5.wav" data-start="14.2" data-duration="2.04" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-yysz" id="vo-6" class="clip" src="assets/voice/v6.wav" data-start="16.35" data-duration="2.64" data-track-index="2" data-volume="1"></audio>
+      <!-- 배경음악: HeyGen 음악 카탈로그(3bdb6d02), 음성 아래 잔잔하게 -->
+      <audio id="bgm" class="clip" src="assets/bgm/track.mp3" data-start="0" data-duration="19" data-track-index="5" data-volume="0.08" data-fade-in="0.2" data-fade-out="1.4"></audio>
+      <!-- 효과음: 화면 속 동작에 맞춰 봉우리가 한 프레임 뒤에 오도록 배치 -->
+      <audio data-hf-id="hf-a1q5" id="sfx-whoosh-1" class="clip" src="assets/sfx/whoosh_deep.mp3" data-start="1.3" data-duration="1.4" data-track-index="3" data-volume="0.45" data-fade-out="0.4"></audio>
+      <audio data-hf-id="hf-v7oy" id="sfx-click-1" class="clip" src="assets/sfx/click.mp3" data-start="3.56" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-h3u0" id="sfx-car" class="clip" src="assets/sfx/car_ev_passby.mp3" data-start="3.92" data-duration="2.4" data-media-start="8.0" data-track-index="4" data-volume="0.7" data-fade-in="0.3" data-fade-out="0.7"></audio>
+      <audio data-hf-id="hf-blvt" id="sfx-click-2" class="clip" src="assets/sfx/click.mp3" data-start="9.41" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-yam9" id="sfx-stamp-1" class="clip" src="assets/sfx/stamp_1.mp3" data-start="9.77" data-duration="0.58" data-track-index="3" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-fd3f" id="sfx-plug" class="clip" src="assets/sfx/plug_in.mp3" data-start="10.75" data-duration="1.07" data-track-index="3" data-volume="0.7"></audio>
+      <audio data-hf-id="hf-lt1n" id="sfx-charge" class="clip" src="assets/sfx/charge_powerup.mp3" data-start="11.25" data-duration="2.1" data-track-index="4" data-volume="0.4" data-fade-out="0.5"></audio>
+      <audio data-hf-id="hf-2rdl" id="sfx-stamp-2" class="clip" src="assets/sfx/stamp_2.mp3" data-start="13.16" data-duration="0.78" data-track-index="3" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-blp8" id="sfx-whoosh-2" class="clip" src="assets/sfx/whoosh_short.mp3" data-start="15.8" data-duration="0.57" data-track-index="3" data-volume="0.45"></audio>
+      <audio data-hf-id="hf-2cjd" id="sfx-stamp-3" class="clip" src="assets/sfx/stamp_3.mp3" data-start="16.61" data-duration="0.57" data-track-index="3" data-volume="0.8"></audio>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

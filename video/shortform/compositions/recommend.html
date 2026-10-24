@@ -1,0 +1,108 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_extrabold.ttf"); font-weight: 800; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_medium.ttf"); font-weight: 500; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #rec-inner { position: absolute; inset: 0; }
+    .hdr { position: absolute; left: 64px; right: 64px; top: 186px; height: 48px; display: flex; align-items: baseline; gap: 18px; }
+    .hdr-word { font-size: 40px; font-weight: 700; }
+    .hdr-scn { font-size: 28px; font-weight: 600; color: #a19c93; flex: 1; }
+    .hdr-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 34px; }
+    .hdr-lbl { font-size: 28px; font-weight: 600; color: #a19c93; }
+    #rec-stock { position: absolute; left: 48px; right: 48px; top: 250px; height: 900px; background: #1a1917; }
+    #rec-lead { position: absolute; left: 96px; top: 262px; display: flex; align-items: baseline; gap: 14px; }
+    #rec-km { font-family: "Geist Mono"; font-weight: 600; font-size: 210px; letter-spacing: -0.04em; line-height: 1; }
+    #rec-km-unit { font-size: 52px; font-weight: 600; }
+    #rec-name { position: absolute; left: 96px; top: 478px; font-size: 88px; font-weight: 800; line-height: 1; }
+    #rec-sub { position: absolute; left: 96px; top: 584px; font-size: 34px; font-weight: 600; color: #a19c93; }
+    #rec-lens { position: absolute; left: 48px; width: 984px; top: 640px; height: 80px; background: #252320;
+      border-top: 3px solid #a19c93; border-bottom: 3px solid #a19c93; }
+    .rec-row { position: absolute; left: 96px; width: 888px; display: flex; align-items: center; justify-content: space-between; border-top: 2px solid #3b3833; }
+    .rec-lbl { font-size: 32px; font-weight: 600; color: #a19c93; }
+    .rec-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 60px; }
+    .rec-unit { font-family: "Wanted Sans"; font-weight: 600; font-size: 34px; margin-left: 10px; }
+    #rec-r4 .rec-fig { font-weight: 600; font-size: 92px; color: #8fb2ee; }
+    #rec-r4 .rec-unit { color: #8fb2ee; font-size: 44px; }
+    #rec-tear { position: absolute; left: 48px; top: 998px; width: 984px; height: 4px; }
+    .rec-notch { position: absolute; width: 52px; height: 52px; border-radius: 50%; background: #0f0e0d; top: 974px; }
+    .rec-btn { position: absolute; top: 1024px; height: 104px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 42px; font-weight: 700; }
+    #rec-accept { left: 96px; width: 576px; background: #8fb2ee; color: #0f1a2e; }
+    #rec-next { left: 696px; width: 288px; border: 3px solid #ede9e2; }
+    #rec-stamp { position: absolute; left: 606px; top: 300px; padding: 7px; border: 4px solid #8fb2ee; border-radius: 8px; }
+    #rec-stamp span { display: block; border: 2px solid #8fb2ee; border-radius: 4px; padding: 12px 30px; color: #8fb2ee; font-size: 46px; font-weight: 700; white-space: nowrap; }
+    #rec-cursor { position: absolute; left: 0; top: 0; width: 70px; height: 90px; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap svg { width: 44px; height: 44px; flex: none; }
+  </style>
+  <div data-hf-id="hf-rzyn" id="root" data-composition-id="recommend" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-kbgo" id="rec-world" class="clip" data-start="0" data-duration="5"><div data-hf-id="hf-hzea" id="rec-inner">
+      <div data-hf-id="hf-tyyu" class="hdr"><span data-hf-id="hf-gsq7" class="hdr-word">Chargis</span><span data-hf-id="hf-3s9q" class="hdr-scn">S1 · 서울→속초(가상)</span>
+        <span data-hf-id="hf-ulk7" class="hdr-fig">09:26</span><span data-hf-id="hf-bob4" class="hdr-lbl">배터리</span><span data-hf-id="hf-s1hy" class="hdr-fig">49%</span></div>
+      <div data-hf-id="hf-8ats" id="rec-stock"></div>
+      <div data-hf-id="hf-mn6k" id="rec-lead"><span data-hf-id="hf-qten" id="rec-km">46</span><span data-hf-id="hf-871q" id="rec-km-unit">km 앞</span></div>
+      <div data-hf-id="hf-a6ln" id="rec-name">B 휴게소</div>
+      <div data-hf-id="hf-tuo0" id="rec-sub">가장 빠른 충전기 · 대기 짧음</div>
+      <div data-hf-id="hf-az7i" id="rec-lens"></div>
+      <div data-hf-id="hf-1tye" id="rec-r1" class="rec-row" style="top:640px;height:80px"><span data-hf-id="hf-0tyv" class="rec-lbl">도착 시 배터리</span><span data-hf-id="hf-zkam" class="rec-fig">37<span data-hf-id="hf-epav" class="rec-unit">%</span></span></div>
+      <div data-hf-id="hf-ajty" id="rec-r2" class="rec-row" style="top:720px;height:80px"><span data-hf-id="hf-r6n3" class="rec-lbl">충전 시간</span><span data-hf-id="hf-ivnj" class="rec-fig">9<span data-hf-id="hf-ezok" class="rec-unit">분</span></span></div>
+      <div data-hf-id="hf-x1t2" id="rec-r3" class="rec-row" style="top:800px;height:80px"><span data-hf-id="hf-mi51" class="rec-lbl">충전기 제한</span><span data-hf-id="hf-e2c8" class="rec-fig">40<span data-hf-id="hf-2l0c" class="rec-unit">분</span></span></div>
+      <div data-hf-id="hf-js99" id="rec-r4" class="rec-row" style="top:880px;height:110px"><span data-hf-id="hf-3n1e" class="rec-lbl">목표 충전</span><span data-hf-id="hf-zysh" class="rec-fig">50<span data-hf-id="hf-85nb" class="rec-unit">%</span></span></div>
+      <svg data-hf-id="hf-6op7" id="rec-tear" viewBox="0 0 984 4" preserveAspectRatio="none"><line data-hf-id="hf-vnjp" x1="0" y1="2" x2="984" y2="2" stroke="#3b3833" stroke-width="3" stroke-dasharray="28 20" /></svg>
+      <div data-hf-id="hf-l9xg" class="rec-notch" style="left:22px"></div>
+      <div data-hf-id="hf-z4ol" class="rec-notch" style="left:1006px"></div>
+      <div data-hf-id="hf-tt7g" id="rec-accept" class="rec-btn">경유지로 수락</div>
+      <div data-hf-id="hf-jmov" id="rec-next" class="rec-btn">다음 휴게소</div>
+      <div data-hf-id="hf-dr13" id="rec-stamp"><span data-hf-id="hf-r45a">경유지 등록</span></div>
+      <svg data-hf-id="hf-ga56" id="rec-cursor" viewBox="0 0 70 90">
+        <path data-hf-id="hf-udvo" d="M6 4 L6 72 L22 58 L34 86 L46 80 L34 53 L56 53 Z" fill="#ffffff" stroke="#0f0e0d" stroke-width="4" stroke-linejoin="round" />
+      </svg>
+    </div></div>
+    <div data-hf-id="hf-qm53" id="rec-cap1" class="cap clip" data-start="0.45" data-duration="2.55">
+      <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-e5fs" id="rec-cap1-t">목적지까지는 50퍼센트면 충분합니다.</span>
+    </div>
+    <div data-hf-id="hf-gt10" id="rec-cap2" class="cap clip" data-start="3.45" data-duration="1.55">
+      <svg data-hf-id="hf-57mt" viewBox="0 0 44 44"><path data-hf-id="hf-b1tq" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-s3wq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-mf2g" id="rec-cap2-t">B 휴게소, 경유지로 추가했습니다.</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const dim = { filter: "blur(4px)", opacity: 0.4 };
+    const sharp = { filter: "blur(0px)", opacity: 1 };
+    // 블러 스왑으로 들어온다.
+    tl.fromTo("#rec-inner", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "power2.out" }, 0);
+    tl.fromTo("#rec-cap1-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.45);
+    // 리딩 자(렌즈)가 줄을 훑고 목표 충전 50%에 멈춘다.
+    tl.fromTo("#rec-r1", sharp, { ...sharp, duration: 0.01 }, 0);
+    tl.fromTo(["#rec-r2", "#rec-r3", "#rec-r4"], dim, { ...dim, duration: 0.01 }, 0);
+    tl.fromTo("#rec-lens", { y: 0, scaleY: 1, transformOrigin: "50% 0%", borderColor: "#a19c93" }, { y: 80, duration: 0.3, ease: "power3.inOut" }, 0.45);
+    tl.to("#rec-r1", { ...dim, duration: 0.3 }, 0.45);
+    tl.to("#rec-r2", { ...sharp, duration: 0.3 }, 0.45);
+    tl.to("#rec-lens", { y: 160, duration: 0.3, ease: "power3.inOut" }, 0.85);
+    tl.to("#rec-r2", { ...dim, duration: 0.3 }, 0.85);
+    tl.to("#rec-r3", { ...sharp, duration: 0.3 }, 0.85);
+    tl.to("#rec-lens", { y: 240, scaleY: 1.375, duration: 0.45, ease: "expo.inOut" }, 1.25);
+    tl.to("#rec-r3", { ...dim, duration: 0.3 }, 1.25);
+    tl.to("#rec-r4", { ...sharp, duration: 0.35 }, 1.35);
+    tl.to("#rec-lens", { borderColor: "#8fb2ee", duration: 0.2, ease: "power2.out" }, 1.7);
+    tl.to(["#rec-r1", "#rec-r2", "#rec-r3"], { ...sharp, duration: 0.3, ease: "power2.out" }, 2.6);
+    // 커서가 [경유지로 수락]을 누르고 도장이 찍힌다. 버튼 중심은 (384, 1076).
+    tl.fromTo("#rec-cursor", { x: 980, y: 1500, opacity: 0 }, { x: 380, y: 1072, opacity: 1, duration: 0.42, ease: "power3.out" }, 3.0);
+    tl.to("#rec-cursor", { scale: 0.86, duration: 0.08, transformOrigin: "6px 4px" }, 3.45);
+    tl.to("#rec-cursor", { scale: 1, duration: 0.12 }, 3.53);
+    tl.to("#rec-accept", { scale: 0.98, duration: 0.08 }, 3.45);
+    tl.to("#rec-accept", { scale: 1, duration: 0.12 }, 3.53);
+    tl.fromTo("#rec-cap2-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 3.45);
+    tl.fromTo("#rec-stamp", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, duration: 0.09 }, 3.55);
+    tl.to("#rec-stamp", { scale: 1, duration: 0.26, ease: "power3.out" }, 3.64);
+    tl.to("#rec-cursor", { x: 760, y: 1500, duration: 0.3, ease: "power3.in" }, 4.1);
+    // 블러 스왑으로 충전 장면에 넘긴다.
+    tl.to("#rec-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 4.82);
+    window.__timelines["recommend"] = tl;
+  </script>
+</template>

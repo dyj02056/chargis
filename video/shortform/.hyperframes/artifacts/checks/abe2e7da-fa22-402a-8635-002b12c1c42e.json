@@ -1,0 +1,301 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 8
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "text_box_overflow",
+        "severity": "info",
+        "time": 15.833,
+        "selector": "#lim-eta",
+        "message": "Text extends outside its nearest visual/container box.",
+        "rect": {
+          "left": 705.33,
+          "top": 847.55,
+          "right": 957.33,
+          "bottom": 956.55,
+          "width": 252,
+          "height": 109
+        },
+        "containerSelector": "#lim-fields > div:nth-of-type(3)",
+        "text": "09:28",
+        "fixHint": "Text is 252px x 109px inside 305px x 130px and overflows by up to 23px; increase the container height to at least ~153px, or allow wrapping with max-width/fitTextFontSize.",
+        "containerRect": {
+          "left": 679.33,
+          "top": 803.55,
+          "right": 984,
+          "bottom": 933.55,
+          "width": 304.67,
+          "height": 130
+        },
+        "overflow": {
+          "bottom": 23
+        },
+        "dataAttributes": {},
+        "sourceFile": "compositions/limit.html",
+        "bbox": {
+          "x": 705.33,
+          "y": 847.55,
+          "width": 252,
+          "height": 109
+        },
+        "firstSeen": 15.833,
+        "lastSeen": 15.833,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          15.833
+        ]
+      }
+    ],
+    "duration": 19,
+    "samples": [
+      1.056,
+      3.167,
+      5.278,
+      7.389,
+      9.5,
+      11.611,
+      13.722,
+      15.833,
+      17.944
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.056,
+      5.278,
+      9.5,
+      13.722,
+      17.944
+    ],
+    "checked": 69,
+    "passed": 69
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 7,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "film_silent",
+        "severity": "warning",
+        "message": "This 19 s film has no sound source (no <audio>, no <video> with sound): add a music bed and sounds on the visible actions unless the person asked for silence; see references/sound.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"경로와 배터리를 읽고, 어느 휴게소에서몇 %까지 충전할지 먼저 알려 드립니다.\" (10 words) is on screen 1.93 s (±0.01 s), under its 2.63 s floor: hold it about 0.5 s + 0.3 s a word (3.50 s here) before it leaves or changes; see references/motion.md.",
+        "text": "경로와 배터리를 읽고, 어느 휴게소에서몇 %까지 충전할지 먼저 알려 드립니다.",
+        "selector": "#issue-lede",
+        "dataAttributes": {},
+        "sourceFile": "compositions/issue.html",
+        "bbox": {
+          "x": 72,
+          "y": 603.43,
+          "width": 556.97,
+          "height": 95.17999999999995
+        },
+        "time": 2.07,
+        "words": 10,
+        "seconds": 1.93,
+        "floorSeconds": 2.625
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"이번 이동은 중간 충전 1회가 필요합니다.\" (7 words) is on screen 1.73 s (±0.01 s), under its 1.95 s floor: hold it about 0.5 s + 0.3 s a word (2.60 s here) before it leaves or changes; see references/motion.md.",
+        "text": "이번 이동은 중간 충전 1회가 필요합니다.",
+        "selector": "#route-cap > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/route.html",
+        "bbox": {
+          "x": 148,
+          "y": 1213.5,
+          "width": 599.81,
+          "height": 45
+        },
+        "time": 4.234,
+        "words": 7,
+        "seconds": 1.734,
+        "floorSeconds": 1.95
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"배터리\" renders at 26 px for 4.88 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "배터리",
+        "selector": "#rec-inner > div:nth-of-type(1) > span:nth-of-type(4)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/recommend.html",
+        "bbox": {
+          "x": 869.38,
+          "y": 199,
+          "width": 67.42,
+          "height": 31
+        },
+        "time": 6.125,
+        "times": [
+          6.125
+        ],
+        "fontPx": 26,
+        "floorPx": 28,
+        "seconds": 4.875,
+        "elements": [
+          {
+            "selector": "#rec-inner > div:nth-of-type(1) > span:nth-of-type(4)",
+            "text": "배터리",
+            "fontPx": 26,
+            "time": 6.125,
+            "seconds": 4.875
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"배터리\" renders at 26 px for 2.88 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "배터리",
+        "selector": "#chg-inner > div:nth-of-type(1) > span:nth-of-type(4)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/charging.html",
+        "bbox": {
+          "x": 869.38,
+          "y": 199,
+          "width": 67.42,
+          "height": 31
+        },
+        "time": 11.125,
+        "times": [
+          11.125
+        ],
+        "fontPx": 26,
+        "floorPx": 28,
+        "seconds": 2.875,
+        "elements": [
+          {
+            "selector": "#chg-inner > div:nth-of-type(1) > span:nth-of-type(4)",
+            "text": "배터리",
+            "fontPx": 26,
+            "time": 11.125,
+            "seconds": 2.875
+          }
+        ]
+      },
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and \"배터리\" renders at 26 px for 2.00 s: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "배터리",
+        "selector": "#lim-inner > div:nth-of-type(1) > span:nth-of-type(4)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/limit.html",
+        "bbox": {
+          "x": 869.38,
+          "y": 199,
+          "width": 67.42,
+          "height": 31
+        },
+        "time": 14,
+        "times": [
+          14
+        ],
+        "fontPx": 26,
+        "floorPx": 28,
+        "seconds": 2,
+        "elements": [
+          {
+            "selector": "#lim-inner > div:nth-of-type(1) > span:nth-of-type(4)",
+            "text": "배터리",
+            "fontPx": 26,
+            "time": 14,
+            "seconds": 2
+          }
+        ]
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "\"제한 시간에 약 59%에서 충전이 끝날 예정\" (8 words) is on screen 1.37 s (±0.01 s), under its 2.17 s floor: hold it about 0.5 s + 0.3 s a word (2.90 s here) before it leaves or changes; see references/motion.md.",
+        "text": "제한 시간에 약 59%에서 충전이 끝날 예정",
+        "selector": "#lim-warn > span:nth-of-type(1)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/limit.html",
+        "bbox": {
+          "x": 158,
+          "y": 951,
+          "width": 567.53,
+          "height": 40
+        },
+        "time": 14.602,
+        "words": 8,
+        "seconds": 1.367,
+        "floorSeconds": 2.175
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 152
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

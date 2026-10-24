@@ -1,0 +1,110 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_medium.ttf"); font-weight: 500; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #chg-inner { position: absolute; inset: 0; }
+    .hdr { position: absolute; left: 64px; right: 64px; top: 186px; height: 48px; display: flex; align-items: baseline; gap: 18px; }
+    .hdr-word { font-size: 40px; font-weight: 700; }
+    .hdr-scn { font-size: 28px; font-weight: 600; color: #a19c93; flex: 1; }
+    .hdr-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 34px; }
+    .hdr-lbl { font-size: 28px; font-weight: 600; color: #a19c93; }
+    #chg-stock { position: absolute; left: 48px; right: 48px; top: 250px; height: 900px; background: #1a1917; }
+    #chg-title { position: absolute; left: 96px; top: 292px; font-size: 56px; font-weight: 700; }
+    #chg-soc-row { position: absolute; left: 96px; top: 380px; display: flex; align-items: baseline; gap: 12px; }
+    #chg-soc { font-family: "Geist Mono"; font-weight: 600; font-size: 260px; letter-spacing: -0.04em; line-height: 1; }
+    .chg-pct { font-size: 64px; font-weight: 600; }
+    #chg-arrow { font-size: 64px; font-weight: 700; color: #8fb2ee; margin-left: 28px; }
+    #chg-target { font-family: "Geist Mono"; font-weight: 600; font-size: 110px; color: #8fb2ee; }
+    #chg-target-u { font-size: 50px; font-weight: 600; color: #8fb2ee; }
+    #chg-gauge { position: absolute; left: 96px; top: 680px; width: 888px; height: 96px; }
+    .chg-cell { position: absolute; top: 0; width: 37px; height: 96px; border-radius: 6px; box-sizing: border-box; overflow: hidden; }
+    .chg-fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #ede9e2; transform-origin: 0% 50%; }
+    #chg-fields { position: absolute; left: 96px; top: 830px; width: 888px; height: 140px; display: flex; }
+    .chg-field { flex: 1; padding-left: 24px; border-left: 2px solid #3b3833; }
+    .chg-field:first-child { padding-left: 0; border-left: none; }
+    .chg-lbl { font-size: 30px; font-weight: 600; color: #a19c93; }
+    .chg-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 72px; margin-top: 8px; }
+    .chg-unit { font-family: "Wanted Sans"; font-weight: 600; font-size: 36px; margin-left: 8px; }
+    #chg-eta { font-weight: 600; font-size: 84px; }
+    #chg-tear { position: absolute; left: 48px; top: 1018px; width: 984px; height: 4px; }
+    .chg-notch { position: absolute; width: 52px; height: 52px; border-radius: 50%; background: #0f0e0d; top: 994px; }
+    #chg-stop { position: absolute; left: 96px; top: 1040px; width: 888px; height: 92px; border: 3px solid #ede9e2; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; }
+    #chg-stamp { position: absolute; left: 610px; top: 274px; padding: 7px; border: 4px solid #8fb2ee; border-radius: 8px; }
+    #chg-stamp span { display: block; border: 2px solid #8fb2ee; border-radius: 4px; padding: 10px 28px; color: #8fb2ee; font-size: 44px; font-weight: 700; white-space: nowrap; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap svg { width: 44px; height: 44px; flex: none; }
+  </style>
+  <div data-hf-id="hf-fuvo" id="root" data-composition-id="charging" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-a8v8" id="chg-world" class="clip" data-start="0" data-duration="3"><div data-hf-id="hf-rw7o" id="chg-inner">
+      <div data-hf-id="hf-tyyu" class="hdr"><span data-hf-id="hf-gsq7" class="hdr-word">Chargis</span><span data-hf-id="hf-3s9q" class="hdr-scn">S1 · 서울→속초(가상)</span>
+        <span data-hf-id="hf-23fp" class="hdr-fig">10:04</span><span data-hf-id="hf-bob4" class="hdr-lbl">배터리</span><span data-hf-id="hf-ntsa" id="chg-hdr-soc" class="hdr-fig">42%</span></div>
+      <div data-hf-id="hf-7ame" id="chg-stock"></div>
+      <div data-hf-id="hf-y40i" id="chg-title">B 휴게소 충전 중</div>
+      <div data-hf-id="hf-wav2" id="chg-soc-row"><span data-hf-id="hf-zxh2" id="chg-soc">42</span><span data-hf-id="hf-20l0" class="chg-pct">%</span>
+        <span data-hf-id="hf-l0vs" id="chg-arrow">→</span><span data-hf-id="hf-lny5" id="chg-target">50</span><span data-hf-id="hf-xycd" id="chg-target-u">%</span></div>
+      <div data-hf-id="hf-jcct" id="chg-gauge"></div>
+      <div data-hf-id="hf-nryb" id="chg-fields">
+        <div data-hf-id="hf-rdqv" class="chg-field"><div data-hf-id="hf-x0pc" class="chg-lbl">목표까지</div><div data-hf-id="hf-o2ql" class="chg-fig"><span data-hf-id="hf-1eei" id="chg-left">6</span><span data-hf-id="hf-892m" class="chg-unit">분</span></div></div>
+        <div data-hf-id="hf-8193" class="chg-field"><div data-hf-id="hf-vhs5" class="chg-lbl">제한까지</div><div data-hf-id="hf-se7l" class="chg-fig"><span data-hf-id="hf-apdq" id="chg-limit">37</span><span data-hf-id="hf-hgj6" class="chg-unit">분</span></div></div>
+        <div data-hf-id="hf-7my2" class="chg-field"><div data-hf-id="hf-6r0s" class="chg-lbl">출발 예정</div><div data-hf-id="hf-agio" id="chg-eta" class="chg-fig">10:09</div></div>
+      </div>
+      <svg data-hf-id="hf-k0lx" id="chg-tear" viewBox="0 0 984 4" preserveAspectRatio="none"><line data-hf-id="hf-vnjp" x1="0" y1="2" x2="984" y2="2" stroke="#3b3833" stroke-width="3" stroke-dasharray="28 20" /></svg>
+      <div data-hf-id="hf-fcue" class="chg-notch" style="left:22px"></div>
+      <div data-hf-id="hf-s8t7" class="chg-notch" style="left:1006px"></div>
+      <div data-hf-id="hf-miy2" id="chg-stop">충전 중단</div>
+      <div data-hf-id="hf-060x" id="chg-stamp"><span data-hf-id="hf-0los">충전 완료</span></div>
+    </div></div>
+    <div data-hf-id="hf-e8u7" id="chg-cap0" class="cap clip" data-start="0" data-duration="1.25">
+      <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-2d5f">B 휴게소, 경유지로 추가했습니다.</span>
+    </div>
+    <div data-hf-id="hf-3iwq" id="chg-cap" class="cap clip" data-start="1.25" data-duration="1.75">
+      <svg data-hf-id="hf-57mt" viewBox="0 0 44 44"><path data-hf-id="hf-b1tq" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-s3wq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-v9ax" id="chg-cap-t">40분 제한이 있습니다.</span>
+    </div>
+  </div>
+  <script>
+    // 20칸 게이지: 5%씩. 목표(50%)까지 칸은 코발트 테두리, 나머지는 괘선 테두리.
+    const gauge = document.getElementById("chg-gauge");
+    const fills = [];
+    for (let i = 0; i < 20; i++) {
+      const cell = document.createElement("div");
+      cell.className = "chg-cell";
+      cell.style.left = i * 45.1 + "px";
+      cell.style.border = i < 10 ? "3px solid #8fb2ee" : "2px solid #3b3833";
+      const fill = document.createElement("div");
+      fill.className = "chg-fill";
+      cell.appendChild(fill);
+      gauge.appendChild(cell);
+      fills.push(fill);
+    }
+    const paint = (soc) => {
+      fills.forEach((f, i) => { f.style.transform = "scaleX(" + Math.max(0, Math.min(1, (soc - i * 5) / 5)) + ")"; });
+      const whole = Math.floor(soc);
+      document.getElementById("chg-soc").textContent = whole;
+      document.getElementById("chg-hdr-soc").textContent = whole + "%";
+      const left = Math.ceil(((50 - soc) / 8) * 6);
+      document.getElementById("chg-left").textContent = left;
+      document.getElementById("chg-limit").textContent = 37 - (6 - left);
+    };
+    const state = { soc: 42 };
+    paint(42);
+
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#chg-inner", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "power2.out" }, 0);
+    tl.fromTo("#chg-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 1.25);
+    // 42% -> 50%: 숫자와 칸, 남은 시간이 함께 움직인다.
+    tl.fromTo(state, { soc: 42 }, { soc: 50, duration: 1.9, ease: "none", onUpdate: () => paint(state.soc) }, 0.3);
+    tl.fromTo("#chg-stamp", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, duration: 0.09 }, 2.3);
+    tl.to("#chg-stamp", { scale: 1, duration: 0.26, ease: "power3.out" }, 2.39);
+    // 값이 위로 빠지며 다음 장면(제한 경고)의 값과 교체된다.
+    tl.to(["#chg-title", "#chg-soc-row", "#chg-stamp", "#chg-gauge", "#chg-fields"],
+      { y: -48, opacity: 0, duration: 0.2, stagger: 0.04, ease: "power3.in" }, 2.72);
+    window.__timelines["charging"] = tl;
+  </script>
+</template>

@@ -1,0 +1,64 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_extrabold.ttf"); font-weight: 800; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #issue-world { position: absolute; inset: 0; }
+    #issue-brand { position: absolute; left: 72px; right: 72px; top: 380px; }
+    #issue-word { font-size: 150px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+    #issue-kind { font-size: 54px; font-weight: 700; margin-top: 20px; }
+    #issue-lede { font-size: 36px; font-weight: 600; color: #a19c93; margin-top: 26px; line-height: 1.45; }
+    #issue-ticket { position: absolute; left: 48px; right: 48px; top: 760px; height: 400px; background: #1a1917; }
+    #issue-body { position: absolute; left: 44px; top: 44px; width: 640px; }
+    #issue-title { font-size: 44px; font-weight: 700; }
+    #issue-fields { display: flex; gap: 44px; margin-top: 56px; }
+    .issue-label { font-size: 28px; font-weight: 600; color: #a19c93; }
+    .issue-fig { font-family: "Geist Mono"; font-weight: 600; font-size: 64px; margin-top: 10px; white-space: nowrap; }
+    .issue-unit { font-family: "Wanted Sans"; font-size: 34px; margin-left: 8px; }
+    #issue-perf { position: absolute; left: 728px; top: 0; width: 4px; height: 400px; }
+    .issue-notch { position: absolute; width: 52px; height: 52px; border-radius: 50%; background: #0f0e0d; left: 704px; }
+    #issue-btn { position: absolute; left: 772px; top: 130px; width: 192px; height: 140px; background: #ede9e2;
+      border-radius: 10px; color: #1a1917; font-size: 48px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    #issue-cursor { position: absolute; left: 0; top: 0; width: 70px; height: 90px; }
+  </style>
+  <div data-hf-id="hf-swui" id="root" data-composition-id="issue" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-st6k" id="issue-world" class="clip" data-start="0" data-duration="2">
+      <div data-hf-id="hf-v6oe" id="issue-brand">
+        <div data-hf-id="hf-8ya4" id="issue-word">Chargis</div>
+        <div data-hf-id="hf-t9r1" id="issue-kind">고속도로 충전 통행권</div>
+      </div>
+      <div data-hf-id="hf-e67f" id="issue-ticket">
+        <div data-hf-id="hf-k923" id="issue-body">
+          <div data-hf-id="hf-qewp" id="issue-title">S1 기본 · 서울→속초(가상)</div>
+          <div data-hf-id="hf-v0mo" id="issue-fields">
+            <div data-hf-id="hf-yeow"><div data-hf-id="hf-bl9w" class="issue-label">거리</div><div data-hf-id="hf-jfo7" class="issue-fig">210<span data-hf-id="hf-unep" class="issue-unit">km</span></div></div>
+            <div data-hf-id="hf-y7yw"><div data-hf-id="hf-9znw" class="issue-label">출발 배터리</div><div data-hf-id="hf-hez2" class="issue-fig">60<span data-hf-id="hf-dc6s" class="issue-unit">%</span></div></div>
+            <div data-hf-id="hf-x11t"><div data-hf-id="hf-kjfc" class="issue-label">출발</div><div data-hf-id="hf-h9yb" class="issue-fig">09:00</div></div>
+          </div>
+        </div>
+        <svg data-hf-id="hf-ys2s" id="issue-perf" viewBox="0 0 4 400"><line data-hf-id="hf-k414" x1="2" y1="0" x2="2" y2="400" stroke="#3b3833" stroke-width="3" stroke-dasharray="28 20" /></svg>
+        <div data-hf-id="hf-ojna" class="issue-notch" style="top:-26px"></div>
+        <div data-hf-id="hf-w4jt" class="issue-notch" style="top:374px"></div>
+        <div data-hf-id="hf-ft0x" id="issue-btn">발권</div>
+      </div>
+      <svg data-hf-id="hf-rz4f" id="issue-cursor" viewBox="0 0 70 90">
+        <path data-hf-id="hf-udvo" d="M6 4 L6 72 L22 58 L34 86 L46 80 L34 53 L56 53 Z" fill="#ffffff" stroke="#0f0e0d" stroke-width="4" stroke-linejoin="round" />
+      </svg>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 앞 장면의 위로 휩을 이어받아 아래에서 올라와 내려앉는다.
+    tl.fromTo("#issue-brand", { y: 360, filter: "blur(12px)", opacity: 0 }, { y: 0, filter: "blur(0px)", opacity: 1, duration: 0.42, ease: "expo.out" }, 0);
+    tl.fromTo("#issue-ticket", { y: 420, filter: "blur(12px)", opacity: 0 }, { y: 0, filter: "blur(0px)", opacity: 1, duration: 0.46, ease: "expo.out" }, 0.06);
+    // 커서가 [발권]으로 이동해 누른다. 버튼 중심은 (916, 960).
+    tl.fromTo("#issue-cursor", { x: 980, y: 1420, opacity: 0 }, { x: 912, y: 952, opacity: 1, duration: 0.6, ease: "power3.inOut" }, 0.8);
+    tl.to("#issue-cursor", { scale: 0.86, duration: 0.08, ease: "power2.out", transformOrigin: "6px 4px" }, 1.6);
+    tl.to("#issue-cursor", { scale: 1, duration: 0.12, ease: "power2.out" }, 1.68);
+    tl.to("#issue-btn", { scale: 0.96, duration: 0.08, ease: "power2.out" }, 1.6);
+    tl.to("#issue-btn", { scale: 1, duration: 0.12, ease: "power2.out" }, 1.68);
+    window.__timelines["issue"] = tl;
+  </script>
+</template>

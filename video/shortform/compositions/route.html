@@ -1,0 +1,75 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #route-world { position: absolute; inset: 0; }
+    #route-stock { position: absolute; left: 48px; right: 48px; top: 230px; height: 910px; background: #1a1917; }
+    #route-label { position: absolute; left: 96px; top: 262px; font-size: 30px; font-weight: 600; color: #a19c93; }
+    #route-title { position: absolute; left: 96px; top: 304px; font-size: 46px; font-weight: 700; }
+    #route-title .mono { font-family: "Geist Mono"; font-weight: 600; }
+    #route-dash { position: absolute; left: 194px; top: 420px; width: 12px; height: 680px; }
+    #route-done { position: absolute; left: 196px; top: 420px; width: 8px; height: 680px; background: #ede9e2; }
+    .route-bar { position: absolute; left: 172px; width: 56px; height: 8px; background: #ede9e2; }
+    .route-stop { position: absolute; left: 176px; width: 48px; height: 48px; border-radius: 50%; border: 6px solid #ede9e2; background: #1a1917; }
+    #route-car { position: absolute; left: 164px; top: 0; width: 72px; height: 12px; background: #ede9e2; }
+    #route-signal { position: absolute; left: 190px; top: 0; width: 20px; height: 20px; border-radius: 50%; background: #8fb2ee; }
+    .route-name { position: absolute; left: 268px; font-size: 44px; font-weight: 700; line-height: 1; }
+    .route-end { color: #a19c93; font-size: 40px; }
+    #route-plan { position: absolute; left: 268px; top: 752px; font-size: 32px; font-weight: 600; color: #8fb2ee; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap svg { width: 44px; height: 44px; flex: none; }
+  </style>
+  <div data-hf-id="hf-722g" id="root" data-composition-id="route" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-327q" id="route-world" class="clip" data-start="0" data-duration="2"><div data-hf-id="hf-kjhd" id="route-inner" style="position:absolute;inset:0">
+      <div data-hf-id="hf-5col" id="route-stock"></div>
+      <div data-hf-id="hf-dfip" id="route-label">구간</div>
+      <div data-hf-id="hf-iln1" id="route-title">서울 → 속초 · <span data-hf-id="hf-n64f" class="mono">210</span> km</div>
+      <svg data-hf-id="hf-pnda" id="route-dash" viewBox="0 0 12 680" preserveAspectRatio="none"><line data-hf-id="hf-um0d" x1="6" y1="0" x2="6" y2="680" stroke="#3b3833" stroke-width="6" stroke-dasharray="18 14" /></svg>
+      <div data-hf-id="hf-5usd" id="route-done"></div>
+      <div data-hf-id="hf-hd3l" class="route-bar" style="top:416px"></div>
+      <div data-hf-id="hf-76v8" class="route-bar" style="top:1096px; background:#a19c93"></div>
+      <div data-hf-id="hf-3kk7" id="route-stop-a" class="route-stop" style="top:516px"></div>
+      <div data-hf-id="hf-0qih" id="route-stop-b" class="route-stop" style="top:676px"></div>
+      <div data-hf-id="hf-n806" id="route-stop-c" class="route-stop" style="top:836px"></div>
+      <div data-hf-id="hf-7zcw" id="route-stop-d" class="route-stop" style="top:976px"></div>
+      <div data-hf-id="hf-xzrt" id="route-car"></div>
+      <div data-hf-id="hf-zb8p" id="route-signal"></div>
+      <div data-hf-id="hf-zr2p" class="route-name route-end" style="top:400px">서울</div>
+      <div data-hf-id="hf-3dc0" id="route-name-a" class="route-name" style="top:518px">A 휴게소</div>
+      <div data-hf-id="hf-knpz" id="route-name-b" class="route-name" style="top:678px">B 휴게소</div>
+      <div data-hf-id="hf-3y6s" id="route-plan">충전 예정</div>
+      <div data-hf-id="hf-fhoc" class="route-name" style="top:838px">C 휴게소</div>
+      <div data-hf-id="hf-9y9u" class="route-name" style="top:978px">D 휴게소</div>
+      <div data-hf-id="hf-x9b1" class="route-name route-end" style="top:1080px">속초</div>
+      <div data-hf-id="hf-gexa" id="route-cap" class="cap">
+        <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+        <span data-hf-id="hf-8cd8">이번 이동은 중간 충전 1회가 필요합니다.</span>
+      </div>
+    </div></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 앞 장면의 [발권] 누른 자리(916, 960)에서 아이리스로 열린다.
+    tl.fromTo("#route-inner", { clipPath: "circle(70px at 916px 960px)" },
+      { clipPath: "circle(2300px at 916px 960px)", duration: 0.35, ease: "expo.out" }, 0);
+    tl.fromTo("#route-cap", { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power2.out" }, 0.2);
+    // 차가 출발: 지나온 길이 아래로 그려지고 현재 위치 눈금이 A를 지나 내려간다.
+    tl.fromTo("#route-done", { scaleY: 0, transformOrigin: "50% 0%" }, { scaleY: 0.3, duration: 0.9, ease: "power2.inOut" }, 0.3);
+    tl.fromTo("#route-car", { y: 414 }, { y: 618, duration: 0.9, ease: "power2.inOut" }, 0.3);
+    tl.to("#route-stop-a", { borderColor: "#a19c93", duration: 0.12 }, 0.72);
+    tl.to("#route-name-a", { color: "#a19c93", duration: 0.12 }, 0.72);
+    // 신호가 남은 길을 따라 B에 닿는다.
+    tl.fromTo("#route-signal", { y: 614, opacity: 0 }, { y: 690, opacity: 1, duration: 0.3, ease: "power3.inOut" }, 1.05);
+    tl.to("#route-signal", { opacity: 0, duration: 0.08 }, 1.35);
+    tl.fromTo("#route-stop-b", { scale: 1, backgroundColor: "#1a1917", borderColor: "#ede9e2" },
+      { scale: 1.25, backgroundColor: "#8fb2ee", borderColor: "#8fb2ee", duration: 0.3, ease: "expo.out" }, 1.33);
+    tl.to("#route-name-b", { color: "#8fb2ee", duration: 0.2, ease: "power2.out" }, 1.33);
+    tl.fromTo("#route-plan", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "power2.out" }, 1.42);
+    // 블러 스왑으로 다음 장면에 넘긴다(바탕은 그대로).
+    tl.to("#route-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 1.82);
+    window.__timelines["route"] = tl;
+  </script>
+</template>

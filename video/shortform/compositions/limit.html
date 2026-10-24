@@ -1,0 +1,94 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_medium.ttf"); font-weight: 500; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #lim-inner { position: absolute; inset: 0; }
+    .hdr { position: absolute; left: 64px; right: 64px; top: 186px; height: 48px; display: flex; align-items: baseline; gap: 18px; }
+    .hdr-word { font-size: 40px; font-weight: 700; }
+    .hdr-scn { font-size: 28px; font-weight: 600; color: #a19c93; flex: 1; }
+    .hdr-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 34px; }
+    .hdr-lbl { font-size: 28px; font-weight: 600; color: #a19c93; }
+    #lim-stock { position: absolute; left: 48px; right: 48px; top: 250px; height: 900px; background: #1a1917; }
+    #lim-title { position: absolute; left: 96px; top: 292px; font-size: 56px; font-weight: 700; }
+    #lim-soc-row { position: absolute; left: 96px; top: 380px; display: flex; align-items: baseline; gap: 12px; }
+    #lim-soc { font-family: "Geist Mono"; font-weight: 600; font-size: 260px; letter-spacing: -0.04em; line-height: 1; }
+    .lim-pct { font-size: 64px; font-weight: 600; }
+    #lim-arrow { font-size: 64px; font-weight: 700; color: #8fb2ee; margin-left: 28px; }
+    #lim-target { font-family: "Geist Mono"; font-weight: 600; font-size: 110px; color: #8fb2ee; }
+    #lim-target-u { font-size: 50px; font-weight: 600; color: #8fb2ee; }
+    #lim-gauge { position: absolute; left: 96px; top: 680px; width: 888px; height: 96px; }
+    .lim-cell { position: absolute; top: 0; width: 37px; height: 96px; border-radius: 6px; box-sizing: border-box; }
+    #lim-fields { position: absolute; left: 96px; top: 810px; width: 888px; height: 130px; display: flex; }
+    .lim-field { flex: 1; padding-left: 24px; border-left: 2px solid #3b3833; }
+    .lim-field:first-child { padding-left: 0; border-left: none; }
+    .lim-lbl { font-size: 30px; font-weight: 600; color: #a19c93; }
+    .lim-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 72px; margin-top: 8px; }
+    .lim-unit { font-family: "Wanted Sans"; font-weight: 600; font-size: 36px; margin-left: 8px; }
+    #lim-limit, #lim-limit .lim-unit { color: #e8ae4a; }
+    #lim-eta { font-weight: 600; font-size: 84px; }
+    #lim-warn { position: absolute; left: 96px; top: 950px; display: flex; align-items: center; gap: 16px; color: #e8ae4a; font-size: 34px; font-weight: 600; white-space: nowrap; }
+    #lim-warn svg { width: 46px; height: 42px; flex: none; }
+    #lim-tear { position: absolute; left: 48px; top: 1026px; width: 984px; height: 4px; }
+    .lim-notch { position: absolute; width: 52px; height: 52px; border-radius: 50%; background: #0f0e0d; top: 1002px; }
+    #lim-stop { position: absolute; left: 96px; top: 1048px; width: 888px; height: 84px; border: 3px solid #ede9e2; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap svg { width: 44px; height: 44px; flex: none; }
+  </style>
+  <div data-hf-id="hf-2ah2" id="root" data-composition-id="limit" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-b7qf" id="lim-world" class="clip" data-start="0" data-duration="2"><div data-hf-id="hf-jqnm" id="lim-inner">
+      <div data-hf-id="hf-tyyu" class="hdr"><span data-hf-id="hf-gsq7" class="hdr-word">Chargis</span><span data-hf-id="hf-cso9" class="hdr-scn">S3 · 서울→부산(가상)</span>
+        <span data-hf-id="hf-wl3c" class="hdr-fig">09:23</span><span data-hf-id="hf-bob4" class="hdr-lbl">배터리</span><span data-hf-id="hf-hpd5" class="hdr-fig">55%</span></div>
+      <div data-hf-id="hf-0g7k" id="lim-stock"></div>
+      <div data-hf-id="hf-dkaf" id="lim-title">E 휴게소 충전 중</div>
+      <div data-hf-id="hf-obe0" id="lim-soc-row"><span data-hf-id="hf-txs4" id="lim-soc">55</span><span data-hf-id="hf-isae" class="lim-pct">%</span>
+        <span data-hf-id="hf-r91a" id="lim-arrow">→</span><span data-hf-id="hf-j5wq" id="lim-target">80</span><span data-hf-id="hf-59r7" id="lim-target-u">%</span></div>
+      <div data-hf-id="hf-obqn" id="lim-gauge">
+        <div data-hf-id="hf-mk6u" class="lim-cell" style="left:0px;background:#ede9e2"></div><div data-hf-id="hf-36p8" class="lim-cell" style="left:45.1px;background:#ede9e2"></div>
+        <div data-hf-id="hf-zle3" class="lim-cell" style="left:90.2px;background:#ede9e2"></div><div data-hf-id="hf-bfie" class="lim-cell" style="left:135.3px;background:#ede9e2"></div>
+        <div data-hf-id="hf-oeo7" class="lim-cell" style="left:180.4px;background:#ede9e2"></div><div data-hf-id="hf-b04w" class="lim-cell" style="left:225.5px;background:#ede9e2"></div>
+        <div data-hf-id="hf-enav" class="lim-cell" style="left:270.6px;background:#ede9e2"></div><div data-hf-id="hf-684q" class="lim-cell" style="left:315.7px;background:#ede9e2"></div>
+        <div data-hf-id="hf-jbef" class="lim-cell" style="left:360.8px;background:#ede9e2"></div><div data-hf-id="hf-bwto" class="lim-cell" style="left:405.9px;background:#ede9e2"></div>
+        <div data-hf-id="hf-fp40" class="lim-cell" style="left:451px;background:#ede9e2"></div>
+        <div data-hf-id="hf-cwxk" class="lim-cell" style="left:496.1px;border:3px solid #8fb2ee"></div><div data-hf-id="hf-bt16" class="lim-cell" style="left:541.2px;border:3px solid #8fb2ee"></div>
+        <div data-hf-id="hf-tuao" class="lim-cell" style="left:586.3px;border:3px solid #8fb2ee"></div><div data-hf-id="hf-ke12" class="lim-cell" style="left:631.4px;border:3px solid #8fb2ee"></div>
+        <div data-hf-id="hf-cmx8" class="lim-cell" style="left:676.5px;border:3px solid #8fb2ee"></div>
+        <div data-hf-id="hf-u1ob" class="lim-cell" style="left:721.6px;border:2px solid #3b3833"></div><div data-hf-id="hf-itx5" class="lim-cell" style="left:766.7px;border:2px solid #3b3833"></div>
+        <div data-hf-id="hf-m0lv" class="lim-cell" style="left:811.8px;border:2px solid #3b3833"></div><div data-hf-id="hf-78o9" class="lim-cell" style="left:856.9px;border:2px solid #3b3833"></div>
+      </div>
+      <div data-hf-id="hf-i1kh" id="lim-fields">
+        <div data-hf-id="hf-v7fd" class="lim-field"><div data-hf-id="hf-jduy" class="lim-lbl">목표까지</div><div data-hf-id="hf-zu4s" class="lim-fig">27<span data-hf-id="hf-43g4" class="lim-unit">분</span></div></div>
+        <div data-hf-id="hf-kh7x" class="lim-field"><div data-hf-id="hf-1q7r" class="lim-lbl">제한까지</div><div data-hf-id="hf-4h12" id="lim-limit" class="lim-fig">5<span data-hf-id="hf-6e8c" class="lim-unit">분</span></div></div>
+        <div data-hf-id="hf-lo50" class="lim-field"><div data-hf-id="hf-0nua" class="lim-lbl">출발 예정</div><div data-hf-id="hf-yhaj" id="lim-eta" class="lim-fig">09:28</div></div>
+      </div>
+      <div data-hf-id="hf-rtlu" id="lim-warn">
+        <svg data-hf-id="hf-ynl9" viewBox="0 0 46 42"><path data-hf-id="hf-jgbx" d="M23 3 L44 39 H2 Z" fill="none" stroke="#e8ae4a" stroke-width="4" stroke-linejoin="round" /><path data-hf-id="hf-x1ls" d="M23 16 V27" stroke="#e8ae4a" stroke-width="4" stroke-linecap="round" /><circle data-hf-id="hf-wy8y" cx="23" cy="33" r="2.6" fill="#e8ae4a" /></svg>
+        <span data-hf-id="hf-cipq">약 59%에서 충전 종료 예정</span>
+      </div>
+      <svg data-hf-id="hf-zli3" id="lim-tear" viewBox="0 0 984 4" preserveAspectRatio="none"><line data-hf-id="hf-vnjp" x1="0" y1="2" x2="984" y2="2" stroke="#3b3833" stroke-width="3" stroke-dasharray="28 20" /></svg>
+      <div data-hf-id="hf-aopo" class="lim-notch" style="left:22px"></div>
+      <div data-hf-id="hf-pegd" class="lim-notch" style="left:1006px"></div>
+      <div data-hf-id="hf-p1wc" id="lim-stop">충전 중단</div>
+    </div></div>
+    <div data-hf-id="hf-4plr" id="lim-cap" class="cap clip" data-start="0.15" data-duration="1.65">
+      <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-ktco" id="lim-cap-t">5분 뒤 충전이 종료됩니다.</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 앞 장면의 값이 위로 빠진 자리에 새 값이 아래에서 줄 단위로 들어온다(용지는 그대로).
+    tl.fromTo(["#lim-title", "#lim-soc-row", "#lim-gauge", "#lim-fields"], { y: 48, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.4, stagger: 0.05, ease: "power3.out" }, 0);
+    tl.fromTo("#lim-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.15);
+    // 경고 줄이 왼쪽부터 인쇄된다.
+    tl.fromTo("#lim-warn", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "power2.out" }, 0.55);
+    // 위로 휩: 영수증이 아래에서 올라온다.
+    tl.to("#lim-inner", { y: -720, opacity: 0, filter: "blur(14px)", duration: 0.26, ease: "power3.in" }, 1.72);
+    window.__timelines["limit"] = tl;
+  </script>
+</template>

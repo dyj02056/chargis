@@ -1,0 +1,28 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_extrabold.ttf"); font-weight: 800; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #hook-block { position: absolute; left: 72px; right: 72px; top: 520px; }
+    #hook-kicker { font-size: 48px; font-weight: 600; color: #a19c93; margin-bottom: 36px; }
+    .hook-line { font-size: 172px; font-weight: 800; line-height: 1.12; letter-spacing: -0.02em; }
+    .hook-word { display: inline-block; color: #a19c93; }
+  </style>
+  <div data-hf-id="hf-srfg" id="root" data-composition-id="hook" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-zd0o" id="hook-clip" class="clip" data-start="0" data-duration="2" style="position:absolute;inset:0"><div data-hf-id="hf-0trk" id="hook-block">
+      <div data-hf-id="hf-oxsb" id="hook-kicker">장거리 전기차, 휴게소에서</div>
+      <div data-hf-id="hf-00yc" class="hook-line"><span data-hf-id="hf-o61j" id="hook-w1" class="hook-word">몇&nbsp;%까지</span></div>
+      <div data-hf-id="hf-0ess" class="hook-line"><span data-hf-id="hf-zb7y" id="hook-w2" class="hook-word">충전하지?</span></div>
+    </div></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 0프레임부터 문장이 보이고(썸네일), 단어가 회색에서 잉크로 인쇄된다.
+    tl.fromTo("#hook-w1", { color: "#a19c93" }, { color: "#ede9e2", duration: 0.25, ease: "power2.out" }, 0.15);
+    tl.fromTo("#hook-w2", { color: "#a19c93" }, { color: "#ede9e2", duration: 0.25, ease: "power2.out" }, 0.4);
+    // 위로 휩: 다음 장면의 통행권이 아래에서 올라온다.
+    tl.fromTo("#hook-block", { y: 0, opacity: 1, filter: "blur(0px)" },
+      { y: -720, opacity: 0, filter: "blur(14px)", duration: 0.28, ease: "power3.in" }, 1.68);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>
