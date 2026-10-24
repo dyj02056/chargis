@@ -25,8 +25,24 @@ data class VehicleProfile(
     val displayName: String,
     val batteryKwh: Double,          // 사용 가능 용량
     val efficiencyKmPerKwh: Double,  // 평균 전비
-    val maxChargeKw: Double          // 차량 최대 수용 출력
-)
+    val maxChargeKw: Double,         // 차량 최대 수용 출력
+    /**
+     * 차종별 충전 곡선: SoC(%)마다 차가 받아들이는 최대 출력(kW). SoC 오름차순.
+     * 예) [(10, 150), (50, 120), (80, 60), (100, 15)] → 사이 값은 직선으로 잇는다.
+     * null이면 "80%까지 평균 출력, 그 위는 감쇠" 두 구간 모델을 쓴다(ChargeMath 참고).
+     */
+    val chargeCurve: List<CurvePoint>? = null
+) {
+    /**
+     * 실제 소비가 평소보다 [factor]배 많을 때의 사양. 예) 겨울이라 1.2배 → 전비가 1/1.2로 떨어진다.
+     * 엔진 계산식은 그대로 두고 전비만 바꿔 끼우기 위한 도우미다.
+     */
+    fun withConsumptionFactor(factor: Double): VehicleProfile =
+        if (factor == 1.0) this else copy(efficiencyKmPerKwh = efficiencyKmPerKwh / factor)
+}
+
+/** 충전 곡선의 한 점: 이 SoC(%)에서 차가 받는 최대 출력(kW). */
+data class CurvePoint(val socPercent: Double, val kw: Double)
 
 /**
  * 차량 데이터를 어디서 받았는지 표시한다.
@@ -39,7 +55,11 @@ data class VehicleState(
     val socPercent: Double,          // 0..100
     val rangeKm: Double?,            // 주행가능거리(없으면 null)
     val isDriving: Boolean,          // 주행/정차 구분 (SDK 불가 시 시뮬레이터/수동)
-    val source: DataSource
+    val source: DataSource,
+    val outsideTempC: Double? = null,    // 바깥 기온(°C). 추울수록 전비가 나빠진다. 없으면 null
+    val chargePowerKw: Double? = null,   // 충전 중 실제 들어오는 출력(kW). 충전 중이 아니거나 모르면 null
+    /** 누적 주행거리(km). 배터리 값과 같은 순간에 읽은 거리라 전비 실측(B3)에 쓴다. 모르면 null */
+    val odometerKm: Double? = null
 )
 
 /** 내비게이션이 알려 주는 현재 경로 정보. 목적지까지 남은 거리와 시간을 담는다. */
@@ -71,8 +91,13 @@ data class ChargingStation(
     val maxKw: Double,                // 해당 소의 최대 출력
     val totalChargers: Int,           // 전체 충전기 대수
     val availableChargers: Int?,      // null = 실시간 미상
-    val expectedWaitMin: Int?,        // 실시간 or 시간대별 통계 기반 추정
-    val rule: ChargerRule
+    val expectedWaitMin: Int?,        // 지금 이 순간의 대기(실시간). null = 미상
+    val rule: ChargerRule,
+    /**
+     * 시간대별 평소 대기(분) 24칸. 0번 = 0시대, 13번 = 13시대. null = 통계 없음.
+     * 도착 시각의 대기를 예측할 때 실시간 값과 섞어 쓴다(WaitForecast).
+     */
+    val waitByHour: List<Int>? = null
 )
 
 /** 충전소의 실시간 상황(빈 충전기 수, 대기 시간). 주기적으로 새 값이 들어온다. */
@@ -80,18 +105,6 @@ data class StationLiveStatus(
     val stationId: String,
     val availableChargers: Int?,
     val expectedWaitMin: Int?
-)
-
-/**
- * 충전소에 점수를 매길 때 항목별로 얼마나 중요하게 볼지 정하는 비율. 다 더하면 1.0이다.
- * 예) power = 0.25 → 충전 속도가 전체 점수의 25%를 차지한다.
- */
-data class ScoreWeights(
-    val arrivalSoc: Double = 0.25,    // 도착했을 때 배터리가 많이 남을수록 가점
-    val power: Double = 0.25,         // 충전 속도가 빠를수록 가점
-    val availability: Double = 0.20,  // 빈 충전기 비율이 높을수록 가점
-    val detour: Double = 0.10,        // 경로에서 많이 벗어날수록 감점
-    val wait: Double = 0.20           // 대기 시간이 길수록 감점
 )
 
 /**
@@ -108,7 +121,41 @@ data class RecommendationConfig(
     val taperFactorAboveCap: Double = 0.35,   // >80% 구간 추가 감쇠 계수 (가정)
     val announceWithinKm: Double = 50.0,      // 추천 지점 N km 전 안내
     val congestionWaitThresholdMin: Int = 20, // 1순위 대기가 이보다 길면 대안 비교 카드
-    val weights: ScoreWeights = ScoreWeights()
+    // ---- 총 소요 시간 비교(B1) ----
+    val defaultSpeedKmh: Double = 100.0,      // 내비가 남은 시간을 주지 않을 때 쓰는 평균 속도
+    val stopOverheadMin: Double = 3.0,        // 한 번 들를 때마다 드는 시간(진출입·주차·결제) (가정)
+    val unknownWaitMin: Int = 10,             // 대기를 전혀 모를 때 셈에 넣는 대기 (가정)
+    val comfortArrivalSocPercent: Double = 20.0, // 도착 잔량이 이보다 낮으면 불안 비용을 더한다
+    val lowSocPenaltyMinPerPercent: Double = 0.5, // 위 기준에서 1% 모자랄 때마다 더하는 분
+    val limitRiskPenaltyMin: Double = 15.0,   // 시간 제한 안에 목표를 못 채우는 계획에 더하는 분
+    val unreachablePenaltyMin: Double = 60.0, // 두 번 들러도 목적지까지 못 가는 계획에 더하는 분
+    val switchMinutesGap: Double = 5.0,       // 수락한 휴게소를 바꾸려면 이만큼 빨라야 한다(히스테리시스)
+    // ---- 충전 곡선(B3) ----
+    val stationDeliveryFactor: Double = 0.92, // 충전기가 표시 출력의 몇 %를 실제로 내주는지 (가정)
+    // ---- 대기 예측(B4) ----
+    val liveWaitHalfLifeMin: Double = 45.0    // 실시간 대기를 믿는 정도가 반으로 줄어드는 시간
+)
+
+/**
+ * 추천 한 번에 쓰는 "지금 상황" 값. 엔진이 시계나 센서를 직접 읽지 않도록 밖에서 넣어 준다.
+ * [minuteOfDay]: 지금 시각(0시부터 분). 도착 시각의 대기를 예측하는 데 쓴다. 모르면 null.
+ * [consumptionFactor]: 실제 소비 ÷ 사양 소비. 1.2면 사양보다 20% 더 쓴다(ConsumptionCalibrator).
+ */
+data class RecommendContext(
+    val minuteOfDay: Int? = null,
+    val consumptionFactor: Double = 1.0
+)
+
+/** 대기 시간 값을 어디서 얻었는지. 화면에 "예측" 같은 꼬리표를 붙일 때 쓴다. */
+enum class WaitSource { LIVE, BLENDED, FORECAST, UNKNOWN }
+
+/** 두 번째로 들를 휴게소 계획(B2). 첫 번째 휴게소에서 출발한 뒤 다시 추천 엔진이 확인한다. */
+data class PlannedStop(
+    val station: ChargingStation,
+    val arrivalSocPercent: Double,
+    val targetSocPercent: Double,
+    val chargeMinutes: Int,
+    val waitMinutes: Int
 )
 
 /**
@@ -120,22 +167,25 @@ data class Recommendation(
     val arrivalSocPercent: Double,            // 이 충전소에 도착했을 때 예상 배터리 %
     val targetSocPercent: Double,             // "OO%까지 충전하세요"의 OO
     val chargeMinutes: Int,                   // 목표까지 충전하는 데 걸리는 분
-    val waitMinutes: Int,                     // 충전기 빌 때까지 기다리는 분
+    val waitMinutes: Int,                     // 도착했을 때 예상 대기(분). 모르면 0
     val timeLimitMin: Int?,                   // 충전소 시간 제한(분)
     val willHitTimeLimit: Boolean,            // 목표까지 충전하기 전에 시간 제한에 걸리는지
     val socAtTimeLimitPercent: Double?,       // 제한 시각에 도달 가능한 SoC
-    val needsAnotherStop: Boolean,            // 목표(상한) 충전으로도 목적지 미도달
-    val score: Double,                        // 비교용 점수. 높을수록 좋은 충전소
-    val reasonCodes: List<ReasonCode>         // 화면에 보여 줄 "추천 이유" 배지 목록
+    val needsAnotherStop: Boolean,            // 이 휴게소 다음에 한 번 더 들러야 한다(또는 그래도 못 감)
+    val reasonCodes: List<ReasonCode>,        // 화면에 보여 줄 "추천 이유" 배지 목록
+    val waitSource: WaitSource = WaitSource.UNKNOWN, // 대기 값의 출처(실시간/예측)
+    val etaMinutes: Double = 0.0,             // 지금부터 목적지 도착까지 걸리는 분(이 계획대로 갈 때)
+    val costMinutes: Double = 0.0,            // 순위용 비용(분) = etaMinutes + 위험 가산. 낮을수록 좋다
+    val nextStop: PlannedStop? = null         // 두 번 들르는 계획이면 두 번째 휴게소
 )
 
 /**
  * 추천 이유 배지의 종류.
- * MAX_POWER = 후보 중 가장 빠른 충전, LOW_WAIT = 대기가 짧음, ENOUGH_CHARGERS = 빈 충전기 넉넉,
+ * FASTEST_ARRIVAL = 후보 중 목적지에 가장 빨리 도착, MAX_POWER = 후보 중 가장 빠른 충전, LOW_WAIT = 대기가 짧음, ENOUGH_CHARGERS = 빈 충전기 넉넉,
  * LATEST_SAFE_STOP = 안전하게 갈 수 있는 마지막 휴게소, NO_DETOUR = 경로 이탈 없음,
  * TIME_LIMIT_RISK = 시간 제한 안에 목표까지 못 채울 위험
  */
-enum class ReasonCode { MAX_POWER, LOW_WAIT, ENOUGH_CHARGERS, LATEST_SAFE_STOP, NO_DETOUR, TIME_LIMIT_RISK }
+enum class ReasonCode { FASTEST_ARRIVAL, MAX_POWER, LOW_WAIT, ENOUGH_CHARGERS, LATEST_SAFE_STOP, NO_DETOUR, TIME_LIMIT_RISK }
 
 /**
  * 추천 엔진의 최종 답. 세 가지 경우 중 정확히 하나가 나온다.
@@ -152,7 +202,7 @@ sealed interface RecommendationResult {
     data class Recommended(
         val primary: Recommendation,
         val alternatives: List<Recommendation>,
-        val congested: Boolean,              // 1순위가 붐벼서 대안 비교 화면을 띄워야 하는지
+        val congested: Boolean,              // 붐비지 않았다면 골랐을 1순위가 붐벼서 대안 비교 화면을 띄워야 하는지
         val latestSafeStopId: String         // 늦어도 여기서는 충전해야 하는 휴게소의 id
     ) : RecommendationResult
 }

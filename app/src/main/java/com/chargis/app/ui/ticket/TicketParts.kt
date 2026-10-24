@@ -125,7 +125,8 @@ fun HairlineV(modifier: Modifier = Modifier) {
 @Composable
 fun Field(label: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val c = Ticket.colors
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // 화면 낭독기가 "목표 충전, 50 %"처럼 칸 이름과 값을 한 번에 읽도록 묶는다.
+    Column(modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
         content()
     }
@@ -141,7 +142,7 @@ fun Figure(
     color: Color = Ticket.colors.ink,
     unitStyle: TextStyle = com.chargis.app.ui.theme.FigureStyle.Unit
 ) {
-    Row(modifier, verticalAlignment = Alignment.Bottom) {
+    Row(modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
         Text(value, style = style, color = color, maxLines = 1)
         if (unit != null) {
             // 단위 글자를 숫자 밑선에 맞추려고 글자 크기에 비례해 아래 여백을 준다.
@@ -183,6 +184,23 @@ fun Stamp(text: String, modifier: Modifier = Modifier, color: Color = Ticket.col
             .semantics { contentDescription = text }
     ) {
         Text(text, style = MaterialTheme.typography.titleMedium, color = color)
+    }
+}
+
+/**
+ * 작은 도장 꼬리표(F3 추천 이유 배지). 큰 [Stamp]와 같은 이중 테두리지만 기울이거나 움직이지 않는다.
+ * 주행 중에 읽는 글자라 똑바로, 조용하게 찍는다.
+ */
+@Composable
+fun StampTag(text: String, modifier: Modifier = Modifier, color: Color = Ticket.colors.stamp) {
+    Box(
+        modifier
+            .border(1.5.dp, color, RoundedCornerShape(4.dp))
+            .padding(2.dp)
+            .border(0.75.dp, color.copy(alpha = 0.6f), RoundedCornerShape(2.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(text, style = MaterialTheme.typography.titleMedium, color = color, maxLines = 1)
     }
 }
 
@@ -250,6 +268,19 @@ fun WarnGlyph(modifier: Modifier = Modifier, color: Color = Ticket.colors.warn, 
         drawPath(tri, color, style = Stroke(width = w * 0.09f))
         drawLine(color, Offset(w / 2, h * 0.36f), Offset(w / 2, h * 0.62f), strokeWidth = w * 0.1f, cap = StrokeCap.Round)
         drawCircle(color, w * 0.055f, Offset(w / 2, h * 0.77f))
+    }
+}
+
+/** 음성 명령 듣는 중 표시: 그린 마이크(F5). */
+@Composable
+fun MicGlyph(modifier: Modifier = Modifier, color: Color = Ticket.colors.stamp, size: Dp = 22.dp) {
+    Canvas(modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val stroke = w * 0.09f
+        drawRoundRect(color, Offset(w * 0.34f, h * 0.06f), androidx.compose.ui.geometry.Size(w * 0.32f, h * 0.54f), androidx.compose.ui.geometry.CornerRadius(w * 0.16f))
+        drawArc(color, 0f, 180f, false, Offset(w * 0.2f, h * 0.24f), androidx.compose.ui.geometry.Size(w * 0.6f, h * 0.52f), style = Stroke(stroke, cap = StrokeCap.Round))
+        drawLine(color, Offset(w / 2, h * 0.76f), Offset(w / 2, h * 0.94f), strokeWidth = stroke, cap = StrokeCap.Round)
     }
 }
 

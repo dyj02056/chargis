@@ -1,4 +1,5 @@
 {
+  "note": "가정값. 실제 차종 사양이 아니다. chargeCurve는 SoC(%)별 차량 최대 수용 출력(kW)이며, 없으면 두 구간 모델을 쓴다.",
   "defaultProfileId": "default",
   "profiles": [
     {
@@ -7,6 +8,28 @@
       "batteryKwh": 77.4,
       "efficiencyKmPerKwh": 5.0,
       "maxChargeKw": 150.0
+    },
+    {
+      "id": "mid_suv",
+      "displayName": "중형 SUV · 800V (가정값)",
+      "batteryKwh": 84.0,
+      "efficiencyKmPerKwh": 4.6,
+      "maxChargeKw": 240.0,
+      "chargeCurve": [
+        { "soc": 0, "kw": 200 }, { "soc": 10, "kw": 235 }, { "soc": 50, "kw": 220 },
+        { "soc": 65, "kw": 160 }, { "soc": 80, "kw": 90 }, { "soc": 90, "kw": 45 }, { "soc": 100, "kw": 12 }
+      ]
+    },
+    {
+      "id": "compact",
+      "displayName": "소형 해치백 · 400V (가정값)",
+      "batteryKwh": 58.0,
+      "efficiencyKmPerKwh": 5.6,
+      "maxChargeKw": 100.0,
+      "chargeCurve": [
+        { "soc": 0, "kw": 80 }, { "soc": 20, "kw": 100 }, { "soc": 50, "kw": 85 },
+        { "soc": 75, "kw": 55 }, { "soc": 85, "kw": 30 }, { "soc": 100, "kw": 8 }
+      ]
     }
   ]
 }

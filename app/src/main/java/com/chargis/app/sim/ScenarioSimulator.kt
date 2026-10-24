@@ -32,6 +32,9 @@ data class Scenario(
     val startSoc: Double,
     val speedKmh: Double,          // 가상 차량의 일정한 주행 속도
     val startHour: Int,            // 출발 시각(시). 화면 시계가 여기서부터 흐른다.
+    val outsideTempC: Double? = null,   // 바깥 기온(°C). 차량 센서 값처럼 앱에 전달된다
+    /** 가상 차량의 "실제" 소비 배율. 앱은 이 값을 모르고, 달리면서 실측으로 알아내야 한다(B3 시연). */
+    val consumptionFactor: Double = 1.0,
     val start: GeoPoint,
     val destination: GeoPoint,
     val stations: List<ChargingStation>
@@ -164,7 +167,7 @@ class ScenarioSimulator(
     // [dKm]만큼 달린다. 경유지나 목적지를 넘어가지 않도록 그 지점에서 멈춘다.
     private fun advanceDriving(dKm: Double, dtSec: Double) {
         val s = _state.value
-        val socPerKm = ChargeMath.socPerKm(scenario.profile)
+        val socPerKm = ChargeMath.socPerKm(scenario.profile) * scenario.consumptionFactor
         val wpKm = waypointKm(s)
         val stopKm = wpKm ?: scenario.totalDistanceKm
         val traveled = min(s.traveledKm + dKm, stopKm)
@@ -199,6 +202,29 @@ class ScenarioSimulator(
             cutOff -> s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = soc, simTimeSec = now, chargeTargetSoc = null, chargeEndsAtSec = null)
             else -> s.copy(soc = soc, simTimeSec = now)
         }
+    }
+
+    /** 충전 중이면 지금 들어오는 출력(kW), 아니면 null. 가짜 차량이 차량 데이터처럼 내보낸다. */
+    fun chargePowerKw(s: SimState = _state.value): Double? {
+        if (s.phase != SimPhase.CHARGING) return null
+        val station = scenario.stations.firstOrNull { it.id == s.stoppedAtId } ?: return null
+        return ChargeMath.powerKw(s.soc, station.maxKw, scenario.profile, config)
+    }
+
+    /** 충전 중 목표 %를 바꾼다(F2). 지금보다 높아야 한다. */
+    fun setChargeTarget(targetSoc: Double) = _state.update {
+        if (it.phase == SimPhase.CHARGING && targetSoc > it.soc) it.copy(chargeTargetSoc = targetSoc) else it
+    }
+
+    /** 저장해 둔 상태로 되돌린다(B5 여행 복원). 일시정지 여부와 배속은 지금 값을 유지한다. */
+    fun restore(next: Scenario, saved: SimState) {
+        scenario = next
+        _state.value = saved.copy(speedMultiplier = _state.value.speedMultiplier, paused = false)
+    }
+
+    /** 차종을 바꾼다(F5 설정). 같은 시나리오를 다른 차로 달린다. 출발 전에만 쓴다. */
+    fun useProfile(profile: VehicleProfile) {
+        scenario = scenario.copy(profile = profile)
     }
 
     private fun waypointKm(s: SimState): Double? =

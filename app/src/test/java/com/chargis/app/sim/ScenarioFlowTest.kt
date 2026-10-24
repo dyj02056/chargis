@@ -4,8 +4,10 @@ import com.chargis.app.data.asset.AssetCatalog
 import com.chargis.app.data.fake.FakeChargerData
 import com.chargis.app.data.fake.FakeNavi
 import com.chargis.app.data.fake.FakeVehicle
+import com.chargis.app.data.fake.InMemoryTripStore
 import com.chargis.app.domain.model.Priority
 import com.chargis.app.domain.session.TripPhase
+import com.chargis.app.port.TripStore
 import com.chargis.app.port.TtsPort
 import com.chargis.app.ui.DriveCard
 import com.chargis.app.ui.TripController
@@ -57,12 +59,14 @@ class ScenarioFlowTest {
         override fun targetReached() = "target_reached"
         override fun resume() = "resume"
         override fun noSafeStop() = "no_safe"
+        override fun planTwoStops(nextName: String, nextTarget: Double) = "two_stops:$nextName:${nextTarget.toInt()}"
+        override fun targetChanged(target: Double) = "target_changed:${target.toInt()}"
     }
 
     // 테스트 한 번에 필요한 부품 묶음(시뮬레이터, 컨트롤러, 가짜 스피커)
     private class Harness(val sim: ScenarioSimulator, val controller: TripController, val tts: Recorder)
 
-    private fun TestScope.harness(): Harness {
+    private fun TestScope.harness(store: TripStore? = null): Harness {
         val sim = ScenarioSimulator(catalog.scenarios.first())
         val tts = Recorder()
         val controller = TripController(
@@ -74,7 +78,9 @@ class ScenarioFlowTest {
             phrases = KeyPhrases,
             demo = sim,
             scenarios = catalog.scenarios,
-            runClock = false
+            runClock = false,
+            profiles = catalog.profiles,
+            tripStore = store
         )
         runCurrent()
         return Harness(sim, controller, tts)
@@ -167,7 +173,11 @@ class ScenarioFlowTest {
         val card = h.controller.state.value.card as DriveCard.Congested
         assertEquals("rest_b", card.primary.station.id)
         assertEquals("rest_c", card.alternative.station.id)
-        assertTrue(h.tts.spoken.any { it.startsWith("congested:B 휴게소:30") })
+        // B4: 지금 30분 대기 + 명절 시간대 통계(11시 34분)를 섞어 도착 시각 대기를 30분 넘게 예측한다.
+        val wait = h.tts.spoken.first { it.startsWith("congested:B 휴게소:") }.split(":")[2].toInt()
+        assertTrue(wait in 30..34)
+        // B1: 대안 C가 목적지에 더 빨리 도착한다.
+        assertTrue(card.alternative.etaMinutes < card.primary.etaMinutes)
 
         h.controller.accept("rest_c")
         runCurrent()
@@ -186,7 +196,9 @@ class ScenarioFlowTest {
         drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
         val rec = (h.controller.state.value.card as DriveCard.Recommend).rec
         assertEquals("rest_e", rec.station.id)
-        assertEquals(80.0, rec.targetSocPercent, 1e-9)
+        // B2: E에서 80%를 채우는 대신, 빠른 F까지 갈 만큼(45%)만 채우고 F에서 한 번 더 충전하는 계획
+        assertEquals(45.0, rec.targetSocPercent, 1e-9)
+        assertEquals("rest_f", rec.nextStop?.station?.id)
         assertTrue(rec.willHitTimeLimit)
 
         h.controller.accept("rest_e")
@@ -200,7 +212,7 @@ class ScenarioFlowTest {
         drive(h) { h.controller.state.value.phase == TripPhase.Done }
         val stop = h.controller.state.value.stop!!
         assertTrue(stop.endedByLimit)
-        assertEquals(59.2, h.sim.state.value.soc, 0.2) // T2와 같은 역산: 26.9% + 40분×37.5kW
+        assertEquals(43.1, h.sim.state.value.soc, 0.2) // 26.9% + 40분×18.75kW(25kW×0.75)
         assertEquals(40, h.controller.state.value.receipt!!.charges.single().minutes)
         assertTrue(h.controller.state.value.receipt!!.charges.single().endedByLimit)
 
@@ -212,8 +224,84 @@ class ScenarioFlowTest {
 
         val spoken = h.tts.spoken
         val f3 = spoken.filter { it.startsWith("rule") || it.startsWith("limit") || it.startsWith("target") }
-        assertEquals(listOf("rule:40", "limit_warn:10:59", "limit_warn:5:59", "limit_shortfall:59:80"), f3)
-        assertTrue(spoken.indexOf("limit_shortfall:59:80") < spoken.indexOfFirst { it.startsWith("recommend:F 휴게소") })
+        assertEquals(listOf("rule:40", "limit_warn:10:43", "limit_warn:5:43", "limit_shortfall:43:45"), f3)
+        assertTrue(spoken.indexOf("limit_shortfall:43:45") < spoken.indexOfFirst { it.startsWith("recommend:F 휴게소") })
+    }
+
+    /** B3 S4 겨울: 실제 소비가 사양보다 30% 많다. 달릴수록 앱이 실측으로 알아내 보정 배율이 1.3에 다가간다. */
+    @Test
+    fun s4_winterCalibratesConsumption() = runTest {
+        val h = harness()
+        h.controller.startScenario("S4")
+        drive(h) { h.sim.state.value.traveledKm >= 30.0 }
+        val energy = h.controller.state.value.energy!!
+        assertEquals(1.3, energy.factor, 0.02)
+        assertTrue(energy.observedKm >= 20.0)
+        // 보정된 소비로 계산하므로, 실제로 휴게소에 도착했을 때 배터리가 안내한 값과 크게 다르지 않다.
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        val rec = (h.controller.state.value.card as DriveCard.Recommend).rec
+        h.controller.accept(rec.station.id)
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
+        assertEquals(rec.arrivalSocPercent, h.sim.state.value.soc, 1.0)
+    }
+
+    /** B5: 충전 중에 앱이 꺼졌다 켜져도 같은 휴게소·목표·알림 기록으로 이어 가고, 끝까지 간다. */
+    @Test
+    fun restore_continuesChargingAfterRestart() = runTest {
+        val store = InMemoryTripStore()
+        val first = harness(store)
+        first.controller.startScenario("S3")
+        drive(first) { first.controller.state.value.phase == TripPhase.AwaitingDecision }
+        first.controller.accept("rest_e")
+        runCurrent()
+        drive(first) { first.controller.state.value.phase == TripPhase.Arrived }
+        first.controller.startCharging()
+        runCurrent()
+        val start = first.sim.state.value.simTimeSec
+        // 제한 10분 전 경고(30분 시점)가 나간 뒤에 앱이 꺼졌다고 친다.
+        drive(first) { first.sim.state.value.simTimeSec - start >= 32 * 60 }
+        assertTrue(first.tts.spoken.contains("limit_warn:10:43"))
+        assertTrue(store.saved != null)
+        val savedSoc = first.sim.state.value.soc
+
+        // 새 컨트롤러 = 앱을 다시 켬
+        val second = harness(store)
+        val restored = second.controller.state.value
+        assertEquals(TripPhase.Charging, restored.phase)
+        assertTrue(restored.restored)
+        assertEquals("E 휴게소", restored.stop?.stationName)
+        assertEquals(savedSoc, second.sim.state.value.soc, 0.5)
+        drive(second) { second.controller.state.value.phase == TripPhase.Done }
+        // 이미 낸 10분 전 경고는 다시 내지 않고, 5분 전 경고와 종료 안내만 이어서 낸다.
+        val f3 = second.tts.spoken.filter { it.startsWith("limit") || it.startsWith("rule") }
+        assertEquals(listOf("limit_warn:5:43", "limit_shortfall:43:45"), f3)
+        assertEquals(1, second.controller.state.value.receipt!!.charges.size)
+    }
+
+    /** F2·F4: 충전 중 목표를 올리면 새 목표까지 충전하고, 영수증은 80%까지 채웠을 때보다 아낀 시간을 보여 준다. */
+    @Test
+    fun s1_adjustTargetAndSavings() = runTest {
+        val h = harness()
+        h.controller.startScenario("S1")
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        h.controller.accept("rest_b")
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
+        h.controller.startCharging()
+        runCurrent()
+        h.controller.adjustTarget(+5)
+        runCurrent()
+        assertEquals(55.0, h.controller.state.value.stop!!.targetSoc, 1e-9)
+        assertTrue(h.tts.spoken.contains("target_changed:55"))
+        drive(h) { h.controller.state.value.phase == TripPhase.Done }
+        assertEquals(55.0, h.sim.state.value.soc, 1e-6)
+        h.controller.depart()
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.Finished }
+        // B 100kW: 36.7→55%는 약 12분, 습관처럼 80%까지 채웠다면 약 27분 → 15분가량 아낌
+        val receipt = h.controller.state.value.receipt!!
+        assertTrue("saved=${receipt.savedMinutes}", receipt.savedMinutes in 12..18)
     }
 
     // 시뮬레이터를 두 번 똑같이 돌리면 결과도 똑같은지(무작위 요소가 없는지)

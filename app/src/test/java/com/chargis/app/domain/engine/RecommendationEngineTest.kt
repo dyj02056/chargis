@@ -86,7 +86,7 @@ class RecommendationEngineTest {
         val rec = result as RecommendationResult.Recommended
         val unknown = (listOf(rec.primary) + rec.alternatives).first { it.station.id == "unknown" }
         assertFalse(ReasonCode.ENOUGH_CHARGERS in unknown.reasonCodes)
-        assertTrue(unknown.score.isFinite())
+        assertTrue(unknown.costMinutes.isFinite())
     }
 
     /** T6: 1순위 대기 30분(임계 20분 초과) → 혼잡 표시 + 대안 포함 */
@@ -125,16 +125,15 @@ class RecommendationEngineTest {
     @Test
     fun t7_acceptedChoiceSticksUnlessMuchWorse() {
         val gate = AnnouncementGate(config.announceWithinKm)
-        val first = engine.recommend(route(210.0), vehicle(60.0), listOf(station("A", 90.0), station("B", 120.0)), defaultProfile)
+        val stations = listOf(station("A", 90.0), station("B", 120.0), station("C", 150.0))
+        val first = engine.recommend(route(210.0), vehicle(60.0), stations, defaultProfile)
             as RecommendationResult.Recommended
         val accepted = first.primary
 
-        // 상태가 조금 변해도(soc 0.5% 하락) 유지
-        val slightly = engine.recommend(route(210.0), vehicle(59.5), listOf(station("A", 90.0), station("B", 120.0)), defaultProfile)
+        val slightly = engine.recommend(route(210.0), vehicle(59.5), stations, defaultProfile)
         assertEquals(null, gate.replacementFor(accepted, slightly))
 
-        // 수락한 휴게소가 후보에서 사라지면 교체
-        val gone = engine.recommend(route(210.0), vehicle(60.0), listOf(station("B", 120.0), station("C", 150.0)), defaultProfile)
+        val gone = engine.recommend(route(210.0), vehicle(60.0), stations.filter { it.id != accepted.station.id }, defaultProfile)
         assertNotNull(gate.replacementFor(accepted, gone))
     }
 }

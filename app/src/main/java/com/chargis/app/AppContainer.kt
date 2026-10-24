@@ -1,6 +1,10 @@
 package com.chargis.app
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import com.chargis.app.voice.AndroidSpeechStt
 import com.chargis.app.data.asset.AssetCatalog
 import com.chargis.app.data.fake.FakeChargerData
 import com.chargis.app.data.fake.FakeLocation
@@ -9,7 +13,15 @@ import com.chargis.app.data.fake.FakeTts
 import com.chargis.app.data.fake.FakeVehicle
 import com.chargis.app.domain.model.RecommendationConfig
 import com.chargis.app.port.ChargerDataPort
+import com.chargis.app.data.publicapi.FallbackChargerData
+import com.chargis.app.data.publicapi.PublicChargerData
+import com.chargis.app.data.publicapi.UrlEvChargerHttp
+import com.chargis.app.data.store.PrefsSettingsStore
+import com.chargis.app.data.store.PrefsTripStore
 import com.chargis.app.port.LocationPort
+import com.chargis.app.port.SettingsStore
+import com.chargis.app.port.SttPort
+import com.chargis.app.port.TripStore
 import com.chargis.app.port.NaviPort
 import com.chargis.app.port.VehiclePort
 import com.chargis.app.sim.ScenarioSimulator
@@ -45,13 +57,31 @@ class AppContainer(context: Context) {
     // 내비, 차량, 충전소, 위치 정보는 모두 시뮬레이터가 만들어 내는 가짜 값을 쓴다.
     val navi: NaviPort = FakeNavi(simulator)
     val vehicle: VehiclePort = FakeVehicle(simulator)
-    val chargerData: ChargerDataPort = FakeChargerData(simulator)
+    // 충전소 정보: 공공데이터 키가 있고 켜 두었으면 공공데이터를 먼저, 실패하면 번들 샘플로 넘어간다(B5).
+    val chargerData: ChargerDataPort =
+        if (BuildConfig.USE_PUBLIC_CHARGER_API && BuildConfig.CHARGER_API_KEY.isNotBlank()) {
+            FallbackChargerData(
+                primary = PublicChargerData(UrlEvChargerHttp(BuildConfig.CHARGER_API_KEY), zcodes = listOf("11", "41", "51")),
+                fallback = FakeChargerData(simulator)
+            )
+        } else {
+            FakeChargerData(simulator)
+        }
     val location: LocationPort = FakeLocation(simulator)
 
     // 음성 안내. 실제 소리는 안드로이드 기본 TTS로 내고, Fake가 말한 내용을 기록해 둔다.
     val tts = FakeTts(delegate = AndroidTts(app))
     val announcer = VoiceAnnouncer(tts)
     val phrases: VoicePhrases = AndroidVoicePhrases(app)
+
+    // 설정과 진행 중인 여행은 기기에 저장해, 앱을 껐다 켜도 이어 간다(F5, B5).
+    val settingsStore: SettingsStore = PrefsSettingsStore(app)
+    val tripStore: TripStore = PrefsTripStore(app)
+
+    // 음성 명령(F5). 아직 차량 STT SDK가 없어 안드로이드 기본 음성 인식을 쓴다. 마이크 권한이 있을 때만 듣는다.
+    val stt: SttPort = AndroidSpeechStt(app) {
+        ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    }
 
     // assets 폴더의 파일을 UTF-8 텍스트로 읽는다(한글이 깨지지 않게).
     private fun readAsset(name: String): String =

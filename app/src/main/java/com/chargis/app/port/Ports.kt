@@ -5,6 +5,7 @@ import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.Priority
 import com.chargis.app.domain.model.RouteState
 import com.chargis.app.domain.model.StationLiveStatus
+import com.chargis.app.domain.model.UserSettings
 import com.chargis.app.domain.model.VehicleState
 import com.chargis.app.domain.model.VoiceCommand
 import kotlinx.coroutines.flow.Flow
@@ -54,4 +55,19 @@ interface SttPort {
 /** 현재 위치(GPS). */
 interface LocationPort {
     val location: Flow<GeoPoint>
+}
+
+/** 운전자 설정 저장소(F5). 값이 바뀌면 [settings]로 새 값이 흘러나온다. */
+interface SettingsStore {
+    val settings: Flow<UserSettings>
+    suspend fun update(transform: (UserSettings) -> UserSettings)
+}
+
+/**
+ * 진행 중인 여행 저장소(B5). 앱이 꺼졌다 켜져도 같은 표로 이어 가게 한다.
+ * 내용은 TripController가 만든 JSON 글자 하나다. null을 저장하면 지운다.
+ */
+interface TripStore {
+    suspend fun load(): String?
+    suspend fun save(json: String?)
 }

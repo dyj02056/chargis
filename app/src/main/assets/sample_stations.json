@@ -1,5 +1,5 @@
 {
-  "note": "가상 데이터. 실제 시설명/사업자 상표를 쓰지 않는다. routeKm는 데모 경로 출발점 기준 거리.",
+  "note": "가상 데이터. 실제 시설명/사업자 상표를 쓰지 않는다. routeKm는 데모 경로 출발점 기준 거리. waitByHour는 시간대(0~23시)별 평소 대기(분) 가정값.",
   "stations": [
     {
       "id": "rest_a",
@@ -15,7 +15,8 @@
       "lat": 37.75, "lon": 127.70,
       "routeKm": 90.0, "detourKm": 0.0, "isRestStop": true,
       "maxKw": 100.0, "totalChargers": 6, "availableChargers": 4, "expectedWaitMin": 5,
-      "timeLimitMin": 40, "amountLimitKrw": null
+      "timeLimitMin": 40, "amountLimitKrw": null,
+      "waitByHour": [2,1,1,1,1,1,2,3,4,5,8,12,14,12,9,8,9,12,14,11,7,5,3,2]
     },
     {
       "id": "rest_c",
@@ -23,7 +24,8 @@
       "lat": 37.88, "lon": 127.98,
       "routeKm": 130.0, "detourKm": 0.0, "isRestStop": true,
       "maxKw": 50.0, "totalChargers": 4, "availableChargers": 1, "expectedWaitMin": 15,
-      "timeLimitMin": 40, "amountLimitKrw": null
+      "timeLimitMin": 40, "amountLimitKrw": null,
+      "waitByHour": [1,1,1,1,1,1,1,2,3,4,6,9,10,9,7,6,7,9,11,9,5,4,2,1]
     },
     {
       "id": "rest_d",
@@ -38,7 +40,7 @@
       "name": "E 휴게소",
       "lat": 37.12, "lon": 127.24,
       "routeKm": 70.0, "detourKm": 0.0, "isRestStop": true,
-      "maxKw": 50.0, "totalChargers": 4, "availableChargers": 2, "expectedWaitMin": 5,
+      "maxKw": 25.0, "totalChargers": 4, "availableChargers": 2, "expectedWaitMin": 5,
       "timeLimitMin": 40, "amountLimitKrw": null
     },
     {

@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- 공공 충전소 데이터 호출(B5). 키가 없으면 호출하지 않는다. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 음성 명령(F5). 설정에서 켤 때만 권한을 묻는다. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 

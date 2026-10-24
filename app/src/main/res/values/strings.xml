@@ -18,6 +18,8 @@
     <string name="tts_target_reached">목표 충전량에 도달했습니다. 출발할 수 있습니다.</string>
     <string name="tts_resume">충전을 마쳤습니다. 길 안내를 이어 갑니다.</string>
     <string name="tts_no_safe_stop">배터리가 부족합니다. 가장 가까운 충전소에서 충전하세요.</string>
+    <string name="tts_plan_two_stops">이어서 %1$s에서 %2$d퍼센트까지 한 번 더 충전하면 가장 빨리 도착합니다.</string>
+    <string name="tts_target_changed">목표를 %1$d퍼센트로 바꿨습니다.</string>
 
     <!-- 칸 이름 -->
     <string name="label_route">구간</string>
@@ -70,13 +72,22 @@
     <string name="drive_need_another">이번 충전 후 한 번 더 충전 필요</string>
     <string name="drive_limit_risk">%1$d분 제한 안에 약 %2$d%%까지 충전</string>
     <string name="drive_congested_title">%1$s 대기</string>
-    <string name="drive_congested_sub">대기 시간과 도착 배터리를 비교해 고르세요</string>
+    <string name="drive_congested_sub">목적지 도착 시각과 남는 배터리를 비교해 고르세요</string>
+    <string name="drive_congested_verdict">%1$s 쪽이 %2$d분 빨리 도착</string>
+    <string name="drive_congested_cost">대신 도착 배터리 %1$d%%p 낮음</string>
+    <string name="drive_congested_even">도착 시각이 거의 같습니다</string>
+    <string name="label_dest_eta">목적지 도착</string>
+    <string name="drive_faster_than_next">다음 후보보다 %1$d분 빠름</string>
+    <string name="drive_two_stop">이후 %1$s에서 %2$d%%까지 한 번 더</string>
+    <string name="wait_live">실시간</string>
+    <string name="wait_forecast">예측</string>
     <string name="drive_navigating">%1$s로 안내 중</string>
     <string name="drive_no_safe_title">배터리 부족</string>
     <string name="drive_no_safe_sub">가장 가까운 충전소 %1$s · %2$d km</string>
     <string name="drive_no_safe_none">경로상 도달할 수 있는 충전소가 없습니다</string>
 
     <!-- 추천 이유 -->
+    <string name="reason_fastest">가장 빨리 도착</string>
     <string name="reason_max_power">가장 빠른 충전기</string>
     <string name="reason_low_wait">대기 짧음</string>
     <string name="reason_enough">충전기 여유</string>
@@ -105,6 +116,15 @@
     <string name="charging_title">%1$s 충전 중</string>
     <string name="charging_limit_forecast">제한 시간에 약 %1$d%%에서 충전이 끝날 예정</string>
     <string name="done_limit_note">목표 %1$d%% 중 %2$d%%까지 충전 · 다음 휴게소에서 한 번 더 충전</string>
+    <string name="target_minus">−5%</string>
+    <string name="target_plus">+5%</string>
+    <string name="target_minus_desc">목표를 5퍼센트 낮추기</string>
+    <string name="target_plus_desc">목표를 5퍼센트 높이기</string>
+    <string name="label_power">출력</string>
+    <string name="curve_title">예상 출력</string>
+    <string name="curve_desc">충전 출력 곡선. 지금 %1$d퍼센트에서 약 %2$d킬로와트, 목표 %3$d퍼센트</string>
+    <string name="taper_note">80%% 이후에는 충전이 크게 느려집니다</string>
+    <string name="next_stop_note">다음 충전 · %1$s %2$d%%까지</string>
     
 
     <!-- 정산 영수증 -->
@@ -122,6 +142,39 @@
     <string name="finished_charges">충전</string>
     <string name="unit_times">회</string>
     <string name="finished_battery">남은 배터리</string>
+    <string name="finished_charge_total">충전 시간</string>
+    <string name="finished_saved">아낀 시간</string>
+    <string name="finished_saved_note">80%%까지 채웠다면 충전에 %1$d분 더 걸렸습니다</string>
+    <string name="finished_saved_none">필요한 만큼만 충전했습니다</string>
+    <string name="receipt_saved">아낀 시간</string>
+    <string name="receipt_saved_value">%1$d분</string>
+
+    <!-- 설정(F5) -->
+    <string name="settings_title">내 차 설정</string>
+    <string name="settings_onboarding">처음이면 차종부터 골라 주세요. 언제든 여기서 바꿀 수 있습니다.</string>
+    <string name="settings_vehicle">차종</string>
+    <string name="settings_vehicle_value">%1$.0fkWh · 최대 %2$.0fkW</string>
+    <string name="settings_target">충전 상한</string>
+    <string name="settings_target_hint">높이면 덜 들르는 대신 한 번에 오래 충전합니다</string>
+    <string name="settings_margin">안전 여유</string>
+    <string name="settings_margin_hint">높일수록 넉넉하게 계산합니다</string>
+    <string name="settings_voice">음성 명령</string>
+    <string name="settings_voice_hint">"수락", "다음", "충전 시작", "출발"이라고 말해 답합니다</string>
+    <string name="settings_on">켬</string>
+    <string name="settings_off">끔</string>
+    <string name="settings_done">설정 완료</string>
+    <string name="settings_edit">설정</string>
+    <string name="voice_listening">듣는 중</string>
+    <string name="voice_say">말하기: %1$s</string>
+    <string name="voice_cmd_accept">수락</string>
+    <string name="voice_cmd_next">다음</string>
+    <string name="voice_cmd_charge">충전 시작</string>
+    <string name="voice_cmd_depart">출발</string>
+    <string name="voice_permission_denied">마이크 권한이 없어 음성 명령을 쓸 수 없습니다</string>
+    <string name="energy_measured">실측 %1$dkm · 사양보다 %2$d%% 더 씀</string>
+    <string name="energy_measured_less">실측 %1$dkm · 사양보다 %2$d%% 덜 씀</string>
+    <string name="energy_prior">기온·속도 반영 · 사양보다 %1$d%% 더 씀</string>
+    <string name="restored_note">이전 여행을 이어서 보여 드립니다</string>
 
     <!-- 데이터 출처 -->
     <string name="source_simulated">시뮬레이션 데이터</string>

@@ -2,6 +2,7 @@ package com.chargis.app.ui
 
 import com.chargis.app.domain.model.DataSource
 import com.chargis.app.domain.model.Recommendation
+import com.chargis.app.domain.model.UserSettings
 import com.chargis.app.domain.session.TripPhase
 
 /*
@@ -14,10 +15,25 @@ import com.chargis.app.domain.session.TripPhase
  * 운전 중에는 한 번에 카드 하나만 보여 줘서 운전자가 한눈에 읽을 수 있게 한다.
  */
 sealed interface DriveCard {
-    /** "46km 앞 B 휴게소, 50%까지 충전" 추천 카드 (docs/screenshots/03-recommend.png) */
-    data class Recommend(val rec: Recommendation) : DriveCard
-    /** 1순위가 붐빌 때 대안과 나란히 비교하는 카드 (10-congested.png) */
-    data class Congested(val primary: Recommendation, val alternative: Recommendation) : DriveCard
+    /**
+     * "46km 앞 B 휴게소, 50%까지 충전" 추천 카드 (docs/screenshots/03-recommend.png)
+     * [etaClock]: 이 계획대로 가면 목적지 도착 시각. [fasterThanNextMin]: 다음 후보보다 몇 분 빨리 도착하는지(없으면 null)
+     */
+    data class Recommend(
+        val rec: Recommendation,
+        val etaClock: String = "",
+        val fasterThanNextMin: Int? = null
+    ) : DriveCard
+    /**
+     * 붐비지 않았다면 골랐을 곳이 붐빌 때 대안과 나란히 비교하는 카드 (10-congested.png)
+     * [primaryEta]/[alternativeEta]: 각각 그곳에서 충전하면 목적지에 도착하는 시각
+     */
+    data class Congested(
+        val primary: Recommendation,
+        val alternative: Recommendation,
+        val primaryEta: String = "",
+        val alternativeEta: String = ""
+    ) : DriveCard
     /** 수락한 휴게소로 가는 중 (04-navigating.png) */
     data class Navigating(
         val stationName: String,
@@ -36,7 +52,10 @@ sealed interface DriveCard {
         val plannedName: String? = null,
         val plannedKm: Double? = null,
         val plannedTarget: Double? = null,
-        val plannedMinutes: Int? = null
+        val plannedMinutes: Int? = null,
+        /** 두 번 들르는 계획이면 두 번째 휴게소 이름과 목표 %(B2) */
+        val nextStopName: String? = null,
+        val nextStopTarget: Double? = null
     ) : DriveCard
     /** 안전하게 갈 수 있는 충전소가 없다는 경고 카드 */
     data class NoSafeStop(val nearestName: String?, val nearestKm: Double?) : DriveCard
@@ -56,8 +75,23 @@ data class StopInfo(
     /** 제한 안에 목표에 닿지 못할 것으로 보이면 true. */
     val willHitLimit: Boolean = false,
     /** 충전기 시간 제한으로 충전이 끝났으면 true(Done 화면용). */
-    val endedByLimit: Boolean = false
+    val endedByLimit: Boolean = false,
+    /** 지금 들어오는 출력(kW). 충전 중이 아니거나 모르면 null (F2) */
+    val chargePowerKw: Double? = null,
+    /** 이 충전기·차종의 예상 출력 곡선: SoC 0~100%마다 kW (F2 그래프) */
+    val powerCurve: List<CurveSample> = emptyList(),
+    /** 목표를 5% 올리거나 내릴 수 있는지 (F2) */
+    val canRaiseTarget: Boolean = false,
+    val canLowerTarget: Boolean = false,
+    /** 목표가 80%를 넘어 충전이 크게 느려지는 구간에 들어가는지 (F2 경고) */
+    val targetInTaper: Boolean = false,
+    /** 두 번 들르는 계획이면 다음 휴게소 이름과 목표 %(B2) */
+    val nextStopName: String? = null,
+    val nextStopTarget: Double? = null
 )
+
+/** 출력 곡선 그래프의 한 점 */
+data class CurveSample(val socPercent: Float, val kw: Float)
 
 /**
  * 경로 띠에 찍히는 휴게소 표시. 지나친 곳도 지우지 않고 상태로 남긴다.
@@ -74,7 +108,9 @@ data class ChargeRecord(
     val fromSoc: Double,
     val toSoc: Double,
     val minutes: Int,
-    val endedByLimit: Boolean = false
+    val endedByLimit: Boolean = false,
+    /** 같은 충전기에서 습관처럼 80%(또는 이번에 채운 %)까지 채웠다면 걸렸을 분 (F4 비교용) */
+    val baselineMinutes: Int = minutes
 )
 
 /** 도착 시 인쇄하는 정산 영수증. */
@@ -86,7 +122,27 @@ data class TripReceipt(
     val distanceKm: Double,
     val charges: List<ChargeRecord>,
     val declinedNames: List<String>
-)
+) {
+    /** 이번 여행에서 충전에 쓴 분 */
+    val chargeMinutesTotal: Int get() = charges.sumOf { it.minutes }
+    /** "80%까지 채웠다면"보다 아낀 분(F4). 음수가 되지 않게 0으로 묶는다. */
+    val savedMinutes: Int get() = charges.sumOf { (it.baselineMinutes - it.minutes).coerceAtLeast(0) }
+}
+
+/** 설정 화면에서 고를 차종 하나 */
+data class ProfileOption(val id: String, val name: String, val batteryKwh: Double, val maxChargeKw: Double)
+
+/**
+ * 전비 보정 상태(B3). [factor]는 실제 소비 ÷ 사양 소비, [observedKm]는 실측한 거리.
+ * 예) factor 1.2, observedKm 25 → "실측 25km · 사양보다 20% 더 씀"
+ */
+data class EnergyInfo(val factor: Double, val observedKm: Double)
+
+/**
+ * 음성 명령 상태(F5). [enabled]: 설정에서 켰는지, [listening]: 지금 말을 듣는 중인지,
+ * [hints]: 지금 말할 수 있는 명령(예: "수락", "다음")
+ */
+data class VoiceUi(val enabled: Boolean = false, val listening: Boolean = false, val hints: List<String> = emptyList())
 
 /** 첫 화면에서 고를 수 있는 데모 시나리오 하나 */
 data class ScenarioOption(
@@ -129,5 +185,11 @@ data class TripUiState(
     val receipt: TripReceipt? = null,
     val scenarios: List<ScenarioOption> = emptyList(),
     val dev: DevState = DevState(),
-    val caption: String? = null                 // 화면 아래 음성 안내 자막
+    val caption: String? = null,                // 화면 아래 음성 안내 자막
+    val energy: EnergyInfo? = null,             // 실측 전비 보정 상태(B3)
+    val settings: UserSettings = UserSettings(),// 운전자 설정(F5)
+    val profiles: List<ProfileOption> = emptyList(),
+    val profileName: String = "",               // 지금 고른 차종 이름
+    val voice: VoiceUi = VoiceUi(),             // 음성 명령 상태(F5)
+    val restored: Boolean = false               // 저장해 둔 여행을 이어서 보여 주는 중인지(B5)
 )

@@ -7,7 +7,7 @@ import com.chargis.app.domain.model.RecommendationResult
  * plan.md §7.3 안내 시점과 히스테리시스.
  * - 1순위가 [announceWithinKm] 안에 들어오면 한 번만 안내한다.
  * - 이미 안내/수락/거절한 휴게소는 다시 안내하지 않는다.
- * - 수락한 추천은 점수 차가 [switchScoreGap] 이상 벌어지거나 후보에서 사라질 때만 바꾼다.
+ * - 수락한 추천은 새 후보가 [switchMinutesGap]분 이상 빨리 도착하거나, 수락한 곳이 후보에서 사라질 때만 바꾼다.
  *
  * 운전자를 귀찮게 하지 않기 위한 "문지기"다. 추천 엔진은 매 순간 새로 계산하므로,
  * 그대로 안내하면 같은 말을 반복하거나 추천이 이리저리 바뀔 수 있다.
@@ -16,7 +16,7 @@ import com.chargis.app.domain.model.RecommendationResult
  */
 class AnnouncementGate(
     private val announceWithinKm: Double,
-    private val switchScoreGap: Double = 0.15
+    private val switchMinutesGap: Double = 5.0
 ) {
     // 이미 다룬(안내했거나 거절한) 휴게소 id
     private val handled = mutableSetOf<String>()
@@ -43,10 +43,21 @@ class AnnouncementGate(
         if (latest !is RecommendationResult.Recommended) return null
         val all = listOf(latest.primary) + latest.alternatives
         // 수락한 휴게소가 새 후보 목록에서 사라졌으면(예: 갈 수 없게 됨) 새 1순위로 바꾼다.
-        val same = all.firstOrNull { it.station.id == accepted.station.id } ?: return latest.primary
-        val best = latest.primary
-        // 새 1순위가 수락한 곳보다 점수가 충분히(0.15 이상) 높을 때만 바꾼다.
-        return if (best.station.id != same.station.id && best.score - same.score >= switchScoreGap) best else null
+        val best = all.minBy { it.costMinutes }
+        val same = all.firstOrNull { it.station.id == accepted.station.id } ?: return best
+        // 가장 빠른 곳이 수락한 곳보다 충분히(기본 5분 이상) 빨리 도착할 때만 바꾼다.
+        return if (best.station.id != same.station.id && same.costMinutes - best.costMinutes >= switchMinutesGap) best else null
+    }
+
+    /** 이미 다룬 휴게소 id(여행 저장용). */
+    val handledIds: Set<String> get() = handled
+
+    /** 저장해 둔 기억으로 되돌린다(B5 여행 복원). */
+    fun restore(handledIds: Collection<String>, declinedIds: Collection<String>) {
+        reset()
+        handled += handledIds
+        handled += declinedIds
+        declined += declinedIds
     }
 
     /** 새 여행을 시작할 때 기억을 모두 지운다. */

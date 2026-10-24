@@ -8,10 +8,13 @@ import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.Priority
 import com.chargis.app.domain.model.RouteState
 import com.chargis.app.domain.model.StationLiveStatus
+import com.chargis.app.domain.model.UserSettings
 import com.chargis.app.domain.model.VehicleState
 import com.chargis.app.port.ChargerDataPort
 import com.chargis.app.port.LocationPort
 import com.chargis.app.port.NaviPort
+import com.chargis.app.port.SettingsStore
+import com.chargis.app.port.TripStore
 import com.chargis.app.port.TtsPort
 import com.chargis.app.port.VehiclePort
 import com.chargis.app.sim.ScenarioSimulator
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 
 /*
  * 포트(port/Ports.kt)의 "가짜" 구현체들이다. 실제 차량·내비 대신 시뮬레이터 값을 읽어 앱에 넘겨준다.
@@ -56,9 +60,12 @@ class FakeVehicle(private val sim: ScenarioSimulator) : VehiclePort {
         val p = sim.scenario.profile
         VehicleState(
             socPercent = s.soc,
-            rangeKm = s.soc / ChargeMath.socPerKm(p),   // 주행가능거리 = 남은 % ÷ 1km당 %
+            rangeKm = s.soc / (ChargeMath.socPerKm(p) * sim.scenario.consumptionFactor),   // 주행가능거리 = 남은 % ÷ 1km당 %
             isDriving = s.isDriving,
-            source = DataSource.SIMULATED
+            source = DataSource.SIMULATED,
+            outsideTempC = sim.scenario.outsideTempC,
+            chargePowerKw = sim.chargePowerKw(s),
+            odometerKm = s.traveledKm
         )
     }
 
@@ -105,5 +112,20 @@ class FakeTts(private val delegate: TtsPort? = null) : TtsPort {
 
     private companion object {
         const val TAG = "ChargisTts"
+    }
+}
+
+/** 메모리에만 두는 설정 저장소. 테스트와 미리보기용. */
+class InMemorySettingsStore(initial: UserSettings = UserSettings()) : SettingsStore {
+    private val state = MutableStateFlow(initial)
+    override val settings: Flow<UserSettings> = state.asStateFlow()
+    override suspend fun update(transform: (UserSettings) -> UserSettings) = state.update(transform)
+}
+
+/** 메모리에만 두는 여행 저장소. 테스트에서 "앱을 껐다 켜기"를 흉내 낼 때 쓴다. */
+class InMemoryTripStore(var saved: String? = null) : TripStore {
+    override suspend fun load(): String? = saved
+    override suspend fun save(json: String?) {
+        saved = json
     }
 }

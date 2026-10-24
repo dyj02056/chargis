@@ -2,6 +2,7 @@ package com.chargis.app.data.asset
 
 import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.CurvePoint
 import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.VehicleProfile
 import com.chargis.app.sim.Scenario
@@ -46,7 +47,8 @@ class AssetCatalog(
             val o = overrides[id]
             base.copy(
                 availableChargers = o?.availableChargers ?: base.availableChargers,
-                expectedWaitMin = o?.expectedWaitMin ?: base.expectedWaitMin
+                expectedWaitMin = o?.expectedWaitMin ?: base.expectedWaitMin,
+                waitByHour = o?.waitByHour ?: base.waitByHour
             ).toDomain()
         }.sortedBy { it.distanceAlongRouteKm }
         return Scenario(
@@ -58,6 +60,8 @@ class AssetCatalog(
             startSoc = startSoc,
             speedKmh = speedKmh,
             startHour = startHour,
+            outsideTempC = outsideTempC,
+            consumptionFactor = consumptionFactor,
             start = start.toDomain(),
             destination = destination.toDomain(),
             stations = stations
@@ -82,10 +86,17 @@ private data class ProfileDto(
     val displayName: String,
     val batteryKwh: Double,
     val efficiencyKmPerKwh: Double,
-    val maxChargeKw: Double
+    val maxChargeKw: Double,
+    val chargeCurve: List<CurvePointDto>? = null
 ) {
-    fun toDomain() = VehicleProfile(id, displayName, batteryKwh, efficiencyKmPerKwh, maxChargeKw)
+    fun toDomain() = VehicleProfile(
+        id, displayName, batteryKwh, efficiencyKmPerKwh, maxChargeKw,
+        chargeCurve = chargeCurve?.map { CurvePoint(it.soc, it.kw) }?.sortedBy { it.socPercent }
+    )
 }
+
+@Serializable
+private data class CurvePointDto(val soc: Double, val kw: Double)
 
 @Serializable
 private data class StationsDto(val stations: List<StationDto>)
@@ -104,7 +115,8 @@ private data class StationDto(
     val availableChargers: Int? = null,
     val expectedWaitMin: Int? = null,
     val timeLimitMin: Int? = null,
-    val amountLimitKrw: Int? = null
+    val amountLimitKrw: Int? = null,
+    val waitByHour: List<Int>? = null
 ) {
     /** distanceAlongRouteKm에는 경로 출발점 기준 거리(routeKm)를 담는다. 현재 위치 기준 변환은 FakeChargerData가 한다. */
     fun toDomain() = ChargingStation(
@@ -118,7 +130,8 @@ private data class StationDto(
         totalChargers = totalChargers,
         availableChargers = availableChargers,
         expectedWaitMin = expectedWaitMin,
-        rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = amountLimitKrw)
+        rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = amountLimitKrw),
+        waitByHour = waitByHour?.takeIf { it.size == 24 }
     )
 }
 
@@ -135,6 +148,8 @@ private data class ScenarioDto(
     val startSoc: Double,
     val speedKmh: Double,
     val startHour: Int,
+    val outsideTempC: Double? = null,
+    val consumptionFactor: Double = 1.0,
     val start: PointDto,
     val destination: PointDto,
     val stationIds: List<String>,
@@ -150,5 +165,6 @@ private data class PointDto(val lat: Double, val lon: Double) {
 private data class OverrideDto(
     val id: String,
     val availableChargers: Int? = null,
-    val expectedWaitMin: Int? = null
+    val expectedWaitMin: Int? = null,
+    val waitByHour: List<Int>? = null
 )

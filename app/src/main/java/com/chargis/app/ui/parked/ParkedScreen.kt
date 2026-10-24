@@ -1,7 +1,16 @@
 package com.chargis.app.ui.parked
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -30,11 +39,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.chargis.app.R
+import com.chargis.app.domain.model.UserSettings
 import com.chargis.app.domain.session.TripPhase
 import com.chargis.app.ui.CandidateTable
 import com.chargis.app.ui.ChargeRecord
 import com.chargis.app.ui.MeasureField
 import com.chargis.app.ui.ScenarioOption
+
 import com.chargis.app.ui.StopInfo
 import com.chargis.app.ui.TripReceipt
 import com.chargis.app.ui.TripUiState
@@ -71,14 +82,16 @@ fun ParkedScreen(
     onStopCharging: () -> Unit,
     onDepart: () -> Unit,
     onRestart: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAdjustTarget: (Int) -> Unit = {},
+    onSettings: ((UserSettings) -> UserSettings) -> Unit = {}
 ) {
     val stop = state.stop
     when {
-        state.phase == TripPhase.Idle -> IssueScreen(state.scenarios, onStartScenario, modifier)
+        state.phase == TripPhase.Idle -> IssueScreen(state, onStartScenario, onSettings, modifier)
         state.phase == TripPhase.Finished && state.receipt != null -> ReceiptScreen(state, onRestart, modifier)
-        stop != null && state.phase == TripPhase.Arrived -> StopScreen(state, stop, modifier) { ArrivedBody(stop, onStartCharging, onDepart) }
-        stop != null && state.phase == TripPhase.Charging -> StopScreen(state, stop, modifier) { ChargingBody(stop, onStopCharging) }
+        stop != null && state.phase == TripPhase.Arrived -> StopScreen(state, stop, modifier) { ArrivedBody(stop, onStartCharging, onDepart, onAdjustTarget) }
+        stop != null && state.phase == TripPhase.Charging -> StopScreen(state, stop, modifier) { ChargingBody(stop, onStopCharging, onAdjustTarget) }
         stop != null && state.phase == TripPhase.Done -> StopScreen(state, stop, modifier) { DoneBody(stop, state.socPercent, onDepart) }
         // 그 밖의 정차(예: 주행 중 잠깐 멈춤)는 간단한 상태 화면
         else -> TicketStock(modifier.fillMaxSize()) {
@@ -93,20 +106,108 @@ fun ParkedScreen(
 
 // ---- 발권 ----
 
-/** 첫 화면. 왼쪽에 앱 이름과 소개, 오른쪽에 고를 수 있는 시나리오 표들. */
+/**
+ * 첫 화면. 왼쪽에 앱 이름과 소개, 그 아래 내 차 설정(F5), 오른쪽에 고를 수 있는 시나리오 표들.
+ * 처음 실행이면 설정 안내 문구를 보여 주고, 발권하면 설정을 마친 것으로 기록한다.
+ */
 @Composable
-private fun IssueScreen(options: List<ScenarioOption>, onStart: (String) -> Unit, modifier: Modifier) {
+private fun IssueScreen(
+    state: TripUiState,
+    onStart: (String) -> Unit,
+    onSettings: ((UserSettings) -> UserSettings) -> Unit,
+    modifier: Modifier
+) {
     val c = Ticket.colors
-    Row(modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 32.dp), horizontalArrangement = Arrangement.spacedBy(56.dp)) {
-        Column(Modifier.weight(0.75f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize * 1.6f, lineHeight = MaterialTheme.typography.displayMedium.lineHeight * 1.5f), color = c.ink)
+    val issue = { id: String ->
+        if (!state.settings.onboarded) onSettings { it.copy(onboarded = true) }
+        onStart(id)
+    }
+    Row(modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp), horizontalArrangement = Arrangement.spacedBy(56.dp)) {
+        Column(Modifier.weight(0.85f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize * 1.4f, lineHeight = MaterialTheme.typography.displayMedium.lineHeight * 1.35f), color = c.ink, modifier = Modifier.semantics { heading() })
             Text(stringResource(R.string.ticket_kind), style = MaterialTheme.typography.headlineMedium, color = c.ink)
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.idle_lede), style = MaterialTheme.typography.bodyLarge, color = c.inkMuted, modifier = Modifier.widthIn(max = 460.dp))
+            Spacer(Modifier.height(24.dp))
+            SettingsPanel(state, onSettings)
         }
-        Column(Modifier.weight(1.25f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
-            options.forEach { IssueTicket(it, onStart) }
+        Column(Modifier.weight(1.15f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
+            state.scenarios.forEach { IssueTicket(it, issue) }
         }
+    }
+}
+
+/**
+ * F5 내 차 설정: 차종, 충전 상한, 안전 여유, 음성 명령. 칸마다 고를 수 있는 값을 인쇄된 선택 칸으로 늘어놓는다.
+ * 고른 칸은 도장 잉크로 채운다. 바꾸면 바로 저장되고 다음 발권부터 적용된다.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SettingsPanel(state: TripUiState, onSettings: ((UserSettings) -> UserSettings) -> Unit) {
+    val c = Ticket.colors
+    val st = state.settings
+    Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleLarge, color = c.ink, modifier = Modifier.semantics { heading() })
+    if (!st.onboarded) {
+        Spacer(Modifier.height(4.dp))
+        Text(stringResource(R.string.settings_onboarding), style = MaterialTheme.typography.bodyMedium, color = c.stamp)
+    }
+    Spacer(Modifier.height(8.dp))
+    HairlineH()
+    if (state.profiles.isNotEmpty()) {
+        SettingRow(stringResource(R.string.settings_vehicle), null) {
+            state.profiles.forEachIndexed { i, p ->
+                val selected = st.profileId == p.id || (st.profileId == null && i == 0)
+                ChoiceCell(p.name, selected) { onSettings { s -> s.copy(profileId = p.id, onboarded = true) } }
+            }
+        }
+    }
+    SettingRow(stringResource(R.string.settings_target), stringResource(R.string.settings_target_hint)) {
+        UserSettings.TARGET_CHOICES.forEach { t ->
+            ChoiceCell("${t.roundToInt()}%", st.maxTargetSocPercent == t) { onSettings { s -> s.copy(maxTargetSocPercent = t) } }
+        }
+    }
+    SettingRow(stringResource(R.string.settings_margin), stringResource(R.string.settings_margin_hint)) {
+        UserSettings.MARGIN_CHOICES.forEach { m ->
+            ChoiceCell("$m%", st.safetyMarginPercent == m) { onSettings { s -> s.copy(safetyMarginPercent = m) } }
+        }
+    }
+    SettingRow(stringResource(R.string.settings_voice), stringResource(R.string.settings_voice_hint)) {
+        ChoiceCell(stringResource(R.string.settings_on), st.voiceCommands) { onSettings { s -> s.copy(voiceCommands = true) } }
+        ChoiceCell(stringResource(R.string.settings_off), !st.voiceCommands) { onSettings { s -> s.copy(voiceCommands = false) } }
+    }
+}
+
+// 설정 한 줄: 칸 이름(+ 짧은 설명)과 선택 칸들. 아래에 괘선.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SettingRow(label: String, hint: String?, choices: @Composable () -> Unit) {
+    val c = Ticket.colors
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
+            if (hint != null) Text(hint, style = MaterialTheme.typography.labelMedium, color = c.inkMuted, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.height(8.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { choices() }
+    }
+    HairlineH()
+}
+
+// 선택 칸 하나. 고른 칸은 도장 잉크로 채우고, 나머지는 괘선 테두리. 손가락으로 누르기 쉽게 48dp 이상.
+@Composable
+private fun ChoiceCell(text: String, selected: Boolean, onClick: () -> Unit) {
+    val c = Ticket.colors
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
+    Box(
+        Modifier
+            .heightIn(min = 48.dp)
+            .background(if (selected) c.stamp else androidx.compose.ui.graphics.Color.Transparent, shape)
+            .border(1.5.dp, if (selected) c.stamp else c.inkMuted, shape)   // 괘선색(1.5:1)은 조작 칸 테두리로 너무 흐려 보조 잉크(5.8:1 이상)를 쓴다
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, style = MaterialTheme.typography.titleMedium, color = if (selected) c.onStamp else c.ink, maxLines = 1)
     }
 }
 
@@ -177,16 +278,20 @@ private fun TripLines(state: TripUiState) {
 
 /** 휴게소 도착: 지금 %, 목표 %, 예상 충전 시간, 시간 제한. [충전 시작] 또는 [충전 없이 출발]. */
 @Composable
-private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit, onDepart: () -> Unit) {
+private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit, onDepart: () -> Unit, onAdjust: (Int) -> Unit) {
     val c = Ticket.colors
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Text(stop.stationName, style = MaterialTheme.typography.displayMedium, color = c.ink)
         Stamp(stringResource(R.string.stamp_arrived))
     }
     Spacer(Modifier.height(28.dp))
-    Row(Modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         MeasureField(stringResource(R.string.label_now), "${stop.currentSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, Modifier.weight(1f))
-        MeasureField(stringResource(R.string.label_target), "${stop.targetSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, Modifier.weight(1f), color = c.stamp)
+        Column(Modifier.weight(1f)) {
+            MeasureField(stringResource(R.string.label_target), "${stop.targetSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
+            Spacer(Modifier.height(8.dp))
+            TargetStepper(stop, onAdjust)
+        }
     }
     Spacer(Modifier.height(20.dp))
     HairlineH()
@@ -194,6 +299,14 @@ private fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit,
     Row(Modifier.fillMaxWidth()) {
         MeasureField(stringResource(R.string.label_estimate), "${stop.minutesToTarget}", stringResource(R.string.unit_min), FigureStyle.Medium, Modifier.weight(1f))
         LimitField(stop.timeLimitMin, Modifier.weight(1f))
+    }
+    if (stop.targetInTaper) {
+        Spacer(Modifier.height(12.dp))
+        LimitWarnLine(stringResource(R.string.taper_note))
+    }
+    stop.nextStopName?.let { name ->
+        Spacer(Modifier.height(12.dp))
+        NextStopLine(name, stop.nextStopTarget)
     }
     Spacer(Modifier.weight(1f))
     TearLine(Modifier.padding(vertical = 8.dp))
@@ -216,19 +329,24 @@ private fun LimitField(limit: Int?, modifier: Modifier) {
     }
 }
 
-/** 충전 중: 지금 SoC 하나가 화면의 주인. 5% 단위 칸 막대, 동승자를 위한 출발 예정 시각. */
+/**
+ * 충전 중: 지금 SoC 하나가 화면의 주인. 5% 단위 칸 막대, 동승자를 위한 출발 예정 시각.
+ * F2: 목표 옆 [−5%][+5%]로 목표를 바꾸고, 아래에 이 충전기·차종의 출력 곡선과 지금 들어오는 kW를 보여 준다.
+ */
 @Composable
-private fun ColumnScope.ChargingBody(stop: StopInfo, onStop: () -> Unit) {
+private fun ColumnScope.ChargingBody(stop: StopInfo, onStop: () -> Unit, onAdjust: (Int) -> Unit) {
     val c = Ticket.colors
     Text(stringResource(R.string.charging_title, stop.stationName), style = MaterialTheme.typography.headlineMedium, color = c.ink)
     Spacer(Modifier.height(4.dp))
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         Figure("${stop.currentSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Monumental)
         Figure("→ ${stop.targetSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Medium, color = c.stamp, modifier = Modifier.padding(bottom = 14.dp))
+        Spacer(Modifier.weight(1f))
+        TargetStepper(stop, onAdjust, Modifier.padding(bottom = 14.dp))
     }
     Spacer(Modifier.height(12.dp))
     CellGauge(stop.currentSoc, stop.targetSoc)
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(20.dp))
     Row(Modifier.fillMaxWidth()) {
         MeasureField(stringResource(R.string.label_to_target), "${stop.minutesToTarget}", stringResource(R.string.unit_min), FigureStyle.Medium, Modifier.weight(1f))
         HairlineV(Modifier.height(84.dp).padding(end = 24.dp))
@@ -249,13 +367,98 @@ private fun ColumnScope.ChargingBody(stop: StopInfo, onStop: () -> Unit) {
         HairlineV(Modifier.height(84.dp).padding(end = 24.dp))
         MeasureField(stringResource(R.string.label_depart_at), stop.departAt, null, FigureStyle.Large.copy(fontSize = FigureStyle.Medium.fontSize * 1.3f), Modifier.weight(1.3f))
     }
-    if (stop.willHitLimit && stop.predictedSocAtLimit != null) {
-        Spacer(Modifier.height(16.dp))
-        LimitWarnLine(stringResource(R.string.charging_limit_forecast, stop.predictedSocAtLimit.roundToInt()))
+    // 경고(제한 미달 예상, 80% 넘는 목표)는 곡선 머리 줄에 함께 둬서 곡선이 납작해지지 않게 한다.
+    val warning = when {
+        stop.willHitLimit && stop.predictedSocAtLimit != null ->
+            stringResource(R.string.charging_limit_forecast, stop.predictedSocAtLimit.roundToInt())
+        stop.targetInTaper -> stringResource(R.string.taper_note)
+        else -> null
     }
-    Spacer(Modifier.weight(1f))
+    Spacer(Modifier.height(16.dp))
+    PowerCurve(stop, warning, Modifier.weight(1f).fillMaxWidth())
     TearLine(Modifier.padding(vertical = 8.dp))
     TicketButton(stringResource(R.string.parked_stop_charging), onStop, Modifier.fillMaxWidth(), primary = false, minHeight = 88.dp)
+}
+
+/** F2 목표 조정: [−5%] [+5%]. 지금 %보다 낮게, 100%보다 높게는 못 바꾼다. */
+@Composable
+private fun TargetStepper(stop: StopInfo, onAdjust: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val minusDesc = stringResource(R.string.target_minus_desc)
+    val plusDesc = stringResource(R.string.target_plus_desc)
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        TicketButton(
+            stringResource(R.string.target_minus), { onAdjust(-STEP) },
+            Modifier.width(136.dp).semantics { contentDescription = minusDesc },
+            primary = false, minHeight = 60.dp, enabled = stop.canLowerTarget
+        )
+        TicketButton(
+            stringResource(R.string.target_plus), { onAdjust(STEP) },
+            Modifier.width(136.dp).semantics { contentDescription = plusDesc },
+            primary = false, minHeight = 60.dp, enabled = stop.canRaiseTarget
+        )
+    }
+}
+
+/**
+ * F2 출력 곡선: 가로는 SoC 0~100%, 세로는 출력(kW). 이번에 채울 구간(지금~목표)을 도장 잉크로 옅게 칠하고,
+ * 지금 위치에 세로 잉크 선, 목표에 점선을 긋는다. 80%를 넘으면 출력이 뚝 떨어지는 모습이 그대로 보인다.
+ */
+@Composable
+private fun PowerCurve(stop: StopInfo, warning: String?, modifier: Modifier) {
+    val c = Ticket.colors
+    val curve = stop.powerCurve
+    if (curve.isEmpty()) return
+    val nowKw = stop.chargePowerKw ?: curve.minBy { kotlin.math.abs(it.socPercent - stop.currentSoc.toFloat()) }.kw.toDouble()
+    val desc = stringResource(R.string.curve_desc, stop.currentSoc.roundToInt(), nowKw.roundToInt(), stop.targetSoc.roundToInt())
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (warning != null) {
+                Box(Modifier.weight(1f)) { LimitWarnLine(warning) }
+            } else {
+                Text(stringResource(R.string.curve_title), style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
+                Spacer(Modifier.weight(1f))
+            }
+            Text(stringResource(R.string.label_power), style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
+            Figure("${nowKw.roundToInt()}", stringResource(R.string.unit_kw), FigureStyle.Small, unitStyle = MaterialTheme.typography.bodyMedium)
+        }
+        Spacer(Modifier.height(6.dp))
+        val maxKw = curve.maxOf { it.kw }.coerceAtLeast(1f)
+        Canvas(Modifier.fillMaxWidth().weight(1f).heightIn(min = 48.dp).semantics { contentDescription = desc }) {
+            val w = size.width
+            val h = size.height
+            fun x(soc: Float) = soc / 100f * w
+            fun y(kw: Float) = h - kw / maxKw * h * 0.92f
+            // 이번에 채울 구간 면
+            val from = stop.currentSoc.toFloat()
+            val to = stop.targetSoc.toFloat()
+            val band = androidx.compose.ui.graphics.Path().apply {
+                moveTo(x(from), h)
+                curve.filter { it.socPercent in from..to }.forEach { lineTo(x(it.socPercent), y(it.kw)) }
+                lineTo(x(to), h)
+                close()
+            }
+            drawPath(band, c.stamp.copy(alpha = 0.22f))
+            // 곡선
+            val line = androidx.compose.ui.graphics.Path().apply {
+                curve.forEachIndexed { i, p -> if (i == 0) moveTo(x(p.socPercent), y(p.kw)) else lineTo(x(p.socPercent), y(p.kw)) }
+            }
+            drawPath(line, c.inkMuted, style = Stroke(2.dp.toPx()))
+            drawLine(c.rule, Offset(0f, h), Offset(w, h), strokeWidth = 1.dp.toPx())
+            // 목표(점선)와 지금(실선)
+            drawLine(c.stamp, Offset(x(to), 0f), Offset(x(to), h), strokeWidth = 2.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 6f)))
+            drawLine(c.ink, Offset(x(from), 0f), Offset(x(from), h), strokeWidth = 2.dp.toPx())
+        }
+    }
+}
+
+// 두 번째 충전 계획 안내 한 줄(B2): 도장 잉크 점 + 글자
+@Composable
+private fun NextStopLine(name: String, target: Double?) {
+    val c = Ticket.colors
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(10.dp).background(c.stamp, androidx.compose.foundation.shape.CircleShape))
+        Text(stringResource(R.string.next_stop_note, name, (target ?: 0.0).roundToInt()), style = MaterialTheme.typography.titleMedium, color = c.ink)
+    }
 }
 
 /** 20칸 막대: 현재까지 잉크로 채우고, 목표까지는 도장 잉크 테두리로 남긴다. */
@@ -310,6 +513,11 @@ private fun ColumnScope.DoneBody(stop: StopInfo, soc: Double, onDepart: () -> Un
     if (stop.endedByLimit) {
         Spacer(Modifier.height(16.dp))
         LimitWarnLine(stringResource(R.string.done_limit_note, stop.targetSoc.roundToInt(), soc.roundToInt()))
+    } else {
+        stop.nextStopName?.let { name ->
+            Spacer(Modifier.height(16.dp))
+            NextStopLine(name, stop.nextStopTarget)
+        }
     }
     Spacer(Modifier.weight(1f))
     TearLine(Modifier.padding(vertical = 8.dp))
@@ -346,7 +554,21 @@ private fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: M
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
                 MeasureField(stringResource(R.string.finished_charges), "${receipt.charges.size}", stringResource(R.string.unit_times), FigureStyle.Medium)
+                MeasureField(stringResource(R.string.finished_charge_total), "${receipt.chargeMinutesTotal}", stringResource(R.string.unit_min), FigureStyle.Medium)
                 MeasureField(stringResource(R.string.finished_battery), "${(receipt.endSoc ?: state.socPercent).roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Medium)
+            }
+            // F4: 필요한 만큼만 충전해서 아낀 시간. 이 앱이 해 준 일을 숫자 하나로 보여 준다.
+            if (receipt.charges.isNotEmpty()) {
+                Spacer(Modifier.height(28.dp))
+                HairlineH()
+                Spacer(Modifier.height(20.dp))
+                if (receipt.savedMinutes > 0) {
+                    MeasureField(stringResource(R.string.finished_saved), "${receipt.savedMinutes}", stringResource(R.string.unit_min), FigureStyle.Large, color = c.stamp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(stringResource(R.string.finished_saved_note, receipt.savedMinutes), style = MaterialTheme.typography.titleMedium, color = c.inkMuted)
+                } else {
+                    Text(stringResource(R.string.finished_saved_none), style = MaterialTheme.typography.titleMedium, color = c.inkMuted)
+                }
             }
             Spacer(Modifier.height(36.dp))
             TicketButton(stringResource(R.string.receipt_again), onRestart, Modifier.width(320.dp), minHeight = 96.dp)
@@ -391,6 +613,9 @@ private fun ReceiptBody(receipt: TripReceipt, title: String) {
         Spacer(Modifier.height(3.dp))
         HairlineH()
         ReceiptLine(stringResource(R.string.receipt_total), "${receipt.distanceKm.roundToInt()} km", strong = true)
+        if (receipt.savedMinutes > 0) {
+            ReceiptLine(stringResource(R.string.receipt_saved), stringResource(R.string.receipt_saved_value, receipt.savedMinutes), strong = true)
+        }
     }
 }
 
@@ -407,3 +632,6 @@ private fun ReceiptLine(label: String, value: String, muted: Boolean = false, st
         Text(value, style = FigureStyle.Small.copy(fontWeight = if (strong) androidx.compose.ui.text.font.FontWeight.Bold else FigureStyle.Small.fontWeight), color = color)
     }
 }
+
+// F2 목표 조정 단위(%)
+private const val STEP = 5

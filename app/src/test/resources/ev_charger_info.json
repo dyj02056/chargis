@@ -1,0 +1,8 @@
+{"resultMsg":"NORMAL SERVICE.","totalCount":6,"items":{"item":[
+{"statNm":"가상A휴게소(서울방향)","statId":"PX000001","chgerId":"01","chgerType":"04","lat":"37.62","lng":"127.33","output":"100","stat":"2","limitYn":"Y","limitDetail":"1회 40분 이내 충전","delYn":"N"},
+{"statNm":"가상A휴게소(서울방향)","statId":"PX000001","chgerId":"02","chgerType":"04","lat":"37.62","lng":"127.33","output":"200","stat":"3","nowTsdt":"20261025100000","delYn":"N"},
+{"statNm":"가상A휴게소(서울방향)","statId":"PX000001","chgerId":"03","chgerType":"02","lat":"37.62","lng":"127.33","output":"7","stat":"2","delYn":"N"},
+{"statNm":"가상B휴게소","statId":"PX000002","chgerId":"01","chgerType":"04","lat":"37.81","lng":"127.67","output":"50","stat":"3","nowTsdt":"20261025101000","delYn":"N"},
+{"statNm":"가상주차장","statId":"PX000003","chgerId":"01","chgerType":"04","lat":"37.70","lng":"127.50","output":"100","stat":"2","delYn":"N"},
+{"statNm":"가상C휴게소","statId":"PX000004","chgerId":"01","chgerType":"04","lat":"36.00","lng":"126.00","output":"100","stat":"2","delYn":"N"}
+]},"pageNo":1,"resultCode":"00","numOfRows":9999}

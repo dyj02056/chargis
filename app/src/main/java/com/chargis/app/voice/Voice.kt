@@ -29,6 +29,8 @@ interface VoicePhrases {
     fun targetReached(): String
     fun resume(): String
     fun noSafeStop(): String
+    fun planTwoStops(nextName: String, nextTarget: Double): String
+    fun targetChanged(target: Double): String
 }
 
 /** strings.xml에서 문구를 꺼내 숫자·이름을 끼워 넣는 실제 구현체. */
@@ -52,6 +54,9 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
     override fun targetReached() = s(R.string.tts_target_reached)
     override fun resume() = s(R.string.tts_resume)
     override fun noSafeStop() = s(R.string.tts_no_safe_stop)
+    override fun planTwoStops(nextName: String, nextTarget: Double) =
+        s(R.string.tts_plan_two_stops, nextName, nextTarget.roundToInt())
+    override fun targetChanged(target: Double) = s(R.string.tts_target_changed, target.roundToInt())
 
     // strings.xml의 문구 [id]에 [args]를 차례로 끼워 넣는다. 예) "%1$s를 추천합니다" → "B 휴게소를 추천합니다"
     private fun s(id: Int, vararg args: Any) = context.getString(id, *args)

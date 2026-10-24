@@ -1,5 +1,12 @@
 package com.chargis.app.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -53,6 +60,7 @@ fun ChargisRoot(controller: TripController) {
     // 컨트롤러의 상태를 구독한다. 값이 바뀔 때마다 이 화면이 다시 그려진다.
     val state by controller.state.collectAsStateWithLifecycle()
     val c = Ticket.colors
+    VoicePermission(state.settings.voiceCommands, controller)
 
     CompositionLocalProvider(LocalContentColor provides c.ink) {
         // safeDrawingPadding: 상태 표시줄이나 화면 모서리에 내용이 가리지 않게 여백을 둔다.
@@ -71,7 +79,8 @@ fun ChargisRoot(controller: TripController) {
                             routeMarks = state.routeMarks,
                             progress = state.progress,
                             onAccept = controller::accept,
-                            onDecline = controller::decline
+                            onDecline = controller::decline,
+                            energy = state.energy
                         )
                     } else {
                         ParkedScreen(
@@ -80,17 +89,39 @@ fun ChargisRoot(controller: TripController) {
                             onStartCharging = controller::startCharging,
                             onStopCharging = controller::stopCharging,
                             onDepart = controller::depart,
-                            onRestart = controller::restart
+                            onRestart = controller::restart,
+                            onAdjustTarget = controller::adjustTarget,
+                            onSettings = controller::updateSettings
                         )
                     }
                 }
-                CaptionBar(state.caption)
+                CaptionBar(
+                    state.caption,
+                    voice = state.voice,
+                    note = if (state.restored) stringResource(R.string.restored_note) else null
+                )
             }
             // 개발용 빌드에서만 오른쪽 위에 시연 도구를 띄운다(build.gradle.kts의 DEV_OVERLAY).
             if (BuildConfig.DEV_OVERLAY) {
                 DevOverlay(state.dev, controller, Modifier.align(Alignment.TopEnd).padding(top = 64.dp, end = 32.dp))
             }
         }
+    }
+}
+
+/**
+ * F5: 음성 명령을 켜면 그때 마이크 권한을 묻는다. 거절하면 음성 명령을 다시 끈다.
+ * 권한을 받으면 컨트롤러에 다시 듣기 시작하라고 알린다.
+ */
+@Composable
+private fun VoicePermission(enabled: Boolean, controller: TripController) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) controller.refreshVoice() else controller.updateSettings { it.copy(voiceCommands = false) }
+    }
+    LaunchedEffect(enabled) {
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        if (enabled && !granted) launcher.launch(Manifest.permission.RECORD_AUDIO)
     }
 }
 

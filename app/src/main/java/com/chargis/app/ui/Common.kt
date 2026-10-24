@@ -25,11 +25,16 @@ import com.chargis.app.R
 import com.chargis.app.domain.model.DataSource
 import com.chargis.app.domain.model.ReasonCode
 import com.chargis.app.domain.model.Recommendation
+import com.chargis.app.domain.model.WaitSource
 import com.chargis.app.ui.theme.FigureStyle
 import com.chargis.app.ui.theme.Ticket
 import com.chargis.app.ui.ticket.Figure
 import com.chargis.app.ui.ticket.HairlineH
+import com.chargis.app.ui.ticket.MicGlyph
 import com.chargis.app.ui.ticket.SpeakerGlyph
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import kotlin.math.roundToInt
 
 // 주행 화면과 정차 화면이 함께 쓰는 화면 조각들을 모은 파일이다.
@@ -75,10 +80,15 @@ fun sourceLabel(source: DataSource) = stringResource(
     }
 )
 
-/** 음성 안내 자막 줄. 소리를 못 들은 동승자도 읽을 수 있게 화면 맨 아래에 띄운다. 자막이 없으면 아무것도 그리지 않는다. */
+/**
+ * 음성 안내 자막 줄. 소리를 못 들은 동승자도 읽을 수 있게 화면 맨 아래에 띄운다.
+ * 오른쪽에는 음성 명령을 듣는 중이면 마이크와 "말하기: 수락 / 다음"을 붙인다(F5).
+ * 자막이 없을 때 [note](예: 이전 여행 복원 안내)가 있으면 그것을 흐리게 보여 준다. 보여 줄 것이 없으면 그리지 않는다.
+ */
 @Composable
-fun CaptionBar(caption: String?, modifier: Modifier = Modifier) {
-    if (caption.isNullOrBlank()) return
+fun CaptionBar(caption: String?, modifier: Modifier = Modifier, voice: VoiceUi = VoiceUi(), note: String? = null) {
+    val text = caption?.takeIf { it.isNotBlank() } ?: note
+    if (text == null && !voice.listening) return
     val c = Ticket.colors
     Column(modifier.fillMaxWidth().background(c.stock)) {
         HairlineH()
@@ -87,11 +97,41 @@ fun CaptionBar(caption: String?, modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SpeakerGlyph()
-            Text(caption, style = MaterialTheme.typography.bodyLarge, color = c.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (text != null) {
+                SpeakerGlyph()
+                Text(
+                    text, style = MaterialTheme.typography.bodyLarge, color = if (caption.isNullOrBlank()) c.inkMuted else c.ink,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            if (voice.listening) {
+                val words = voice.hints.map { voiceWord(it) }.joinToString(" / ")
+                Row(
+                    Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    MicGlyph()
+                    Text(stringResource(R.string.voice_listening), style = MaterialTheme.typography.labelMedium, color = c.stamp)
+                    Text(stringResource(R.string.voice_say, words), style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
+                }
+            }
         }
     }
 }
+
+// 음성 명령 이름을 운전자가 말할 낱말로 바꾼다.
+@Composable
+private fun voiceWord(command: String): String = stringResource(
+    when (command) {
+        "ACCEPT" -> R.string.voice_cmd_accept
+        "NEXT_STOP" -> R.string.voice_cmd_next
+        "START_CHARGING" -> R.string.voice_cmd_charge
+        else -> R.string.voice_cmd_depart
+    }
+)
 
 /**
  * 세로로 인쇄한 글자(표 꼬리 칸용).
@@ -108,22 +148,31 @@ fun Modifier.vertical() = layout { measurable, constraints ->
 }
 
 /**
- * 추천 이유 배지를 "안전하게 갈 수 있는 마지막 휴게소 · 가장 빠른 충전기" 같은 한 줄 글자로 만든다.
- * 운전 중에 너무 많이 읽지 않도록 최대 2개만 보여 준다. 보여 줄 이유가 없으면 null.
+ * 추천 이유 배지 글자 목록. 예) ["가장 빨리 도착", "가장 빠른 충전기"]
+ * 운전 중에 너무 많이 읽지 않도록 최대 [max]개만 보여 준다.
  * (경로 이탈 없음, 시간 제한 위험은 다른 곳에서 따로 표시하므로 여기서는 뺀다.)
  */
 @Composable
-fun reasonText(rec: Recommendation): String? {
-    val parts = rec.reasonCodes.mapNotNull {
+fun reasonLabels(rec: Recommendation, max: Int = 2): List<String> =
+    rec.reasonCodes.mapNotNull {
         when (it) {
+            ReasonCode.FASTEST_ARRIVAL -> R.string.reason_fastest
             ReasonCode.LATEST_SAFE_STOP -> R.string.reason_latest_safe
             ReasonCode.MAX_POWER -> R.string.reason_max_power
             ReasonCode.LOW_WAIT -> R.string.reason_low_wait
             ReasonCode.ENOUGH_CHARGERS -> R.string.reason_enough
             ReasonCode.NO_DETOUR, ReasonCode.TIME_LIMIT_RISK -> null
         }
-    }.take(2).map { stringResource(it) }
-    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+    }.take(max).map { stringResource(it) }
+
+/** 대기 칸 이름에 출처 꼬리표를 붙인다. 예) "대기 · 예측". 실시간이면 꼬리표 없이 "대기". */
+@Composable
+fun waitLabel(source: WaitSource): String {
+    val base = stringResource(R.string.label_wait)
+    return when (source) {
+        WaitSource.FORECAST, WaitSource.BLENDED -> "$base · ${stringResource(R.string.wait_forecast)}"
+        WaitSource.LIVE, WaitSource.UNKNOWN -> base
+    }
 }
 
 /**
@@ -152,7 +201,7 @@ fun CandidateTable(candidates: List<Recommendation>, modifier: Modifier = Modifi
                 NumberCell("${r.arrivalSocPercent.roundToInt()}", "%", Modifier.weight(1f))
                 NumberCell("${s.maxKw.roundToInt()}", "kW", Modifier.weight(1f))
                 NumberCell(s.availableChargers?.let { "$it/${s.totalChargers}" }, null, Modifier.weight(1f), unknown)
-                NumberCell(s.expectedWaitMin?.toString(), stringResource(R.string.unit_min), Modifier.weight(1f), unknown)
+                NumberCell(r.waitMinutes.takeIf { r.waitSource != WaitSource.UNKNOWN }?.toString(), stringResource(R.string.unit_min), Modifier.weight(1f), unknown)
             }
         }
         HairlineH()

@@ -19,9 +19,9 @@ enum class AlertType { RULE_NOTICE, LIMIT_T10, LIMIT_T5, TARGET_T5, TARGET_REACH
  * 충전 중에 "지금 어떤 음성 알림을 내야 하나?"를 판단하는 알람 시계 역할이다.
  * 충전 한 번마다 새로 만들고, 충전 상황이 갱신될 때마다 [evaluate]를 불러 낼 알림 목록을 받는다.
  */
-class AlertScheduler(private val timeLimitMin: Int?) {
-    // 이미 낸 알림을 기억해서 같은 말을 두 번 하지 않게 한다.
-    private val fired = mutableSetOf<AlertType>()
+class AlertScheduler(private val timeLimitMin: Int?, alreadyFired: Set<AlertType> = emptySet()) {
+    // 이미 낸 알림을 기억해서 같은 말을 두 번 하지 않게 한다. 여행을 복원하면 저장해 둔 목록으로 시작한다.
+    private val fired = alreadyFired.toMutableSet()
 
     val firedAlerts: Set<AlertType> get() = fired
 
@@ -47,6 +47,11 @@ class AlertScheduler(private val timeLimitMin: Int?) {
         else if (s.limitExpired && limit != null) due += AlertType.LIMIT_SHORTFALL to limit
 
         return fire(due.sortedBy { it.second }.map { it.first })
+    }
+
+    /** 충전 중 목표를 바꾸면(F2) "곧 목표 도달" 안내를 새 목표 기준으로 다시 낼 수 있게 한다. */
+    fun rearmTarget() {
+        fired.remove(AlertType.TARGET_T5)
     }
 
     // 아직 내지 않은 알림만 남긴다. (Set.add는 처음 넣을 때만 true를 돌려준다.)

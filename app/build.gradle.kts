@@ -28,6 +28,8 @@ android {
         versionCode = 1                     // 내부 버전 번호(올릴 때마다 1씩 증가)
         versionName = "0.1.0"               // 사용자에게 보이는 버전
         buildConfigField("String", "CHARGER_API_KEY", "\"${localProps.getProperty("chargis.chargerApiKey", "")}\"")
+        // true면 데모 샘플 대신 공공 충전소 데이터를 먼저 쓴다(실패하면 샘플로 폴백). 데모 경로는 가상이라 기본은 끔.
+        buildConfigField("boolean", "USE_PUBLIC_CHARGER_API", localProps.getProperty("chargis.usePublicChargerApi", "false"))
     }
 
     // debug = 개발·시연용(개발자 오버레이 켬), release = 배포용(끔)
