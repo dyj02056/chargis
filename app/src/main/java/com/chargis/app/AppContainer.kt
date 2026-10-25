@@ -7,7 +7,6 @@ import androidx.core.content.ContextCompat
 import com.chargis.app.voice.AndroidSpeechStt
 import com.chargis.app.data.asset.AssetCatalog
 import com.chargis.app.data.fake.FakeChargerData
-import com.chargis.app.data.fake.FakeLocation
 import com.chargis.app.data.fake.FakeNavi
 import com.chargis.app.data.fake.FakeTts
 import com.chargis.app.data.fake.FakeVehicle
@@ -19,7 +18,6 @@ import com.chargis.app.data.publicapi.PublicChargerData
 import com.chargis.app.data.publicapi.UrlEvChargerHttp
 import com.chargis.app.data.store.PrefsSettingsStore
 import com.chargis.app.data.store.PrefsTripStore
-import com.chargis.app.port.LocationPort
 import com.chargis.app.port.SettingsStore
 import com.chargis.app.port.SttPort
 import com.chargis.app.port.TripStore
@@ -73,7 +71,6 @@ class AppContainer(context: Context) {
         } else {
             FakeChargerData(simulator)
         }
-    val location: LocationPort = FakeLocation(simulator)
 
     // 음성 안내. 실제 소리는 안드로이드 기본 TTS로 내고, Fake가 말한 내용을 기록해 둔다.
     val tts = FakeTts(delegate = AndroidTts(app))

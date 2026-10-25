@@ -16,6 +16,8 @@ class VoiceCommandParserTest {
         assertEquals(VoiceCommand.NEXT_STOP, VoiceCommandParser.parse("다음 휴게소로 가", decide))
         assertEquals(VoiceCommand.START_CHARGING, VoiceCommandParser.parse("충전 시작해 줘", arrived))
         assertEquals(VoiceCommand.DEPART, VoiceCommandParser.parse("출발하자", arrived))
+        assertEquals(VoiceCommand.PRECONDITION, VoiceCommandParser.parse("배터리 예열 켜 줘", setOf(VoiceCommand.PRECONDITION)))
+        assertNull(VoiceCommandParser.parse("예열", decide))
     }
 
     @Test

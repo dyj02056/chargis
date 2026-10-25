@@ -1,5 +1,6 @@
 package com.chargis.app.ui
 
+import com.chargis.app.domain.engine.BatteryThermal
 import com.chargis.app.domain.engine.ChargeMath
 import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.Recommendation
@@ -29,7 +30,8 @@ class TripPresenter {
         scenario: Scenario,
         declinedIds: Set<String>,
         config: RecommendationConfig,
-        energy: EnergyInfo?
+        energy: EnergyInfo?,
+        manualSoc: Boolean = false
     ): TripUiState {
         val v = m.lastVehicle
         val route = m.lastRoute
@@ -49,7 +51,7 @@ class TripPresenter {
             progress = (sim.traveledKm / scenario.totalDistanceKm).toFloat().coerceIn(0f, 1f),
             receipt = buildReceipt(m, scenario, declinedIds, clock),
             card = buildCard(m, sim, clock),
-            stop = buildStop(m, sim, scenario.profile, config, clock),
+            stop = buildStop(m, sim, scenario.profile, config, clock)?.copy(manualSoc = manualSoc),
             candidates = (m.lastResult as? RecommendationResult.Recommended)
                 ?.let { r -> listOf(r.primary) + r.alternatives }.orEmpty(),
             energy = energy,
@@ -90,7 +92,11 @@ class TripPresenter {
                     arrivalSoc = acc.arrivalSocPercent,
                     chargeMinutes = acc.chargeMinutes,
                     timeLimitMin = acc.timeLimitMin,
-                    timeLimitKnown = acc.station.rule.timeLimitKnown
+                    timeLimitKnown = acc.station.rule.timeLimitKnown,
+                    coldExtraMinutes = acc.coldExtraMinutes,
+                    preconditioning = m.lastVehicle?.preconditioning,
+                    // 컨트롤러가 예열을 권한 뒤(도착 30분 이내)부터, 아직 꺼져 있으면 버튼을 띄운다.
+                    suggestPreconditioning = m.preconditionAdvised && m.lastVehicle?.preconditioning != true
                 )
             else -> when (val r = m.lastResult) {
                 is RecommendationResult.NoSafeStop ->
@@ -162,7 +168,10 @@ class TripPresenter {
         val session = m.charge
         val snap = session?.snapshot
         val target = session?.targetSoc ?: rec.targetSocPercent
-        val common = StopCommon(rec.station, target, v, profile, config)
+        // 배터리가 차가우면 충전을 덜 받는다. 예상 시간과 출력 곡선을 지금 배터리 온도로 그린다.
+        val thermal = BatteryThermal.chargePowerFactor(v.batteryTempC ?: v.outsideTempC)
+        val cold = profile.withChargePowerFactor(thermal)
+        val common = StopCommon(rec.station, target, v, cold, config, profile, thermal < COLD_NOTE_FACTOR)
         if (m.phase == TripPhase.Charging && snap != null) {
             return common.fill(
                 StopInfo(
@@ -181,8 +190,8 @@ class TripPresenter {
             )
         }
         // 도착(충전 전)·완료: 모델값으로 예상한다.
-        val toTarget = ChargeMath.chargeMinutes(v.socPercent, target, rec.station.maxKw, profile, config)
-        val atLimit = rec.timeLimitMin?.let { ChargeMath.socAfterMinutes(v.socPercent, it.toDouble(), rec.station.maxKw, profile, config) }
+        val toTarget = ChargeMath.chargeMinutes(v.socPercent, target, rec.station.maxKw, cold, config)
+        val atLimit = rec.timeLimitMin?.let { ChargeMath.socAfterMinutes(v.socPercent, it.toDouble(), rec.station.maxKw, cold, config) }
         return common.fill(
             StopInfo(
                 stationName = rec.station.name,
@@ -200,13 +209,16 @@ class TripPresenter {
         )
     }
 
-    // 정차 화면 세 단계가 함께 쓰는 값: 출력 곡선, 목표 조정 가능 여부, 다음 충전소
+    // 정차 화면 세 단계가 함께 쓰는 값: 출력 곡선, 목표 조정 가능 여부, 다음 충전소, 요금.
+    // [profile]은 배터리 온도를 반영한 사양(곡선용), [base]는 원래 사양(요금용 배터리 용량).
     private class StopCommon(
         val station: ChargingStation,
         val target: Double,
         val v: VehicleState,
         val profile: VehicleProfile,
-        val config: RecommendationConfig
+        val config: RecommendationConfig,
+        val base: VehicleProfile,
+        val cold: Boolean
     ) {
         fun fill(info: StopInfo, rec: Recommendation) = info.copy(
             powerCurve = (0..100 step CURVE_STEP).map { soc ->
@@ -217,7 +229,9 @@ class TripPresenter {
             targetInTaper = target > config.taperStartSocPercent,
             nextStopName = rec.nextStop?.station?.name,
             nextStopTarget = rec.nextStop?.targetSocPercent,
-            timeLimitKnown = rec.station.rule.timeLimitKnown
+            timeLimitKnown = rec.station.rule.timeLimitKnown,
+            costKrw = ChargeMath.chargeCostKrw(v.socPercent, target, base, station.pricePerKwh, config),
+            coldBattery = cold
         )
     }
 
@@ -241,5 +255,6 @@ class TripPresenter {
         const val MAX_TARGET = 100.0
         const val MIN_GAP = 1.0       // 목표는 지금 %보다 이만큼은 높아야 한다
         private const val CURVE_STEP = 2
+        private const val COLD_NOTE_FACTOR = 0.9   // 충전 수용이 평소의 90% 아래면 "배터리가 차가워 느림"을 알린다
     }
 }

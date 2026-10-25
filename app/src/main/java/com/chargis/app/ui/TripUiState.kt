@@ -42,7 +42,13 @@ sealed interface DriveCard {
         val arrivalSoc: Double,
         val chargeMinutes: Int,
         val timeLimitMin: Int?,
-        val timeLimitKnown: Boolean = true   // false면 제한 칸에 "없음" 대신 "정보 없음"
+        val timeLimitKnown: Boolean = true,  // false면 제한 칸에 "없음" 대신 "정보 없음"
+        /** 배터리가 차가워 더 걸리는 충전 시간(분). 예열 안내에 쓴다 */
+        val coldExtraMinutes: Int = 0,
+        /** 예열 상태: true 켜짐, false 꺼짐, null 모름 */
+        val preconditioning: Boolean? = null,
+        /** 예열을 권할 때인지(차가 지원하고, 차가운 배터리로 충전이 눈에 띄게 늦어지고, 도착까지 30분 이내) */
+        val suggestPreconditioning: Boolean = false
     ) : DriveCard
     /**
      * 평소 주행 상태(남은 거리, 충전 계획) (02-drive-status.png)
@@ -90,7 +96,13 @@ data class StopInfo(
     val nextStopName: String? = null,
     val nextStopTarget: Double? = null,
     /** 시간 제한 정보를 확인했는지. false면 제한 칸에 "정보 없음"(제한 없음과 구분) */
-    val timeLimitKnown: Boolean = true
+    val timeLimitKnown: Boolean = true,
+    /** 지금 %에서 목표까지 충전하는 예상 요금(원). 요금을 모르면 null */
+    val costKrw: Int? = null,
+    /** 배터리 %를 운전자가 직접 넣는 중인지. true면 값을 고치는 버튼을 보여 준다 */
+    val manualSoc: Boolean = false,
+    /** 배터리가 차가워 충전이 늦어지는 중인지(예상 출력 곡선이 평소보다 낮다) */
+    val coldBattery: Boolean = false
 )
 
 /** 출력 곡선 그래프의 한 점 */
@@ -113,7 +125,9 @@ data class ChargeRecord(
     val minutes: Int,
     val endedByLimit: Boolean = false,
     /** 같은 충전기에서 습관처럼 80%(또는 이번에 채운 %)까지 채웠다면 걸렸을 분 (F4 비교용) */
-    val baselineMinutes: Int = minutes
+    val baselineMinutes: Int = minutes,
+    /** 이번 충전 요금(원). 충전소 요금을 모르면 null */
+    val costKrw: Int? = null
 )
 
 /** 도착 시 인쇄하는 정산 영수증. */
@@ -130,6 +144,10 @@ data class TripReceipt(
     val chargeMinutesTotal: Int get() = charges.sumOf { it.minutes }
     /** "80%까지 채웠다면"보다 아낀 분(F4). 음수가 되지 않게 0으로 묶는다. */
     val savedMinutes: Int get() = charges.sumOf { (it.baselineMinutes - it.minutes).coerceAtLeast(0) }
+    /** 요금을 아는 충전의 요금 합(원). 아는 충전이 하나도 없으면 null */
+    val costKrwTotal: Int? get() = charges.mapNotNull { it.costKrw }.takeIf { it.isNotEmpty() }?.sum()
+    /** 요금을 모르는 충전이 섞여 있는지(합계 옆에 "일부 정보 없음"을 붙인다) */
+    val costPartlyUnknown: Boolean get() = charges.any { it.costKrw == null } && costKrwTotal != null
 }
 
 /** 설정 화면에서 고를 차종 하나 */
@@ -194,5 +212,6 @@ data class TripUiState(
     val profiles: List<ProfileOption> = emptyList(),
     val profileName: String = "",               // 지금 고른 차종 이름
     val voice: VoiceUi = VoiceUi(),             // 음성 명령 상태(F5)
-    val restored: Boolean = false               // 저장해 둔 여행을 이어서 보여 주는 중인지(B5)
+    val restored: Boolean = false,              // 저장해 둔 여행을 이어서 보여 주는 중인지(B5)
+    val loading: Boolean = true                 // 저장해 둔 여행을 아직 불러오는 중인지. 그동안은 발권 화면을 그리지 않는다
 )

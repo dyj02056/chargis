@@ -31,7 +31,13 @@ data class VehicleProfile(
      * 예) [(10, 150), (50, 120), (80, 60), (100, 15)] → 사이 값은 직선으로 잇는다.
      * null이면 "80%까지 평균 출력, 그 위는 감쇠" 두 구간 모델을 쓴다(ChargeMath 참고).
      */
-    val chargeCurve: List<CurvePoint>? = null
+    val chargeCurve: List<CurvePoint>? = null,
+    /** 급속 충전구 종류. 국내 전기차는 대부분 DC콤보. null이면 모른다고 보고 충전기를 거르지 않는다. */
+    val connectors: Set<ConnectorType>? = setOf(ConnectorType.DC_COMBO),
+    /** 주행 중 배터리 예열(컨디셔닝)을 지원하는지. 지원해야 예열 안내를 한다. */
+    val supportsPreconditioning: Boolean = true,
+    /** 차량 무게(kg, 사람·짐 포함 가정). 오르막·내리막 에너지 계산에 쓴다. */
+    val massKg: Double = 2100.0
 ) {
     /**
      * 실제 소비가 평소보다 [factor]배 많을 때의 사양. 예) 겨울이라 1.2배 → 전비가 1/1.2로 떨어진다.
@@ -39,7 +45,33 @@ data class VehicleProfile(
      */
     fun withConsumptionFactor(factor: Double): VehicleProfile =
         if (factor == 1.0) this else copy(efficiencyKmPerKwh = efficiencyKmPerKwh / factor)
+
+    /**
+     * 배터리가 차가워 충전을 [factor]배로만 받을 때의 사양. 예) 0.6 → 최대 수용 출력과 충전 곡선이 60%로 줄어든다.
+     * 충전기 출력은 그대로이고 차가 받아들이는 쪽만 줄어든다(BatteryThermal 참고).
+     */
+    fun withChargePowerFactor(factor: Double): VehicleProfile =
+        if (factor >= 1.0) this else copy(
+            maxChargeKw = maxChargeKw * factor,
+            chargeCurve = chargeCurve?.map { it.copy(kw = it.kw * factor) }
+        )
+
+    /** 이 차가 [station]의 충전기를 꽂을 수 있는지. 어느 한쪽이라도 모르면 쓸 수 있다고 본다. */
+    fun canUse(station: ChargingStation): Boolean {
+        val mine = connectors ?: return true
+        val theirs = station.connectors ?: return true
+        return mine.any { it in theirs }
+    }
 }
+
+/**
+ * 급속 충전구 종류. 공공데이터 충전기 타입(chgerType) 코드에서 정한다(PublicChargerData 참고).
+ * AC3 = AC 3상(급속), NACS = 북미 표준(테슬라).
+ */
+enum class ConnectorType { DC_COMBO, CHADEMO, AC3, NACS }
+
+/** 경로 고도의 한 점: 지금 위치에서 [distanceKm] 앞의 해발 고도 [elevationM](m). */
+data class ElevationPoint(val distanceKm: Double, val elevationM: Double)
 
 /** 충전 곡선의 한 점: 이 SoC(%)에서 차가 받는 최대 출력(kW). */
 data class CurvePoint(val socPercent: Double, val kw: Double)
@@ -59,7 +91,11 @@ data class VehicleState(
     val outsideTempC: Double? = null,    // 바깥 기온(°C). 추울수록 전비가 나빠진다. 없으면 null
     val chargePowerKw: Double? = null,   // 충전 중 실제 들어오는 출력(kW). 충전 중이 아니거나 모르면 null
     /** 누적 주행거리(km). 배터리 값과 같은 순간에 읽은 거리라 전비 실측(B3)에 쓴다. 모르면 null */
-    val odometerKm: Double? = null
+    val odometerKm: Double? = null,
+    /** 배터리 온도(°C). 차가우면 충전이 느리다. 모르면 null(엔진은 바깥 기온으로 어림한다) */
+    val batteryTempC: Double? = null,
+    /** 배터리 예열(컨디셔닝)이 켜져 있는지. 모르면 null */
+    val preconditioning: Boolean? = null
 )
 
 /** 내비게이션이 알려 주는 현재 경로 정보. 목적지까지 남은 거리와 시간을 담는다. */
@@ -67,7 +103,9 @@ data class RouteState(
     val current: GeoPoint,
     val destination: GeoPoint?,
     val remainingDistanceKm: Double,
-    val remainingTimeMin: Int?
+    val remainingTimeMin: Int?,
+    /** 지금 위치부터 목적지까지의 고도. 거리 오름차순, 첫 점은 지금 위치(0km). 없으면 평지로 본다 */
+    val elevation: List<ElevationPoint>? = null
 )
 
 /**
@@ -156,18 +194,19 @@ data class ChargingStation(
      */
     val waitByHour: List<Int>? = null,
     val openHours: OpenHours? = null, // 이용 가능 시간. null = 미상(엔진은 열려 있다고 본다)
-    val parkingFree: Boolean? = null  // 주차 무료 여부. null = 미상
+    val parkingFree: Boolean? = null, // 주차 무료 여부. null = 미상
+    /** 이 충전소의 급속 충전구 종류. null = 미상(엔진은 거르지 않는다) */
+    val connectors: Set<ConnectorType>? = null,
+    /** 충전 요금(원/kWh). null = 미상 */
+    val pricePerKwh: Double? = null,
+    /** 고장·점검 중이라 쓸 수 없는 충전기 수. [totalChargers]에는 들어가지 않는다. null = 미상 */
+    val brokenChargers: Int? = null,
+    /** 마지막으로 충전이 끝난 뒤 지난 시간(시간). 오래 아무도 못 썼으면 고장일 수 있다. null = 미상 */
+    val hoursSinceLastCharge: Double? = null
 ) {
     /** 휴게소(고속도로·국도)인지. 화면 문구를 고를 때 쓴다. */
     val isRestStop: Boolean get() = kind == StationKind.HIGHWAY_REST_STOP || kind == StationKind.LOCAL_REST_STOP
 }
-
-/** 충전소의 실시간 상황(빈 충전기 수, 대기 시간). 주기적으로 새 값이 들어온다. */
-data class StationLiveStatus(
-    val stationId: String,
-    val availableChargers: Int?,
-    val expectedWaitMin: Int?
-)
 
 /**
  * 추천 계산에 쓰는 기준값 모음. 숫자를 코드 곳곳에 흩어 두지 않고 여기 한 곳에서 바꿀 수 있게 했다.
@@ -175,7 +214,8 @@ data class StationLiveStatus(
  */
 data class RecommendationConfig(
     val safetyMargin: Double = 0.15,          // 필요 에너지에 곱할 (1+margin)
-    val minArrivalSocPercent: Double = 10.0,  // 도착 시 최소 잔량
+    val minArrivalSocPercent: Double = 10.0,  // 충전소 도착 시 최소 잔량
+    val destinationSocPercent: Double = 10.0, // 목적지 도착 시 남길 잔량(사용자 설정). 목적지에 충전기가 없으면 높인다
     val maxTargetSocPercent: Double = 80.0,   // 기본 권장 상한(사용자 조정 가능)
     val roundUpStepPercent: Double = 5.0,     // 목표 %를 5% 단위로 올림
     val taperStartSocPercent: Double = 80.0,  // 이 SoC부터 충전 출력 감쇠 (배터리 특성, 사용자 상한과 별개)
@@ -203,17 +243,27 @@ data class RecommendationConfig(
     // ---- 충전 곡선(B3) ----
     val stationDeliveryFactor: Double = 0.92, // 충전기가 표시 출력의 몇 %를 실제로 내주는지 (가정)
     // ---- 대기 예측(B4) ----
-    val liveWaitHalfLifeMin: Double = 45.0    // 실시간 대기를 믿는 정도가 반으로 줄어드는 시간
+    val liveWaitHalfLifeMin: Double = 45.0,   // 실시간 대기를 믿는 정도가 반으로 줄어드는 시간
+    // ---- 충전기 신뢰도 ----
+    val staleChargeHours: Double = 72.0,      // 마지막 충전 뒤 이만큼 아무도 충전하지 못했으면 고장 의심(고속도로 휴게소·상업시설)
+    val staleChargeHoursQuiet: Double = 168.0, // 이용이 드문 곳(쉼터·국도 휴게소·공공·기타)은 일주일로 본다
+    val unreliablePenaltyMin: Double = 10.0,  // 고장 의심 충전소에 더하는 순위 가산(분)
+    // ---- 요금 ----
+    val chargeLossFactor: Double = 1.08       // 충전기에서 나간 전력 ÷ 배터리에 들어간 전력(충전 손실, 가정). 요금은 나간 전력으로 낸다
 )
 
 /**
  * 추천 한 번에 쓰는 "지금 상황" 값. 엔진이 시계나 센서를 직접 읽지 않도록 밖에서 넣어 준다.
  * [minuteOfDay]: 지금 시각(0시부터 분). 도착 시각의 대기를 예측하는 데 쓴다. 모르면 null.
  * [consumptionFactor]: 실제 소비 ÷ 사양 소비. 1.2면 사양보다 20% 더 쓴다(ConsumptionCalibrator).
+ * [batteryTempC]: 지금 배터리 온도(모르면 바깥 기온, 그것도 모르면 null = 충전 속도 보정 없음).
+ * [preconditioning]: 배터리 예열이 켜져 있는지. 켜져 있으면 도착할 때까지 배터리가 데워진다고 본다.
  */
 data class RecommendContext(
     val minuteOfDay: Int? = null,
-    val consumptionFactor: Double = 1.0
+    val consumptionFactor: Double = 1.0,
+    val batteryTempC: Double? = null,
+    val preconditioning: Boolean = false
 )
 
 /** 대기 시간 값을 어디서 얻었는지. 화면에 "예측" 같은 꼬리표를 붙일 때 쓴다. */
@@ -225,7 +275,8 @@ data class PlannedStop(
     val arrivalSocPercent: Double,
     val targetSocPercent: Double,
     val chargeMinutes: Int,
-    val waitMinutes: Int
+    val waitMinutes: Int,
+    val costKrw: Int? = null
 )
 
 /**
@@ -246,16 +297,20 @@ data class Recommendation(
     val waitSource: WaitSource = WaitSource.UNKNOWN, // 대기 값의 출처(실시간/예측)
     val etaMinutes: Double = 0.0,             // 지금부터 목적지 도착까지 걸리는 분(이 계획대로 갈 때)
     val costMinutes: Double = 0.0,            // 순위용 비용(분) = etaMinutes + 위험 가산. 낮을수록 좋다
-    val nextStop: PlannedStop? = null         // 두 번 들르는 계획이면 두 번째 충전소
+    val nextStop: PlannedStop? = null,        // 두 번 들르는 계획이면 두 번째 충전소
+    /** 배터리가 차가워서 더 걸리는 충전 시간(분). 예열을 켜면 줄일 수 있다. 0이면 영향 없음 */
+    val coldExtraMinutes: Int = 0,
+    /** 이 충전소에서 목표까지 충전하는 예상 요금(원). 요금을 모르면 null */
+    val costKrw: Int? = null
 )
 
 /**
  * 추천 이유 배지의 종류.
  * FASTEST_ARRIVAL = 후보 중 목적지에 가장 빨리 도착, MAX_POWER = 후보 중 가장 빠른 충전, LOW_WAIT = 대기가 짧음, ENOUGH_CHARGERS = 빈 충전기 넉넉,
  * LATEST_SAFE_STOP = 안전하게 갈 수 있는 마지막 충전소, NO_DETOUR = 경로 이탈 없음,
- * TIME_LIMIT_RISK = 시간 제한 안에 목표까지 못 채울 위험
+ * TIME_LIMIT_RISK = 시간 제한 안에 목표까지 못 채울 위험, MAYBE_BROKEN = 오래 충전 기록이 없어 고장이 의심됨
  */
-enum class ReasonCode { FASTEST_ARRIVAL, MAX_POWER, LOW_WAIT, ENOUGH_CHARGERS, LATEST_SAFE_STOP, NO_DETOUR, TIME_LIMIT_RISK }
+enum class ReasonCode { FASTEST_ARRIVAL, MAX_POWER, LOW_WAIT, ENOUGH_CHARGERS, LATEST_SAFE_STOP, NO_DETOUR, TIME_LIMIT_RISK, MAYBE_BROKEN }
 
 /**
  * 추천 엔진의 최종 답. 세 가지 경우 중 정확히 하나가 나온다.
@@ -280,5 +335,5 @@ sealed interface RecommendationResult {
 /** 음성 안내의 우선순위. HIGH는 다른 안내를 끊고 먼저 말한다(예: 시간 제한 경고). */
 enum class Priority { LOW, NORMAL, HIGH }
 
-/** 운전자가 말로 할 수 있는 명령. 수락 / 다음 후보 / 충전 시작 / 출발 */
-enum class VoiceCommand { ACCEPT, NEXT_STOP, START_CHARGING, DEPART }
+/** 운전자가 말로 할 수 있는 명령. 수락 / 다음 후보 / 충전 시작 / 출발 / 배터리 예열 켜기 */
+enum class VoiceCommand { ACCEPT, NEXT_STOP, START_CHARGING, DEPART, PRECONDITION }

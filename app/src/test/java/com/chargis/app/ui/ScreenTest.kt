@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.chargis.app.domain.engine.station
 import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.OpenHours
@@ -104,9 +105,82 @@ class ScreenTest {
                 )
             }
         }
+        // 첫 화면에는 요약만 있고, [설정]을 누르면 설정 화면이 열린다.
+        compose.onNodeWithText("휴게소 밖 포함 · 차량 데이터 · 음성 명령 끔").assertIsDisplayed()
+        compose.onNodeWithText("설정").performClick()
         compose.onNodeWithText("충전소 범위").assertIsDisplayed()
         compose.onNodeWithText("휴게소·쉼터만").performClick()
         assertFalse(settings.includeNonRoadside)
+    }
+
+    /** 경유지 안내 중 배터리가 차가우면 예열을 권하고, [배터리 예열 켜기]를 누르면 알린다. */
+    @Test
+    fun navigatingCard_suggestsPreconditioning() {
+        var pressed = false
+        val card = DriveCard.Navigating(
+            stationName = "B 휴게소", distanceKm = 30.0, targetSoc = 55.0, arrivalSoc = 30.0, chargeMinutes = 21,
+            timeLimitMin = 40, coldExtraMinutes = 6, preconditioning = false, suggestPreconditioning = true
+        )
+        compose.setContent {
+            ChargisTheme(night = true) {
+                DriveCardScreen(card, "18:40", 120.0, TicketMeta("S4-1700", "17:00"), emptyList(), 0.4f, {}, {}, onPrecondition = { pressed = true })
+            }
+        }
+        compose.onNodeWithText("배터리 예열을 켜면 충전 약 6분 단축").assertIsDisplayed()
+        compose.onNodeWithText("배터리 예열 켜기").performClick()
+        assertEquals(true, pressed)
+    }
+
+    /** 휴게소 도착: 예상 요금을 100원 단위로 보여 주고, 배터리를 직접 넣는 중이면 고치는 버튼이 있다. */
+    @Test
+    fun arrived_showsCostAndManualCorrector() {
+        var delta = 0
+        val stop = StopInfo(
+            stationName = "B 휴게소", currentSoc = 37.0, targetSoc = 50.0, minutesToTarget = 9, timeLimitMin = 40,
+            minutesToLimit = 40, departAt = "10:27", costKrw = 3862, manualSoc = true
+        )
+        compose.setContent {
+            ChargisTheme(night = true) {
+                ParkedScreen(
+                    state = TripUiState(phase = com.chargis.app.domain.session.TripPhase.Arrived, stop = stop),
+                    onStartScenario = {}, onStartCharging = {}, onStopCharging = {}, onDepart = {}, onRestart = {},
+                    onCorrectSoc = { delta += it }
+                )
+            }
+        }
+        compose.onNodeWithText("예상 요금").assertIsDisplayed()
+        compose.onNodeWithText("3,900").assertIsDisplayed()
+        compose.onNodeWithText("−1").performClick()
+        compose.onNodeWithText("+5").performClick()
+        assertEquals(4, delta)
+        // [맞음]은 값을 바꾸지 않고 확인만 한다(0).
+        compose.onNodeWithText("맞음").performClick()
+        assertEquals(4, delta)
+    }
+
+    /** 설정: 목적지 도착 잔량과 배터리 값(직접 입력)을 고른다. */
+    @Test
+    fun settings_destinationReserveAndManualSoc() {
+        var settings = UserSettings(onboarded = true)
+        compose.setContent {
+            ChargisTheme(night = true) {
+                ParkedScreen(
+                    state = TripUiState(settings = settings),
+                    onStartScenario = {}, onStartCharging = {}, onStopCharging = {}, onDepart = {}, onRestart = {},
+                    onSettings = { transform -> settings = transform(settings) }
+                )
+            }
+        }
+        compose.onNodeWithText("설정").performClick()
+        // 설정 화면은 두 칸으로 나눠 1280×800에서 스크롤 없이 모두 보인다.
+        compose.onNodeWithText("30%").assertIsDisplayed().performClick()
+        compose.onNodeWithText("직접 입력").assertIsDisplayed().performClick()
+        assertEquals(30, settings.destinationSocPercent)
+        assertEquals(true, settings.manualSoc)
+        // [설정 완료]를 누르면 첫 화면으로 돌아가고 설정을 마친 것으로 기록한다.
+        compose.onNodeWithText("설정 완료").performClick()
+        assertEquals(true, settings.onboarded)
+        compose.onNodeWithText("설정").assertIsDisplayed()
     }
 
     // 글자 일부("왕복")가 들어간 노드가 하나라도 있는지

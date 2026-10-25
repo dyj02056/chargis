@@ -24,6 +24,10 @@
     <string name="tts_waypoint_switched">경유지를 바꿨습니다. %1$s 대신 %2$s. 목적지에 약 %3$d분 빨리 도착합니다.</string>
     <string name="tts_waypoint_switched_unreachable">%1$s까지 가기 어려워져 경유지를 바꿨습니다. 새 경유지는 %2$s.</string>
     <string name="tts_rule_unknown">이 충전기의 시간 제한 정보가 없습니다. 충전기 화면에서 확인해 주세요.</string>
+    <string name="tts_precondition_advice">배터리가 차가워 충전이 느립니다. 지금 배터리 예열을 켜면 충전이 약 %1$d분 빨라집니다.</string>
+    <string name="tts_precondition_started">배터리 예열을 켰습니다. 도착할 때까지 배터리를 데웁니다.</string>
+    <string name="tts_check_soc">계기판의 배터리 값을 확인해 주세요. 다르면 화면에서 고칠 수 있습니다.</string>
+    <string name="tts_precondition_manual">이 앱에서는 예열을 켤 수 없습니다. 차량 화면에서 배터리 예열을 켜 주세요.</string>
 
     <!-- 칸 이름 -->
     <string name="label_route">구간</string>
@@ -56,6 +60,7 @@
     <string name="unit_percent">%</string>
     <string name="unit_min">분</string>
     <string name="unit_kw">kW</string>
+    <string name="unit_won">원</string>
     <string name="value_none">없음</string>
     <string name="value_not_needed">필요 없음</string>
     <string name="unit_km_point">km 지점</string>
@@ -86,6 +91,9 @@
     <string name="wait_live">실시간</string>
     <string name="wait_forecast">예측</string>
     <string name="drive_navigating">%1$s로 안내 중</string>
+    <string name="drive_precondition_suggest">배터리 예열을 켜면 충전 약 %1$d분 단축</string>
+    <string name="drive_precondition_on">배터리 예열 중</string>
+    <string name="drive_precondition_button">배터리 예열 켜기</string>
     <string name="drive_no_safe_title">배터리 부족</string>
     <string name="drive_no_safe_sub">가장 가까운 충전소 %1$s · %2$d km</string>
     <string name="drive_no_safe_none">경로상 도달할 수 있는 충전소가 없습니다</string>
@@ -107,6 +115,8 @@
     <string name="meta_round_trip">왕복 %1$dkm 우회</string>
     <string name="meta_hours">%1$s~%2$s 운영</string>
     <string name="meta_parking_paid">주차 유료</string>
+    <string name="meta_broken">고장·점검 %1$d대</string>
+    <string name="meta_stale">%1$d일째 충전 기록 없음</string>
 
     <!-- 도장 -->
     <string name="stamp_waypoint">경유지 등록</string>
@@ -139,6 +149,16 @@
     <string name="curve_desc">충전 출력 곡선. 지금 %1$d퍼센트에서 약 %2$d킬로와트, 목표 %3$d퍼센트</string>
     <string name="taper_note">80%% 이후에는 충전이 크게 느려집니다</string>
     <string name="next_stop_note">다음 충전 · %1$s %2$d%%까지</string>
+    <string name="label_cost">예상 요금</string>
+    <string name="label_charge_cost">이번 요금</string>
+    <string name="cost_value">%1$s원</string>
+    <string name="cold_note">배터리가 차가워 충전이 평소보다 느립니다</string>
+    <string name="manual_soc_title">계기판과 같으면 [맞음], 다르면 고쳐 주세요</string>
+    <string name="manual_soc_ok">맞음</string>
+    <string name="manual_soc_ok_desc">계기판 배터리 값과 같다고 확인하기</string>
+    <string name="loading_trip">이전 여행을 불러오는 중입니다</string>
+    <string name="manual_soc_desc_minus">배터리 값을 %1$d퍼센트 낮추기</string>
+    <string name="manual_soc_desc_plus">배터리 값을 %1$d퍼센트 높이기</string>
     
 
     <!-- 정산 영수증 -->
@@ -162,6 +182,10 @@
     <string name="finished_saved_none">필요한 만큼만 충전했습니다</string>
     <string name="receipt_saved">아낀 시간</string>
     <string name="receipt_saved_value">%1$d분</string>
+    <string name="receipt_cost_total">충전 요금</string>
+    <string name="receipt_cost_partial">%1$s · 일부 정보 없음</string>
+    <string name="receipt_charge_cost_value">%1$s · %2$s원</string>
+    <string name="finished_cost">충전 요금</string>
 
     <!-- 설정(F5) -->
     <string name="settings_title">내 차 설정</string>
@@ -173,14 +197,25 @@
     <string name="settings_margin">안전 여유</string>
     <string name="settings_margin_hint">높일수록 넉넉하게 계산합니다</string>
     <string name="settings_voice">음성 명령</string>
-    <string name="settings_voice_hint">"수락", "다음", "충전 시작", "출발"이라고 말해 답합니다</string>
+    <string name="settings_voice_hint">"수락", "다음", "충전 시작", "출발", "예열"이라고 말해 답합니다</string>
     <string name="settings_stations">충전소 범위</string>
     <string name="settings_stations_hint">휴게소만 고르면 국도변·마트 같은 충전소는 추천하지 않습니다</string>
     <string name="settings_stations_all">휴게소 밖 포함</string>
     <string name="settings_stations_rest_only">휴게소·쉼터만</string>
+    <string name="settings_destination">목적지 도착 잔량</string>
+    <string name="settings_destination_hint">목적지에 충전기가 없으면 높여 두세요</string>
+    <string name="settings_soc_source">배터리 값</string>
+    <string name="settings_soc_source_hint">차량에서 받을 수 없으면 정차할 때 직접 고칩니다</string>
+    <string name="settings_soc_vehicle">차량 데이터</string>
+    <string name="settings_soc_manual">직접 입력</string>
     <string name="settings_on">켬</string>
     <string name="settings_off">끔</string>
     <string name="settings_done">설정 완료</string>
+    <string name="settings_summary_charge">충전 기준</string>
+    <string name="settings_summary_charge_value">상한 %1$d%% · 여유 %2$d%% · 도착 %3$d%%</string>
+    <string name="settings_summary_options">그 밖에</string>
+    <string name="settings_summary_voice_on">음성 명령 켬</string>
+    <string name="settings_summary_voice_off">음성 명령 끔</string>
     <string name="settings_edit">설정</string>
     <string name="voice_listening">듣는 중</string>
     <string name="voice_say">말하기: %1$s</string>
@@ -188,6 +223,7 @@
     <string name="voice_cmd_next">다음</string>
     <string name="voice_cmd_charge">충전 시작</string>
     <string name="voice_cmd_depart">출발</string>
+    <string name="voice_cmd_precondition">예열</string>
     <string name="voice_permission_denied">마이크 권한이 없어 음성 명령을 쓸 수 없습니다</string>
     <string name="energy_measured">실측 %1$dkm · 사양보다 %2$d%% 더 씀</string>
     <string name="energy_measured_less">실측 %1$dkm · 사양보다 %2$d%% 덜 씀</string>

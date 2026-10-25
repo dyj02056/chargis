@@ -1,7 +1,10 @@
 package com.chargis.app.sim
 
+import com.chargis.app.domain.engine.BatteryThermal
 import com.chargis.app.domain.engine.ChargeMath
+import com.chargis.app.domain.engine.ElevationModel
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.ElevationPoint
 import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.RecommendationConfig
 import com.chargis.app.domain.model.VehicleProfile
@@ -37,7 +40,11 @@ data class Scenario(
     val consumptionFactor: Double = 1.0,
     val start: GeoPoint,
     val destination: GeoPoint,
-    val stations: List<ChargingStation>
+    val stations: List<ChargingStation>,
+    /** 출발점 기준 경로 고도(km, m). 없으면 평지. 가상 차량은 오르막에서 배터리를 더 쓰고 내리막에서 되찾는다 */
+    val elevation: List<ElevationPoint>? = null,
+    /** 출발할 때 배터리 온도(°C). 없으면 바깥 기온과 같다고 본다(바깥에 세워 둔 차) */
+    val batteryTempC: Double? = null
 )
 
 /** 가상 차량의 상태: 출발 전 / 주행 중 / 충전소 정차 / 충전 중 / 도착 */
@@ -55,7 +62,9 @@ data class SimState(
     val waypointId: String? = null,        // 경유지로 등록된 충전소(도착하면 자동 정차)
     val stoppedAtId: String? = null,       // 지금 멈춰 있는 충전소
     val chargeTargetSoc: Double? = null,   // 충전 목표 %
-    val chargeEndsAtSec: Double? = null    // 충전기 시간 제한이 끊는 시각(없으면 null)
+    val chargeEndsAtSec: Double? = null,   // 충전기 시간 제한이 끊는 시각(없으면 null)
+    val batteryTempC: Double? = null,      // 배터리 온도(°C). 모르면 null(충전 속도 보정 없음)
+    val preconditioning: Boolean = false   // 배터리 예열 중인지(주행 중에만 켤 수 있다)
 ) {
     val isDriving: Boolean get() = phase == SimPhase.DRIVING
 }
@@ -126,6 +135,17 @@ class ScenarioSimulator(
         } else it
     }
 
+    /**
+     * 배터리 예열을 켜거나 끈다. 주행 중이고 배터리 온도를 알 때만 켤 수 있다(정차하면 저절로 꺼진다).
+     * 켜 두면 배터리가 데워지는 대신 히터가 배터리를 조금 쓴다([BatteryThermal.PRECONDITION_KW]).
+     */
+    fun setPreconditioning(on: Boolean): Boolean {
+        val s = _state.value
+        if (on && (s.phase != SimPhase.DRIVING || s.batteryTempC == null)) return false
+        _state.update { it.copy(preconditioning = on) }
+        return true
+    }
+
     // 충전을 멈추고 충전소 정차 상태로 돌아간다.
     fun stopCharging() = _state.update {
         if (it.phase == SimPhase.CHARGING) it.copy(phase = SimPhase.STOPPED_AT_STATION, chargeTargetSoc = null, chargeEndsAtSec = null) else it
@@ -146,6 +166,14 @@ class ScenarioSimulator(
     private fun detourOf(stationId: String?) = scenario.stations.firstOrNull { it.id == stationId }?.detourKm ?: 0.0
 
     private fun socPerKm() = ChargeMath.socPerKm(scenario.profile) * scenario.consumptionFactor
+
+    // 경로 [fromKm]~[toKm](출발점 기준)의 고도 변화로 쓰는(+)/되찾는(−) 배터리 %
+    private fun elevationSoc(fromKm: Double, toKm: Double) =
+        ElevationModel.socBetween(scenario.elevation, fromKm, toKm, scenario.profile)
+
+    // 배터리 온도를 반영한 차량 사양(차가우면 충전을 덜 받는다)
+    private fun chargingProfile(s: SimState) =
+        scenario.profile.withChargePowerFactor(BatteryThermal.chargePowerFactor(s.batteryTempC))
 
     /** 개발자 오버레이: 주행 중 [km]만큼 앞으로 건너뛴다(경유지/목적지 직전에서 멈춤). */
     fun jumpAhead(km: Double) {
@@ -196,23 +224,28 @@ class ScenarioSimulator(
         val stopKm = wpKm ?: scenario.totalDistanceKm
         val traveled = min(s.traveledKm + dKm, stopKm)
         val used = traveled - s.traveledKm
-        // 달린 거리만큼 배터리를 줄인다(0% 아래로는 내려가지 않음).
-        val soc = max(0.0, s.soc - used * socPerKm)
         // 도중에 멈췄다면 실제로 달린 비율만큼만 시간이 흐른 것으로 친다.
-        val time = s.simTimeSec + if (used < dKm && dKm > 0) dtSec * used / dKm else dtSec
+        val elapsed = if (used < dKm && dKm > 0) dtSec * used / dKm else dtSec
+        val time = s.simTimeSec + elapsed
+        // 달린 거리와 오르내린 높이만큼 배터리를 줄인다. 예열 중이면 히터가 쓰는 몫도 뺀다(0% 아래로는 내려가지 않음).
+        val heater = if (s.preconditioning) BatteryThermal.PRECONDITION_KW * elapsed / 3600.0 / scenario.profile.batteryKwh * 100.0 else 0.0
+        val soc = max(0.0, s.soc - used * socPerKm - elevationSoc(s.traveledKm, traveled) - heater)
+        val temp = s.batteryTempC?.let {
+            BatteryThermal.tempAfter(it, elapsed / 60.0, if (s.preconditioning) BatteryThermal.Mode.PRECONDITIONING else BatteryThermal.Mode.DRIVING)
+        }
         _state.value = when {
-            // 경유지에 닿으면 경로에서 충전소까지 빠지는 거리(편도)만큼 더 달린 뒤 정차한다.
+            // 경유지에 닿으면 경로에서 충전소까지 빠지는 거리(편도)만큼 더 달린 뒤 정차한다. 정차하면 예열은 꺼진다.
             wpKm != null && traveled >= wpKm -> detourOf(s.waypointId).let { out ->
                 s.copy(
                     phase = SimPhase.STOPPED_AT_STATION, traveledKm = traveled,
                     soc = max(0.0, soc - out * socPerKm), simTimeSec = time + out / scenario.speedKmh * 3600.0,
-                    stoppedAtId = s.waypointId, waypointId = null
+                    stoppedAtId = s.waypointId, waypointId = null, batteryTempC = temp, preconditioning = false
                 )
             }
             traveled >= scenario.totalDistanceKm -> s.copy(
-                phase = SimPhase.FINISHED, traveledKm = traveled, soc = soc, simTimeSec = time
+                phase = SimPhase.FINISHED, traveledKm = traveled, soc = soc, simTimeSec = time, batteryTempC = temp, preconditioning = false
             )
-            else -> s.copy(traveledKm = traveled, soc = soc, simTimeSec = time)
+            else -> s.copy(traveledKm = traveled, soc = soc, simTimeSec = time, batteryTempC = temp)
         }
     }
 
@@ -222,13 +255,15 @@ class ScenarioSimulator(
         val target = s.chargeTargetSoc ?: return
         // 시간 제한이 이번 진행 중에 끝나면 딱 그 시각까지만 충전한다.
         val step = s.chargeEndsAtSec?.let { minOf(dtSec, it - s.simTimeSec) } ?: dtSec
-        val soc = ChargeMath.socAfterMinutes(s.soc, step / 60.0, station.maxKw, scenario.profile, config)
+        val soc = ChargeMath.socAfterMinutes(s.soc, step / 60.0, station.maxKw, chargingProfile(s), config)
         val now = s.simTimeSec + step
         val cutOff = s.chargeEndsAtSec != null && now >= s.chargeEndsAtSec
+        // 충전하면 배터리가 스스로 데워진다.
+        val temp = s.batteryTempC?.let { BatteryThermal.tempAfter(it, step / 60.0, BatteryThermal.Mode.CHARGING) }
         _state.value = when {
-            soc >= target -> s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = target, simTimeSec = now, chargeTargetSoc = null, chargeEndsAtSec = null)
-            cutOff -> s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = soc, simTimeSec = now, chargeTargetSoc = null, chargeEndsAtSec = null)
-            else -> s.copy(soc = soc, simTimeSec = now)
+            soc >= target -> s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = target, simTimeSec = now, chargeTargetSoc = null, chargeEndsAtSec = null, batteryTempC = temp)
+            cutOff -> s.copy(phase = SimPhase.STOPPED_AT_STATION, soc = soc, simTimeSec = now, chargeTargetSoc = null, chargeEndsAtSec = null, batteryTempC = temp)
+            else -> s.copy(soc = soc, simTimeSec = now, batteryTempC = temp)
         }
     }
 
@@ -236,7 +271,7 @@ class ScenarioSimulator(
     fun chargePowerKw(s: SimState = _state.value): Double? {
         if (s.phase != SimPhase.CHARGING) return null
         val station = scenario.stations.firstOrNull { it.id == s.stoppedAtId } ?: return null
-        return ChargeMath.powerKw(s.soc, station.maxKw, scenario.profile, config)
+        return ChargeMath.powerKw(s.soc, station.maxKw, chargingProfile(s), config)
     }
 
     /** 충전 중 목표 %를 바꾼다(F2). 지금보다 높아야 한다. */
@@ -265,7 +300,8 @@ class ScenarioSimulator(
         soc = sc.startSoc,
         simTimeSec = 0.0,
         speedMultiplier = speed,
-        paused = false
+        paused = false,
+        batteryTempC = sc.batteryTempC ?: sc.outsideTempC
     )
 
     private companion object {

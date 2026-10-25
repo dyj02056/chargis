@@ -2,11 +2,11 @@ package com.chargis.app.data.publicapi
 
 import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.ConnectorType
 import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.OpenHours
 import com.chargis.app.domain.model.RouteState
 import com.chargis.app.domain.model.StationKind
-import com.chargis.app.domain.model.StationLiveStatus
 import com.chargis.app.port.ChargerDataPort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -67,11 +67,12 @@ data class ChargerItem(
     val useTime: String? = null,  // 이용 가능 시간. 예) "24시간 이용가능", "09:00~22:00"
     val parkingFree: String? = null, // 주차료 무료 여부 "Y"/"N"
     val note: String? = null,     // 충전소 안내
-    val busiId: String? = null    // 운영기관 아이디. 시간 제한 규칙표(charger_rules.json)를 찾을 때 쓴다
+    val busiId: String? = null,   // 운영기관 아이디. 시간 제한 규칙표(charger_rules.json)를 찾을 때 쓴다
+    val lastTedt: String? = null  // 마지막 충전 종료 시각 "yyyyMMddHHmmss". 오래됐으면 고장일 수 있다
 )
 
 /** 충전기 상태 한 줄(getChargerStatus). */
-data class ChargerStatus(val statId: String, val chgerId: String, val stat: Int?, val nowTsdt: String?)
+data class ChargerStatus(val statId: String, val chgerId: String, val stat: Int?, val nowTsdt: String?, val lastTedt: String? = null)
 
 /** API 응답(JSON)을 [ChargerItem] 목록으로 바꾼다. 순수 함수라 테스트에서 저장해 둔 응답으로 확인한다. */
 object EvChargerParser {
@@ -100,13 +101,17 @@ object EvChargerParser {
             useTime = o.str("useTime"),
             parkingFree = o.str("parkingFree"),
             note = o.str("note"),
-            busiId = o.str("busiId")
+            busiId = o.str("busiId"),
+            lastTedt = o.str("lastTedt")?.takeIf { it.isNotBlank() }
         )
     }
 
     fun parseStatus(body: String): List<ChargerStatus> = items(body).mapNotNull { o ->
         val statId = o.str("statId") ?: return@mapNotNull null
-        ChargerStatus(statId, o.str("chgerId") ?: "", o.num("stat")?.toInt(), o.str("nowTsdt")?.takeIf { it.isNotBlank() })
+        ChargerStatus(
+            statId, o.str("chgerId") ?: "", o.num("stat")?.toInt(),
+            o.str("nowTsdt")?.takeIf { it.isNotBlank() }, o.str("lastTedt")?.takeIf { it.isNotBlank() }
+        )
     }
 
     /** 결과 코드가 정상("00")이 아니면 오류로 본다. */
@@ -146,26 +151,36 @@ data class PublicStation(
     val note: String?,
     val openHours: OpenHours? = null,
     val parkingFree: Boolean? = null,
-    val operatorId: String? = null
+    val operatorId: String? = null,
+    val connectors: Set<ConnectorType>? = null,
+    val brokenChargers: Int? = null,
+    val hoursSinceLastCharge: Double? = null
 )
 
 /**
- * 운영기관·시설 종류별 충전 시간 제한 규칙표(assets/charger_rules.json).
- * 공공데이터에는 시간 제한 항목이 없어서, 확인한 규칙을 이 표에 출처와 함께 적어 둔다.
- * 위에서부터 처음 맞는 규칙을 쓴다. operatorId·kind가 비어 있으면 모든 값에 맞는다.
- * 표에도 없으면 시간 제한은 "정보 없음"이 된다(제한 없음이 아니다).
+ * 운영기관·시설 종류별 충전 시간 제한·요금 규칙표(assets/charger_rules.json).
+ * 공공데이터에는 시간 제한과 요금 항목이 없어서, 확인한 규칙을 이 표에 출처와 함께 적어 둔다.
+ * 위에서부터 그 값(시간 제한 또는 요금)이 있는 규칙 중 처음 맞는 것을 쓴다. operatorId·kind가 비어 있으면 모든 값에 맞는다.
+ * 표에도 없으면 시간 제한·요금은 "정보 없음"이 된다(제한 없음, 무료가 아니다).
  */
 class ChargerRuleTable(private val rules: List<Rule>) {
     @Serializable
     data class Rule(
         val operatorId: String? = null,
         val kind: StationKind? = null,
-        val timeLimitMin: Int,
+        val timeLimitMin: Int? = null,
+        val pricePerKwh: Double? = null, // 급속 충전 요금(원/kWh, 회원가 기준으로 적는다)
         val source: String            // 이 규칙을 어디서 확인했는지(문서·안내문). 비워 두지 않는다
     )
 
     fun timeLimitFor(operatorId: String?, kind: StationKind): Int? =
-        rules.firstOrNull { (it.operatorId == null || it.operatorId == operatorId) && (it.kind == null || it.kind == kind) }?.timeLimitMin
+        rules.firstOrNull { it.timeLimitMin != null && matches(it, operatorId, kind) }?.timeLimitMin
+
+    fun priceFor(operatorId: String?, kind: StationKind): Double? =
+        rules.firstOrNull { it.pricePerKwh != null && matches(it, operatorId, kind) }?.pricePerKwh
+
+    private fun matches(rule: Rule, operatorId: String?, kind: StationKind) =
+        (rule.operatorId == null || rule.operatorId == operatorId) && (rule.kind == null || rule.kind == kind)
 
     companion object {
         val EMPTY = ChargerRuleTable(emptyList())
@@ -222,20 +237,47 @@ object StationKinds {
     }
 }
 
+/** 충전기 타입 코드(chgerType) → 충전구 종류. 08~10은 새로 생긴 코드라 실제 응답으로 확인이 필요하다(docs/OPEN_ISSUES.md). */
+object ConnectorCodes {
+    fun of(chgerType: String?): Set<ConnectorType>? = when (chgerType?.trim()) {
+        "01" -> setOf(ConnectorType.CHADEMO)
+        "03" -> setOf(ConnectorType.CHADEMO, ConnectorType.AC3)
+        "04", "08" -> setOf(ConnectorType.DC_COMBO)
+        "05" -> setOf(ConnectorType.CHADEMO, ConnectorType.DC_COMBO)
+        "06" -> setOf(ConnectorType.CHADEMO, ConnectorType.AC3, ConnectorType.DC_COMBO)
+        "07" -> setOf(ConnectorType.AC3)
+        "09" -> setOf(ConnectorType.NACS)
+        "10" -> setOf(ConnectorType.DC_COMBO, ConnectorType.NACS)
+        else -> null   // "02"(AC 완속)은 따로 빼고, 모르는 코드는 미상
+    }
+}
+
 /** 충전기들을 충전소 단위로 묶는다. 누구나 쓸 수 있는 급속 충전기만 남긴다. */
 object StationAggregator {
 
-    fun aggregate(items: List<ChargerItem>, statuses: List<ChargerStatus>, now: LocalDateTime): List<PublicStation> {
+    /**
+     * [connectors]를 주면 그 충전구를 쓸 수 있는 충전기만 센다(타입을 모르는 충전기는 남긴다).
+     * 예) DC콤보 차에게 차데모 전용 충전기는 빈 대수에도, 출력에도 넣지 않는다.
+     */
+    fun aggregate(
+        items: List<ChargerItem>,
+        statuses: List<ChargerStatus>,
+        now: LocalDateTime,
+        connectors: Set<ConnectorType>? = null
+    ): List<PublicStation> {
         // 상태 API 값이 있으면 목록 API의 상태보다 최신이므로 덮어쓴다.
         val latest = statuses.associateBy { it.statId to it.chgerId }
         return items
-            .filter { isFast(it) && StationKinds.isOpenFacility(it) && !isUserRestricted(it) }
-            .map { item -> latest[item.statId to item.chgerId]?.let { s -> item.copy(stat = s.stat, nowTsdt = s.nowTsdt) } ?: item }
+            .filter { isFast(it) && StationKinds.isOpenFacility(it) && !isUserRestricted(it) && fits(it, connectors) }
+            .map { item ->
+                latest[item.statId to item.chgerId]?.let { s -> item.copy(stat = s.stat, nowTsdt = s.nowTsdt, lastTedt = s.lastTedt ?: item.lastTedt) } ?: item
+            }
             .groupBy { it.statId }
             .map { (id, chargers) ->
                 val known = chargers.filter { it.stat != null && it.stat != STAT_UNKNOWN && it.stat != STAT_COMM_ERROR }
                 val available = known.count { it.stat == STAT_READY }
-                val usable = chargers.count { it.stat != STAT_STOPPED && it.stat != STAT_MAINTENANCE }
+                val broken = chargers.count { it.stat == STAT_STOPPED || it.stat == STAT_MAINTENANCE }
+                val usable = chargers.size - broken
                 val first = chargers.first()
                 PublicStation(
                     id = id,
@@ -250,9 +292,30 @@ object StationAggregator {
                     note = chargers.firstNotNullOfOrNull { it.limitDetail?.takeIf { d -> d.isNotBlank() } },
                     openHours = chargers.firstNotNullOfOrNull { OpenHours.parse(it.useTime) },
                     parkingFree = first.parkingFree?.let { if (it == "Y") true else if (it == "N") false else null },
-                    operatorId = first.busiId
+                    operatorId = first.busiId,
+                    connectors = chargers.mapNotNull { ConnectorCodes.of(it.chgerType) }.takeIf { it.isNotEmpty() }?.flatten()?.toSet(),
+                    brokenChargers = broken,
+                    hoursSinceLastCharge = hoursSinceLastCharge(chargers, now)
                 )
             }
+    }
+
+    /**
+     * 마지막으로 충전이 끝난 뒤 몇 시간 지났는지(충전소 안 충전기 중 가장 최근). 지금 충전 중인 충전기가 있으면 0.
+     * 시각을 하나도 모르면 null. 오랫동안 아무도 충전하지 못했다면 고장이 의심된다(엔진이 순위를 낮춘다).
+     */
+    fun hoursSinceLastCharge(chargers: List<ChargerItem>, now: LocalDateTime): Double? {
+        if (chargers.any { it.stat == STAT_CHARGING }) return 0.0
+        val ends = chargers.mapNotNull { c -> c.lastTedt?.let { runCatching { LocalDateTime.parse(it, TS) }.getOrNull() } }
+        val latest = ends.maxOrNull() ?: return null
+        return java.time.Duration.between(latest, now).toMinutes().coerceAtLeast(0) / 60.0
+    }
+
+    // 차의 충전구와 맞는지. 차 또는 충전기 타입을 모르면 맞는다고 본다.
+    private fun fits(c: ChargerItem, connectors: Set<ConnectorType>?): Boolean {
+        val mine = connectors ?: return true
+        val theirs = ConnectorCodes.of(c.chgerType) ?: return true
+        return mine.any { it in theirs }
     }
 
     /**
@@ -410,12 +473,13 @@ class PublicChargerData(
     private val info = mutableMapOf<String, Cached<List<ChargerItem>>>()
     private val status = mutableMapOf<String, Cached<List<ChargerStatus>>>()
     private var lastZones: List<String> = emptyList()
+    private var lastConnectors: Set<ConnectorType>? = null
     private var lastStations: List<PublicStation> = emptyList()
 
     private class Cached<T>(val value: T, val at: Long)
 
-    override suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation> {
-        val stations = load(zcodes ?: SidoCodes.along(route))
+    override suspend fun stationsAlongRoute(route: RouteState, connectors: Set<ConnectorType>?): List<ChargingStation> {
+        val stations = load(zcodes ?: SidoCodes.along(route), connectors)
         return stations.mapNotNull { st ->
             // 반대 방향 휴게소("(서울방향)" 등)는 본선에서 들어갈 수 없으므로 뺀다.
             if (st.kind.isRoadside && RestStopDirection.isOpposite(st.name, st.location, route)) return@mapNotNull null
@@ -437,24 +501,23 @@ class PublicChargerData(
                     ChargerRule(timeLimitMin = limit, amountLimitKrw = null, note = st.note, timeLimitKnown = limit != null)
                 },
                 openHours = st.openHours,
-                parkingFree = st.parkingFree
+                parkingFree = st.parkingFree,
+                connectors = st.connectors,
+                // 요금: 공공데이터에 없어 규칙표에서만 찾는다. 없으면 "정보 없음"
+                pricePerKwh = rules.priceFor(st.operatorId, st.kind),
+                brokenChargers = st.brokenChargers,
+                hoursSinceLastCharge = st.hoursSinceLastCharge
             )
         }.sortedBy { it.distanceAlongRouteKm }
-    }
-
-    // 실시간 상태는 마지막으로 경로를 받았던 시도들에서 찾는다.
-    override fun liveStatus(stationId: String): Flow<StationLiveStatus?> = flow {
-        val st = load(zcodes ?: lastZones).firstOrNull { it.id == stationId }
-        emit(st?.let { StationLiveStatus(it.id, it.availableChargers, it.expectedWaitMin) })
     }
 
     /**
      * [zones] 시도의 충전소. 시도마다 캐시가 살아 있으면 그대로, 만료됐으면 그 시도만 다시 받는다.
      * 상태만 실패하면 목록 API의 상태로 버틴다. 아무것도 새로 받지 않았고 시도도 같으면 지난 결과를 그대로 쓴다.
      */
-    private suspend fun load(zones: List<String>): List<PublicStation> = mutex.withLock {
+    private suspend fun load(zones: List<String>, connectors: Set<ConnectorType>?): List<PublicStation> = mutex.withLock {
         val now = nowMillis()
-        var changed = zones != lastZones
+        var changed = zones != lastZones || connectors != lastConnectors
         val items = zones.flatMap { z ->
             info[z]?.takeIf { now - it.at < infoTtlMs }?.value
                 ?: fetch(z, "getChargerInfo", EvChargerParser::parseInfo).also { info[z] = Cached(it, now); changed = true }
@@ -466,7 +529,8 @@ class PublicChargerData(
         }
         if (changed) {
             lastZones = zones
-            lastStations = StationAggregator.aggregate(items, statuses, nowLocal())
+            lastConnectors = connectors
+            lastStations = StationAggregator.aggregate(items, statuses, nowLocal(), connectors)
         }
         lastStations
     }
@@ -487,16 +551,11 @@ class FallbackChargerData(
     private val fallback: ChargerDataPort,
     private val onFallback: (Throwable?) -> Unit = {}
 ) : ChargerDataPort {
-    override suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation> {
-        val result = runCatching { primary.stationsAlongRoute(route) }
+    override suspend fun stationsAlongRoute(route: RouteState, connectors: Set<ConnectorType>?): List<ChargingStation> {
+        val result = runCatching { primary.stationsAlongRoute(route, connectors) }
         val list = result.getOrNull()
         if (list != null && list.isNotEmpty()) return list
         onFallback(result.exceptionOrNull())
-        return fallback.stationsAlongRoute(route)
-    }
-
-    override fun liveStatus(stationId: String): Flow<StationLiveStatus?> = flow {
-        val live = runCatching { var v: StationLiveStatus? = null; primary.liveStatus(stationId).collect { v = it }; v }.getOrNull()
-        if (live != null) emit(live) else fallback.liveStatus(stationId).collect { emit(it) }
+        return fallback.stationsAlongRoute(route, connectors)
     }
 }

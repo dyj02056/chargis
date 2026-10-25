@@ -133,6 +133,7 @@ private fun voiceWord(command: String): String = stringResource(
         "ACCEPT" -> R.string.voice_cmd_accept
         "NEXT_STOP" -> R.string.voice_cmd_next
         "START_CHARGING" -> R.string.voice_cmd_charge
+        "PRECONDITION" -> R.string.voice_cmd_precondition
         else -> R.string.voice_cmd_depart
     }
 )
@@ -165,13 +166,14 @@ fun reasonLabels(rec: Recommendation, max: Int = 2): List<String> =
             ReasonCode.MAX_POWER -> R.string.reason_max_power
             ReasonCode.LOW_WAIT -> R.string.reason_low_wait
             ReasonCode.ENOUGH_CHARGERS -> R.string.reason_enough
-            ReasonCode.NO_DETOUR, ReasonCode.TIME_LIMIT_RISK -> null
+            // 고장 의심은 추천 이유가 아니라 주의 사항이라 충전소 설명 줄(stationMeta)에 적는다.
+            ReasonCode.NO_DETOUR, ReasonCode.TIME_LIMIT_RISK, ReasonCode.MAYBE_BROKEN -> null
         }
     }.take(max).map { stringResource(it) }
 
 /**
- * 충전소 이름 아래에 붙이는 한 줄. 예) "상업시설 · 왕복 5km 우회 · 10:00~22:00 운영 · 주차 유료"
- * 본선의 고속도로 휴게소는 설명할 것이 없어 null(지금까지의 화면 그대로).
+ * 충전소 이름 아래에 붙이는 한 줄. 예) "상업시설 · 왕복 5km 우회 · 10:00~22:00 운영 · 주차 유료 · 고장·점검 1대"
+ * 본선의 고속도로 휴게소는 고장·점검 소식이 없으면 설명할 것이 없어 null(지금까지의 화면 그대로).
  */
 @Composable
 fun stationMeta(station: ChargingStation): String? {
@@ -189,12 +191,20 @@ fun stationMeta(station: ChargingStation): String? {
             add(stringResource(R.string.meta_hours, clock(it.openMin), clock(it.closeMin)))
         }
         if (station.parkingFree == false) add(stringResource(R.string.meta_parking_paid))
+        station.brokenChargers?.takeIf { it > 0 }?.let { add(stringResource(R.string.meta_broken, it)) }
+        station.hoursSinceLastCharge?.takeIf { it >= staleHours(station.kind) }?.let { add(stringResource(R.string.meta_stale, (it / 24).toInt())) }
     }
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
-// 엔진이 "경로를 벗어난다"고 보는 편도 우회 거리와 같은 기준
+// 엔진이 "경로를 벗어난다"고 보는 편도 우회 거리, "고장 의심"으로 보는 무충전 시간과 같은 기준
 private val OFF_ROUTE_KM = RecommendationConfig().offRouteKm
+private val STALE_CONFIG = RecommendationConfig()
+private fun staleHours(kind: StationKind) =
+    if (kind == StationKind.HIGHWAY_REST_STOP || kind == StationKind.COMMERCIAL) STALE_CONFIG.staleChargeHours else STALE_CONFIG.staleChargeHoursQuiet
+
+/** 요금 표시: 100원 단위로 반올림하고 천 단위 쉼표. 예) 3,780 → "3,800" */
+fun wonText(krw: Int): String = "%,d".format(((krw + 50) / 100) * 100)
 
 // 0시부터 분 → "09:30"
 private fun clock(minuteOfDay: Int) = "%02d:%02d".format(minuteOfDay / 60 % 24, minuteOfDay % 60)

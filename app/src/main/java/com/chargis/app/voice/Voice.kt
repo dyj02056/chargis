@@ -39,6 +39,14 @@ interface VoicePhrases {
     fun waypointSwitchedUnreachable(fromName: String, toName: String): String
     /** 충전을 시작했는데 이 충전기의 시간 제한 정보가 없을 때. */
     fun ruleUnknown(): String
+    /** 배터리가 차가워 충전이 늦어질 때 예열을 권한다. [savedMin]은 예열로 줄일 수 있는 충전 시간(분). */
+    fun preconditionAdvice(savedMin: Int): String
+    /** 차량에 예열을 켰을 때. */
+    fun preconditionStarted(): String
+    /** 앱에서 예열을 켤 수 없을 때(차량에서 직접 켜야 함). */
+    fun preconditionManual(): String
+    /** 배터리를 직접 넣는 중일 때 충전소에 도착하면 계기판 값을 확인해 달라고 한다. */
+    fun checkSoc(): String
 }
 
 /** strings.xml에서 문구를 꺼내 숫자·이름을 끼워 넣는 실제 구현체. */
@@ -71,6 +79,10 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
     override fun waypointSwitchedUnreachable(fromName: String, toName: String) =
         s(R.string.tts_waypoint_switched_unreachable, fromName, toName)
     override fun ruleUnknown() = s(R.string.tts_rule_unknown)
+    override fun preconditionAdvice(savedMin: Int) = s(R.string.tts_precondition_advice, savedMin)
+    override fun preconditionStarted() = s(R.string.tts_precondition_started)
+    override fun preconditionManual() = s(R.string.tts_precondition_manual)
+    override fun checkSoc() = s(R.string.tts_check_soc)
 
     // strings.xml의 문구 [id]에 [args]를 차례로 끼워 넣는다. 예) "%1$s를 추천합니다" → "B 휴게소를 추천합니다"
     private fun s(id: Int, vararg args: Any) = context.getString(id, *args)

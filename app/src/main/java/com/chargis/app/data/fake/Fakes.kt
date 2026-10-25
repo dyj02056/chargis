@@ -2,16 +2,16 @@ package com.chargis.app.data.fake
 
 import android.util.Log
 import com.chargis.app.domain.engine.ChargeMath
+import com.chargis.app.domain.engine.ElevationModel
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.ConnectorType
 import com.chargis.app.domain.model.DataSource
 import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.Priority
 import com.chargis.app.domain.model.RouteState
-import com.chargis.app.domain.model.StationLiveStatus
 import com.chargis.app.domain.model.UserSettings
 import com.chargis.app.domain.model.VehicleState
 import com.chargis.app.port.ChargerDataPort
-import com.chargis.app.port.LocationPort
 import com.chargis.app.port.NaviPort
 import com.chargis.app.port.SettingsStore
 import com.chargis.app.port.TripStore
@@ -42,7 +42,8 @@ class FakeNavi(private val sim: ScenarioSimulator) : NaviPort {
             current = sim.positionAt(s.traveledKm),
             destination = sc.destination,
             remainingDistanceKm = remaining,
-            remainingTimeMin = (remaining / sc.speedKmh * 60).toInt()
+            remainingTimeMin = (remaining / sc.speedKmh * 60).toInt(),
+            elevation = ElevationModel.ahead(sc.elevation, s.traveledKm)
         )
     }
 
@@ -71,11 +72,18 @@ class FakeVehicle(private val sim: ScenarioSimulator) : VehiclePort {
             source = DataSource.SIMULATED,
             outsideTempC = sim.scenario.outsideTempC,
             chargePowerKw = sim.chargePowerKw(s),
-            odometerKm = s.traveledKm
+            odometerKm = s.traveledKm,
+            batteryTempC = s.batteryTempC,
+            preconditioning = s.preconditioning
         )
     }
 
     override suspend fun isSupported(): Boolean = true
+
+    // 데모: 시뮬레이터 차량의 배터리 예열을 켠다(주행 중이고 배터리 온도를 알 때만 된다).
+    override suspend fun requestPreconditioning(on: Boolean): Result<Unit> =
+        if (sim.setPreconditioning(on)) Result.success(Unit)
+        else Result.failure(IllegalStateException("preconditioning unavailable"))
 }
 
 /**
@@ -83,25 +91,14 @@ class FakeVehicle(private val sim: ScenarioSimulator) : VehiclePort {
  * 예) 출발점에서 120km 지점 충전소, 지금 80km 달림 → "40km 앞". 이미 지나친 곳은 뺀다.
  */
 class FakeChargerData(private val sim: ScenarioSimulator) : ChargerDataPort {
-    override suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation> {
+    // 충전구 종류는 충전소마다 적혀 있어 엔진이 거른다([connectors]는 공공데이터처럼 충전기 단위로 셀 때만 쓴다).
+    override suspend fun stationsAlongRoute(route: RouteState, connectors: Set<ConnectorType>?): List<ChargingStation> {
         val sc = sim.scenario
         val traveled = sc.totalDistanceKm - route.remainingDistanceKm
         return sc.stations
             .map { it.copy(distanceAlongRouteKm = it.distanceAlongRouteKm - traveled) }
             .filter { it.distanceAlongRouteKm > 0 }
     }
-
-    // 실시간 혼잡도 대신 시나리오 파일에 적힌 고정값을 한 번 내보낸다.
-    override fun liveStatus(stationId: String): Flow<StationLiveStatus?> {
-        val s = sim.scenario.stations.firstOrNull { it.id == stationId } ?: return flowOf(null)
-        return flowOf(StationLiveStatus(s.id, s.availableChargers, s.expectedWaitMin))
-    }
-}
-
-/** 가짜 GPS. 위치가 실제로 바뀔 때만 새 값을 내보낸다(distinctUntilChanged). */
-class FakeLocation(private val sim: ScenarioSimulator) : LocationPort {
-    override val location: Flow<GeoPoint> =
-        sim.state.map { sim.positionAt(it.traveledKm) }.distinctUntilChanged()
 }
 
 /** 화면 자막 + 로그. [delegate]가 있으면(기본 TextToSpeech) 실제 발화도 맡긴다. */

@@ -6,6 +6,7 @@ import com.chargis.app.domain.model.VehicleProfile
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * plan.md §7.1, §7.2-4의 충전 수식. 추천 엔진과 충전 세션 트래커가 함께 쓴다.
@@ -31,11 +32,25 @@ object ChargeMath {
 
     /**
      * [distanceKm]를 안전하게 가려면 출발할 때 몇 %가 있어야 하는지.
-     * 실제 소모량에 안전 마진(15%)을 더 얹고, 도착 시 최소 잔량(10%)을 남기도록 계산한다.
+     * 실제 소모량에 안전 마진(15%)을 더 얹고, 도착 시 남길 잔량([reservePercent], 기본 10%)을 더한다.
      * 예) 100km → 26% × 1.15 + 10 ≈ 39.7%
      */
-    fun requiredSoc(distanceKm: Double, profile: VehicleProfile, config: RecommendationConfig): Double =
-        distanceKm * socPerKm(profile) * (1 + config.safetyMargin) + config.minArrivalSocPercent
+    fun requiredSoc(
+        distanceKm: Double,
+        profile: VehicleProfile,
+        config: RecommendationConfig,
+        reservePercent: Double = config.minArrivalSocPercent
+    ): Double = distanceKm * socPerKm(profile) * (1 + config.safetyMargin) + reservePercent
+
+    /**
+     * [fromSoc] → [toSoc] 충전 요금(원). 충전기에서 나간 전력(배터리에 들어간 양 × 충전 손실)에 단가를 곱한다.
+     * 예) 77.4kWh 배터리 37% → 50%: 10.1kWh × 1.08 × 347원 ≈ 3,780원. 단가를 모르면 null.
+     */
+    fun chargeCostKrw(fromSoc: Double, toSoc: Double, profile: VehicleProfile, pricePerKwh: Double?, config: RecommendationConfig): Int? {
+        val price = pricePerKwh ?: return null
+        if (toSoc <= fromSoc) return 0
+        return (kwhOf(toSoc - fromSoc, profile) * config.chargeLossFactor * price).roundToInt()
+    }
 
     /**
      * [value]를 [step] 단위로 올림한다. 예) 39.7을 5 단위로 → 40

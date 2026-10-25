@@ -6,6 +6,7 @@ import com.chargis.app.data.publicapi.RestStopDirection
 import com.chargis.app.data.publicapi.SidoCodes
 import com.chargis.app.data.publicapi.UrlEvChargerHttp
 import com.chargis.app.data.publicapi.ChargerStatus
+import com.chargis.app.data.publicapi.ConnectorCodes
 import com.chargis.app.data.publicapi.EvChargerParser
 import com.chargis.app.data.publicapi.FallbackChargerData
 import com.chargis.app.data.publicapi.PublicChargerData
@@ -14,11 +15,11 @@ import com.chargis.app.data.publicapi.StationAggregator
 import com.chargis.app.data.publicapi.StationKinds
 import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.ConnectorType
 import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.OpenHours
 import com.chargis.app.domain.model.RouteState
 import com.chargis.app.domain.model.StationKind
-import com.chargis.app.domain.model.StationLiveStatus
 import com.chargis.app.port.ChargerDataPort
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -242,13 +243,82 @@ class PublicChargerDataTest {
         assertFalse(proxied.contains("serviceKey"))
     }
 
+    // 충전기 한 대(가상). 나머지 값은 공용 고속도로 휴게소 급속 충전기로 둔다.
+    private fun charger(id: String, type: String?, stat: Int? = 2, lastTedt: String? = null, kw: Double = 100.0) = ChargerItem(
+        statId = "PX9", chgerId = id, statNm = "X 휴게소", lat = 37.7, lng = 127.6, chgerType = type, outputKw = kw,
+        stat = stat, nowTsdt = null, limitYn = "N", limitDetail = null, kind = "C0", kindDetail = "C001", lastTedt = lastTedt
+    )
+
+    @Test
+    fun connectorCodes_mapChargerTypes() {
+        assertEquals(setOf(ConnectorType.CHADEMO), ConnectorCodes.of("01"))
+        assertEquals(setOf(ConnectorType.DC_COMBO), ConnectorCodes.of("04"))
+        assertEquals(setOf(ConnectorType.CHADEMO, ConnectorType.AC3, ConnectorType.DC_COMBO), ConnectorCodes.of("06"))
+        assertNull(ConnectorCodes.of("02"))
+        assertNull(ConnectorCodes.of(null))
+    }
+
+    /** DC콤보 차에게는 차데모 전용 충전기를 빈 대수·출력에 넣지 않는다. 타입을 모르는 충전기는 남긴다. */
+    @Test
+    fun aggregate_countsOnlyChargersTheCarCanUse() {
+        val items = listOf(
+            charger("1", "01", stat = 2, kw = 200.0),   // 차데모 전용, 비어 있음
+            charger("2", "04", stat = 3),               // DC콤보, 충전 중
+            charger("3", null, stat = 2)                // 타입 미상, 비어 있음
+        )
+        val combo = StationAggregator.aggregate(items, emptyList(), now, setOf(ConnectorType.DC_COMBO)).single()
+        assertEquals(2, combo.totalChargers)
+        assertEquals(1, combo.availableChargers)
+        assertEquals(100.0, combo.maxKw, 1e-9)
+        assertEquals(setOf(ConnectorType.DC_COMBO), combo.connectors)
+        val any = StationAggregator.aggregate(items, emptyList(), now).single()
+        assertEquals(3, any.totalChargers)
+        assertEquals(setOf(ConnectorType.CHADEMO, ConnectorType.DC_COMBO), any.connectors)
+    }
+
+    /** 고장·점검 중인 충전기 수와, 마지막 충전이 끝난 뒤 지난 시간을 센다. 충전 중인 충전기가 있으면 0시간. */
+    @Test
+    fun aggregate_reportsBrokenChargersAndLastCharge() {
+        val idle = StationAggregator.aggregate(
+            listOf(charger("1", "04", stat = 4), charger("2", "04", stat = 2, lastTedt = "20261022102000")), emptyList(), now
+        ).single()
+        assertEquals(1, idle.brokenChargers)
+        assertEquals(1, idle.totalChargers)
+        assertEquals(72.0, idle.hoursSinceLastCharge!!, 1e-9)
+        val busy = StationAggregator.aggregate(listOf(charger("1", "04", stat = 3, lastTedt = "20261001000000")), emptyList(), now).single()
+        assertEquals(0.0, busy.hoursSinceLastCharge!!, 1e-9)
+        // 상태 API의 마지막 충전 시각이 목록보다 최신이면 그것을 쓴다.
+        val updated = StationAggregator.aggregate(
+            listOf(charger("1", "04", lastTedt = "20261001000000")),
+            listOf(ChargerStatus("PX9", "1", 2, null, "20261025092000")), now
+        ).single()
+        assertEquals(1.0, updated.hoursSinceLastCharge!!, 1e-9)
+        assertNull(StationAggregator.aggregate(listOf(charger("1", "04")), emptyList(), now).single().hoursSinceLastCharge)
+    }
+
+    /** 규칙표의 요금은 운영기관·시설 종류로 찾는다. 시간 제한만 적힌 규칙은 요금을 주지 않는다. */
+    @Test
+    fun ruleTable_findsPriceSeparatelyFromTimeLimit() {
+        val table = ChargerRuleTable.parse(
+            """{"rules":[
+              {"operatorId":"ME","timeLimitMin":40,"source":"t"},
+              {"operatorId":"ME","pricePerKwh":347.2,"source":"t"},
+              {"kind":"COMMERCIAL","pricePerKwh":385,"source":"t"}
+            ]}"""
+        )
+        assertEquals(40, table.timeLimitFor("ME", StationKind.HIGHWAY_REST_STOP))
+        assertEquals(347.2, table.priceFor("ME", StationKind.HIGHWAY_REST_STOP)!!, 1e-9)
+        assertEquals(385.0, table.priceFor("XX", StationKind.COMMERCIAL)!!, 1e-9)
+        assertNull(table.priceFor("XX", StationKind.HIGHWAY_REST_STOP))
+        assertNull(table.timeLimitFor("XX", StationKind.COMMERCIAL))
+    }
+
     @Test
     fun fallback_usesSampleWhenPrimaryFails() = runTest {
         val sample = object : ChargerDataPort {
-            override suspend fun stationsAlongRoute(route: RouteState) = listOf(
+            override suspend fun stationsAlongRoute(route: RouteState, connectors: Set<ConnectorType>?) = listOf(
                 ChargingStation("s", "샘플", GeoPoint(0.0, 0.0), StationKind.HIGHWAY_REST_STOP, 10.0, 0.0, 50.0, 2, null, null, ChargerRule(null, null))
             )
-            override fun liveStatus(stationId: String): Flow<StationLiveStatus?> = flowOf(null)
         }
         val broken = PublicChargerData(http = { _, _ -> error("offline") }, zcodes = listOf("11"))
         var fellBack = false

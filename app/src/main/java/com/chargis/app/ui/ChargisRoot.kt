@@ -70,7 +70,9 @@ fun ChargisRoot(controller: TripController) {
                 // weight(1f): 머리 줄과 자막 줄을 뺀 나머지 공간을 모두 차지한다.
                 Box(Modifier.weight(1f).padding(horizontal = 24.dp).padding(bottom = 16.dp)) {
                     // 운전 중에는 꼭 필요한 정보만, 멈춰 있을 때는 자세한 정보를 보여 준다(운전자 안전).
-                    if (state.isDriving) {
+                    if (state.loading) {
+                        LoadingTicket()
+                    } else if (state.isDriving) {
                         DriveCardScreen(
                             card = state.card,
                             eta = state.eta,
@@ -80,7 +82,8 @@ fun ChargisRoot(controller: TripController) {
                             progress = state.progress,
                             onAccept = controller::accept,
                             onDecline = controller::decline,
-                            energy = state.energy
+                            energy = state.energy,
+                            onPrecondition = controller::startPreconditioning
                         )
                     } else {
                         ParkedScreen(
@@ -91,7 +94,8 @@ fun ChargisRoot(controller: TripController) {
                             onDepart = controller::depart,
                             onRestart = controller::restart,
                             onAdjustTarget = controller::adjustTarget,
-                            onSettings = controller::updateSettings
+                            onSettings = controller::updateSettings,
+                            onCorrectSoc = controller::correctSoc
                         )
                     }
                 }
@@ -105,6 +109,17 @@ fun ChargisRoot(controller: TripController) {
             if (BuildConfig.DEV_OVERLAY) {
                 DevOverlay(state.dev, controller, Modifier.align(Alignment.TopEnd).padding(top = 64.dp, end = 32.dp))
             }
+        }
+    }
+}
+
+/** 저장해 둔 여행을 불러오는 동안 보여 주는 빈 표. 발권 화면이 잠깐 보였다가 바뀌지 않게 한다. */
+@Composable
+private fun LoadingTicket() {
+    val c = Ticket.colors
+    com.chargis.app.ui.ticket.TicketStock(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.loading_trip), style = MaterialTheme.typography.titleLarge, color = c.inkMuted)
         }
     }
 }

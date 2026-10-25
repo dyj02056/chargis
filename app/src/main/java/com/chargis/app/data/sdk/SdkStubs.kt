@@ -30,4 +30,6 @@ class SdkNavi : NaviPort {
 class SdkVehicle : VehiclePort {
     override val vehicleState: Flow<VehicleState> = emptyFlow()
     override suspend fun isSupported(): Boolean = false
+    override suspend fun requestPreconditioning(on: Boolean): Result<Unit> =
+        Result.failure(UnsupportedOperationException("TODO(SDK): 배터리 컨디셔닝 제어(제공 여부 확인 필요)"))
 }

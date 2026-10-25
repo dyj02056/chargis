@@ -2,8 +2,6 @@ package com.chargis.app.ui
 
 import com.chargis.app.domain.engine.AnnouncementGate
 import com.chargis.app.domain.engine.ChargeMath
-import com.chargis.app.domain.engine.ConsumptionCalibrator
-import com.chargis.app.domain.engine.ConsumptionModel
 import com.chargis.app.domain.engine.RecommendationEngine
 import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.Priority
@@ -87,7 +85,7 @@ class TripController(
     private val gate = AnnouncementGate(config.announceWithinKm, config.switchMinutesGap)
     private val presenter = TripPresenter()
     private val m = TripMemory()
-    private val calibrator = ConsumptionCalibrator()
+    private val readout = VehicleReadout(m) { demo.scenario.profile }   // 거리·고도·전비 보정·배터리 직접 입력
     private var settings = UserSettings()
 
     // 화면 상태. _state(밑줄)는 이 클래스 안에서만 고칠 수 있고, 바깥(화면)에는 읽기 전용 state로 보여 준다.
@@ -113,7 +111,13 @@ class TripController(
         scope.launch {
             // 설정과 저장해 둔 여행을 먼저 불러온 뒤에 시계와 데이터 구독을 시작한다.
             settingsStore?.let { store -> launch { store.settings.collect(::applySettings) } }
-            restoreSaved()
+            readout.socSupported = runCatching { vehicle.isSupported() }.getOrDefault(false)
+            // 저장해 둔 여행을 다 불러올 때까지는 발권 화면 대신 빈 표를 보여 준다(그사이 발권 화면이 잠깐 보이지 않게).
+            try {
+                restoreSaved()
+            } finally {
+                _state.update { it.copy(loading = false) }
+            }
             // 데모 시계를 돌린다(가상의 차가 움직이기 시작).
             if (runClock) launch { demo.run() }
             // 경로나 차량 값 중 하나라도 바뀌면 둘을 묶어 onTick을 부른다.
@@ -150,6 +154,7 @@ class TripController(
         demo.load(scenarios.first { it.id == id })
         selectedProfile()?.let(demo::useProfile)
         resetTrip()
+        readout.anchorAtStart(demo.scenario.startSoc)
         demo.start()
         transition(TripEvent.DestinationSet)
     }
@@ -159,6 +164,7 @@ class TripController(
         demo.load(scenarios.firstOrNull { it.id == demo.scenario.id } ?: demo.scenario)
         selectedProfile()?.let(demo::useProfile)
         resetTrip()
+        readout.anchorAtStart(demo.scenario.startSoc)
         publish()
     }
 
@@ -177,6 +183,7 @@ class TripController(
                     if (rec.station.id != current.primary.station.id) gate.markDeclined(current.primary.station.id)
                     gate.markAnnounced(rec.station.id)
                     m.accepted = rec
+                    m.preconditionAdvised = false
                     m.offer = null
                     transition(TripEvent.Accepted)
                     announcer.announce(phrases.waypointAdded(rec.station.name))
@@ -198,6 +205,7 @@ class TripController(
         val rec = m.accepted ?: return
         if (m.phase != TripPhase.Arrived) return
         val soc = m.lastVehicle?.socPercent ?: return
+        readout.flushPending()
         // 이미 목표 이상이면 충전할 필요 없이 바로 완료 처리한다.
         if (rec.targetSocPercent <= soc) {
             transition(TripEvent.ChargingStarted)
@@ -272,12 +280,44 @@ class TripController(
     /** [출발]. 충전 관련 기록을 비우고 다시 주행 단계로 돌아간다. */
     fun depart() {
         val charged = m.phase == TripPhase.Done
+        readout.flushPending()
         demo.depart()
         transition(TripEvent.Depart)
         m.accepted = null
         m.charge = null
         m.endedByLimit = false
+        m.preconditionAdvised = false
         if (charged) scope.launch { announcer.announce(phrases.resume()) }
+    }
+
+    /**
+     * 주행 중 [배터리 예열 켜기]. 차량에 예열을 요청하고 결과를 음성으로 알린다.
+     * 차량이 받아 주지 않으면(SDK 미지원 등) 차량 화면에서 직접 켜 달라고 안내한다.
+     */
+    fun startPreconditioning() {
+        if (m.phase != TripPhase.NavigatingToCharger) return
+        scope.launch {
+            vehicle.requestPreconditioning(true)
+                .onSuccess { announcer.announce(phrases.preconditionStarted()) }
+                .onFailure { announcer.announce(phrases.preconditionManual()) }
+            updateListening()
+        }
+    }
+
+    /**
+     * 배터리 %를 직접 넣는 중일 때, 정차 화면에서 계기판 값에 맞춰 [deltaPercent]만큼 고친다(±1, ±5).
+     * 0이면 "계기판과 같음": 지금 값을 확인한 것으로 기록한다. 고치거나 확인한 값이 새 기준점이 되고,
+     * 다시 움직이거나 충전을 시작할 때 전비 실측에도 들어간다(확인할수록 추정이 정확해진다).
+     */
+    fun correctSoc(deltaPercent: Int) {
+        if (!readout.manualMode || m.phase !in TripPresenter.STOP_PHASES) return
+        val current = m.lastVehicle?.socPercent ?: return
+        val next = (current.roundToInt() + deltaPercent).coerceIn(0, 100).toDouble()
+        readout.correct(next, demo.state.value.simTimeSec, m.phase == TripPhase.Charging)
+        m.lastVehicle = m.lastVehicle?.copy(socPercent = next)
+        m.lastEval = null
+        publish()
+        saveNow()
     }
 
     /** F5: 설정을 바꾼다. 저장소가 있으면 거기에 쓰고, 바뀐 값은 구독으로 돌아와 반영된다. */
@@ -301,6 +341,7 @@ class TripController(
             VoiceCommand.NEXT_STOP -> decline()
             VoiceCommand.START_CHARGING -> startCharging()
             VoiceCommand.DEPART -> if (m.phase == TripPhase.Arrived || m.phase == TripPhase.Done) depart()
+            VoiceCommand.PRECONDITION -> startPreconditioning()
         }
     }
 
@@ -324,13 +365,15 @@ class TripController(
      * - NavigatingToCharger: 차가 멈추면 도착 처리, 아니면 더 나은 곳이 생겼는지 확인
      * - Charging: 남은 시간 계산, 알림 발송, 충전 종료 판단
      */
-    private suspend fun onTick(route: RouteState?, vehicleState: VehicleState) {
+    private suspend fun onTick(route: RouteState?, raw: VehicleState) {
+        val charger = if (m.phase == TripPhase.Charging) readout.chargerFor(m.accepted, m.charge?.targetSoc, raw, config) else null
+        val tracking = m.phase != TripPhase.Idle && m.phase != TripPhase.Finished
+        val vehicleState = readout.read(route, raw, demo.state.value.simTimeSec, tracking, charger)
         m.lastVehicle = vehicleState
         if (route == null) {
             publish()
             return
         }
-        trackOdometer(route, vehicleState)
         m.lastRoute = route
 
         when (m.phase) {
@@ -368,8 +411,16 @@ class TripController(
                 // 차가 멈췄다 = 충전소에 도착했다고 본다.
                 if (!vehicleState.isDriving) {
                     transition(TripEvent.ArrivedAtStop)
+                    // 배터리를 직접 넣는 중이면 도착할 때마다 계기판 값을 확인해 달라고 한다(확인할수록 추정이 정확해진다).
+                    if (readout.manualMode) announcer.announce(phrases.checkSoc())
                 } else {
                     keepOrSwitchAccepted(route, vehicleState)
+                    val acc = m.accepted
+                    if (acc != null && PreconditionAdvisor.shouldAdvise(acc, vehicleState, route, demo.scenario.profile, m.preconditionAdvised, config.defaultSpeedKmh)) {
+                        m.preconditionAdvised = true
+                        announcer.announce(phrases.preconditionAdvice(acc.coldExtraMinutes))
+                        updateListening()   // "예열"이라고 말해 켤 수 있게 한다
+                    }
                 }
             }
             TripPhase.Charging -> {
@@ -389,35 +440,13 @@ class TripController(
                 }
             }
             TripPhase.Resuming -> transition(TripEvent.ResumeComplete)
-            TripPhase.Idle, TripPhase.Arrived, TripPhase.Done, TripPhase.Finished -> Unit
+            // 앱을 다시 켜 정차 화면에서 이어 가면 비교 표가 비어 있다. 한 번만 앞으로의 충전소를 다시 계산한다.
+            TripPhase.Arrived, TripPhase.Done -> if (m.lastResult == null) evaluate(route, vehicleState)
+            TripPhase.Idle, TripPhase.Finished -> Unit
         }
         publish()
         // 진행 상황은 몇 초에 한 번만 저장한다(단계가 바뀔 때는 transition에서 바로 저장).
         if (++ticksSinceSave >= SAVE_EVERY_TICKS) saveNow()
-    }
-
-    /**
-     * B3: 달린 거리와 배터리를 보정기에 넣는다.
-     * 차량이 주는 누적 주행거리를 쓰면 거리와 배터리가 같은 순간의 값이라 짝이 어긋나지 않는다.
-     * 차량이 주행거리를 주지 않을 때만 경로의 남은 거리가 줄어든 만큼 달렸다고 본다
-     * (이때는 경로와 배터리가 따로 도착하므로, 보정기가 어긋난 짝을 걸러 낸다).
-     */
-    private fun trackOdometer(route: RouteState, v: VehicleState) {
-        val prev = m.lastRoute
-        val odo = v.odometerKm
-        if (odo != null) {
-            m.odometerKm = odo
-        } else if (prev != null && v.isDriving) {
-            m.odometerKm += max(0.0, prev.remainingDistanceKm - route.remainingDistanceKm)
-        }
-        if (m.phase != TripPhase.Idle && m.phase != TripPhase.Finished) calibrator.onSample(m.odometerKm, v.socPercent)
-    }
-
-    /** 지금 소비 배율: 기온·속도로 어림한 값(사전)에서 시작해, 달릴수록 실측 쪽으로 옮겨 간다(B3). */
-    private fun consumptionFactor(route: RouteState?, v: VehicleState?): Double {
-        val speed = route?.remainingTimeMin?.takeIf { it > 0 }?.let { route.remainingDistanceKm / (it / 60.0) }
-        val prior = ConsumptionModel.priorFactor(v?.outsideTempC, speed)
-        return calibrator.factor(ChargeMath.socPerKm(demo.scenario.profile), prior)
     }
 
     /**
@@ -435,10 +464,13 @@ class TripController(
             m.stations = last.stations.map { it.ahead(moved) }.filter { it.distanceAlongRouteKm > 0 }
             return last.result.ahead(moved).also { m.lastResult = it }
         }
-        m.stations = chargerData.stationsAlongRoute(route).filter { it.id !in gate.declinedIds }
+        m.stations = chargerData.stationsAlongRoute(route, demo.scenario.profile.connectors).filter { it.id !in gate.declinedIds }
         val context = RecommendContext(
             minuteOfDay = TripPresenter.Clock(demo.scenario.startHour).minuteOfDay(now),
-            consumptionFactor = consumptionFactor(route, v)
+            consumptionFactor = readout.consumptionFactor(route, v),
+            // 배터리 온도를 모르면 바깥 기온으로 어림한다(바깥에 세워 둔 차라고 본다).
+            batteryTempC = v.batteryTempC ?: v.outsideTempC,
+            preconditioning = v.preconditioning == true
         )
         val result = engine.recommend(route, v, m.stations, demo.scenario.profile, context)
         m.lastEval = EvalPoint(route.remainingDistanceKm, now, gate.declinedIds.size, m.stations, result)
@@ -526,7 +558,13 @@ class TripController(
                 navi.addWaypoint(acc.station)
             }
         } else {
-            m.accepted = acc.withDistanceFrom(m.stations)
+            // 같은 충전소·같은 목표의 새 계산이 있으면 충전 시간만 새 값으로 바꾼다(예열을 켜면 줄어든다).
+            val fresh = (result as? RecommendationResult.Recommended)
+                ?.let { r -> (listOf(r.primary) + r.alternatives).firstOrNull { it.station.id == acc.station.id } }
+                ?.takeIf { it.targetSocPercent == acc.targetSocPercent }
+            m.accepted = acc.withDistanceFrom(m.stations).let { a ->
+                if (fresh == null) a else a.copy(chargeMinutes = fresh.chargeMinutes, coldExtraMinutes = fresh.coldExtraMinutes)
+            }
         }
     }
 
@@ -540,7 +578,7 @@ class TripController(
 
     private fun newSession(rec: Recommendation, target: Double, startSec: Double, fromSoc: Double, fired: Set<AlertType> = emptySet()) =
         ChargeSession(
-            profile = demo.scenario.profile,
+            profile = readout.chargeProfile(m.lastVehicle),
             config = config,
             stationMaxKw = rec.station.maxKw,
             targetSoc = target,
@@ -559,17 +597,20 @@ class TripController(
         val session = m.charge
         val from = session?.fromSoc ?: return
         val sim = demo.state.value
+        // 직접 입력 중이면 차량 값 대신 앱이 보여 준 값(추정 또는 운전자가 고친 값)을 남긴다.
+        val to = if (readout.manualMode) m.lastVehicle?.socPercent ?: sim.soc else sim.soc
         val minutes = ceil((sim.simTimeSec - session.startSec) / 60.0 - 1e-9).toInt()
-        val habit = max(HABIT_TARGET, sim.soc)
-        val baseline = ceil(ChargeMath.chargeMinutes(from, habit, rec.station.maxKw, demo.scenario.profile, config) - 1e-9).toInt()
+        val habit = max(HABIT_TARGET, to)
+        val baseline = ceil(ChargeMath.chargeMinutes(from, habit, rec.station.maxKw, readout.chargeProfile(m.lastVehicle), config) - 1e-9).toInt()
         m.charges += rec.station.id to ChargeRecord(
             stationName = rec.station.name,
             fromSoc = from,
-            toSoc = sim.soc,
+            toSoc = to,
             minutes = minutes,
             endedByLimit = m.endedByLimit,
             // 제한으로 끊긴 충전은 "80%까지"도 같은 제한에 걸리므로 비교하지 않는다.
-            baselineMinutes = if (m.endedByLimit) minutes else max(minutes, baseline)
+            baselineMinutes = if (m.endedByLimit) minutes else max(minutes, baseline),
+            costKrw = ChargeMath.chargeCostKrw(from, to, demo.scenario.profile, rec.station.pricePerKwh, config)
         )
     }
 
@@ -591,7 +632,7 @@ class TripController(
     private fun resetTrip() {
         m.reset()
         m.lastRoute = null
-        calibrator.reset()
+        readout.reset()
         gate.reset()
         announcer.reset()
         updateListening()
@@ -601,10 +642,10 @@ class TripController(
     /** 지금까지 계산한 모든 값을 화면용 상태([TripUiState]) 하나로 묶어 내보낸다. 화면은 이것만 보고 다시 그린다. */
     private fun publish() {
         val energy = m.lastRoute?.let {
-            EnergyInfo(consumptionFactor(it, m.lastVehicle), calibrator.observedKm)
+            EnergyInfo(readout.consumptionFactor(it, m.lastVehicle), readout.observedKm)
         }
         _state.update {
-            presenter.present(it, m, demo.state.value, demo.scenario, gate.declinedIds, config, energy)
+            presenter.present(it, m, demo.state.value, demo.scenario, gate.declinedIds, config, energy, readout.manualMode)
         }
     }
 
@@ -618,6 +659,8 @@ class TripController(
         config = next.applyTo(baseConfig)
         engine = RecommendationEngine(config)
         m.lastEval = null   // 기준이 바뀌었으니 다음 틱에 새로 계산한다
+        readout.manualSetting = next.manualSoc
+        if (!readout.manualMode) readout.forgetManual()   // 직접 입력을 끄면 다음에 켤 때 그때 차량 값에서 새로 시작한다
         if (m.phase == TripPhase.Idle) selectedProfile()?.let(demo::useProfile)
         _state.update { it.copy(settings = next) }
         updateListening()
@@ -629,6 +672,9 @@ class TripController(
     /** 지금 단계에서 말할 수 있는 명령. 없으면 듣지 않는다. */
     private fun allowedCommands(): Set<VoiceCommand> = when (m.phase) {
         TripPhase.AwaitingDecision -> setOf(VoiceCommand.ACCEPT, VoiceCommand.NEXT_STOP)
+        // 예열을 권한 뒤 아직 꺼져 있으면 "예열"이라고 말해 켤 수 있다(주행 중 버튼을 누르지 않아도 되게).
+        TripPhase.NavigatingToCharger ->
+            if (m.preconditionAdvised && m.lastVehicle?.preconditioning != true) setOf(VoiceCommand.PRECONDITION) else emptySet()
         TripPhase.Arrived -> setOf(VoiceCommand.START_CHARGING, VoiceCommand.DEPART)
         TripPhase.Done -> setOf(VoiceCommand.DEPART)
         else -> emptySet()
@@ -678,7 +724,10 @@ class TripController(
             arrivedAtSec = m.arrivedAtSec,
             endedByLimit = m.endedByLimit,
             charge = m.charge?.let { SavedChargeSession(it.targetSoc, it.startSec, it.fromSoc, it.firedAlerts.toList()) },
-            odometerKm = m.odometerKm
+            odometerKm = m.odometerKm,
+            elevationSoc = m.elevationSoc,
+            preconditionAdvised = m.preconditionAdvised,
+            manualSoc = if (readout.manualMode) m.lastVehicle?.socPercent else null
         )
     }
 
@@ -701,6 +750,9 @@ class TripController(
         m.arrivedAtSec = saved.arrivedAtSec
         m.endedByLimit = saved.endedByLimit
         m.odometerKm = saved.odometerKm
+        m.elevationSoc = saved.elevationSoc
+        m.preconditionAdvised = saved.preconditionAdvised
+        saved.manualSoc?.let { readout.restore(it, saved.sim.simTimeSec, saved.phase == TripPhase.Charging) }
         saved.charges.forEach { m.charges += it.toRecord() }
         gate.restore(saved.handled, saved.declined)
         // 수락한 충전소는 시나리오 목록에서 다시 찾아, 지금 위치 기준 거리로 바꿔 넣는다.

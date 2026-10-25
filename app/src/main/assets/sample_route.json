@@ -1,5 +1,5 @@
 {
-  "note": "가상 경로/좌표. S1 기본, S2 명절 혼잡, S3 충전기 시간 제한, S4 겨울 저녁(실제 전비가 사양보다 나쁨), S5 휴게소 밖 충전(휴게소·쉼터가 붐벼 경로 밖 마트를 추천). consumptionFactor는 시뮬레이터 차량의 실제 소비 배율(앱은 모름).",
+  "note": "가상 경로/좌표. S1 기본, S2 명절 혼잡, S3 충전기 시간 제한, S4 겨울 저녁(실제 전비가 사양보다 나쁨), S5 휴게소 밖 충전(휴게소·쉼터가 붐벼 경로 밖 마트를 추천), S6 산길(높은 고개를 넘는 경로. elevation은 출발점 기준 km별 해발 m). consumptionFactor는 시뮬레이터 차량의 실제 소비 배율(앱은 모름).",
   "scenarios": [
     {
       "id": "S1",
@@ -76,6 +76,24 @@
       "destination": { "lat": 38.20, "lon": 128.59 },
       "stationIds": ["rest_g", "shelter_h", "mart_i", "local_j"],
       "stationOverrides": []
+    },
+    {
+      "id": "S6",
+      "title": "S6 산길 · 서울→강릉(가상)",
+      "seed": 6,
+      "profileId": "default",
+      "totalDistanceKm": 220.0,
+      "startSoc": 55.0,
+      "speedKmh": 100.0,
+      "startHour": 13,
+      "start": { "lat": 37.55, "lon": 127.05 },
+      "destination": { "lat": 37.75, "lon": 128.90 },
+      "stationIds": ["rest_k", "rest_l"],
+      "stationOverrides": [],
+      "elevation": [
+        { "km": 0, "m": 40 }, { "km": 60, "m": 120 }, { "km": 120, "m": 300 },
+        { "km": 160, "m": 600 }, { "km": 185, "m": 780 }, { "km": 200, "m": 300 }, { "km": 220, "m": 20 }
+      ]
     }
   ]
 }

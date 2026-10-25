@@ -81,7 +81,8 @@ fun DriveCardScreen(
     onAccept: (String) -> Unit,
     onDecline: () -> Unit,
     modifier: Modifier = Modifier,
-    energy: EnergyInfo? = null
+    energy: EnergyInfo? = null,
+    onPrecondition: () -> Unit = {}
 ) {
     val reduce = rememberReduceMotion()
     TicketStock(modifier.fillMaxSize(), perforationX = StubWidth) {
@@ -107,7 +108,7 @@ fun DriveCardScreen(
                     when (target) {
                         is DriveCard.Recommend -> RecommendStub(target, onAccept, onDecline)
                         is DriveCard.Congested -> CongestedStub(target, onAccept)
-                        is DriveCard.Navigating -> NavigatingStub(target, routeMarks, progress)
+                        is DriveCard.Navigating -> NavigatingStub(target, routeMarks, progress, onPrecondition)
                         is DriveCard.Status -> StatusStub(target, eta, remainingKm, routeMarks, progress, energy)
                         is DriveCard.NoSafeStop -> NoSafeStub(target, routeMarks, progress)
                     }
@@ -363,9 +364,12 @@ private fun ChoiceColumn(rec: Recommendation, eta: String, emphasize: Boolean, o
     }
 }
 
-/** 수락한 충전소로 가는 중 카드 (04-navigating.png). 남은 거리와 "경유지 등록" 도장, 아래에 경로 띠. */
+/**
+ * 수락한 충전소로 가는 중 카드 (04-navigating.png). 남은 거리와 "경유지 등록" 도장, 아래에 경로 띠.
+ * 배터리가 차가워 충전이 늦어질 때는 도착 30분 전부터 예열을 권하고 [배터리 예열 켜기] 버튼 하나를 띄운다.
+ */
 @Composable
-private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<RouteMark>, progress: Float) {
+private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<RouteMark>, progress: Float, onPrecondition: () -> Unit) {
     val c = Ticket.colors
     val min = stringResource(R.string.unit_min)
     Row(Modifier.weight(1f).fillMaxWidth()) {
@@ -388,6 +392,14 @@ private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<R
                 { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Stamp(stringResource(R.string.stamp_waypoint)) } }
             )
             HairlineH()
+            when {
+                card.preconditioning == true -> InfoLine(stringResource(R.string.drive_precondition_on))
+                card.suggestPreconditioning -> {
+                    InfoLine(stringResource(R.string.drive_precondition_suggest, card.coldExtraMinutes))
+                    Spacer(Modifier.weight(1f))
+                    TicketButton(stringResource(R.string.drive_precondition_button), onPrecondition, Modifier.fillMaxWidth(), primary = false, minHeight = 88.dp)
+                }
+            }
         }
     }
     Spacer(Modifier.height(20.dp))

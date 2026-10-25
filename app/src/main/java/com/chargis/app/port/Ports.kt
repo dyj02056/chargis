@@ -1,10 +1,9 @@
 package com.chargis.app.port
 
 import com.chargis.app.domain.model.ChargingStation
-import com.chargis.app.domain.model.GeoPoint
+import com.chargis.app.domain.model.ConnectorType
 import com.chargis.app.domain.model.Priority
 import com.chargis.app.domain.model.RouteState
-import com.chargis.app.domain.model.StationLiveStatus
 import com.chargis.app.domain.model.UserSettings
 import com.chargis.app.domain.model.VehicleState
 import com.chargis.app.domain.model.VoiceCommand
@@ -32,15 +31,21 @@ interface NaviPort {
 
 /** 차량 연결. 배터리 %와 주행/정차 상태를 읽는다. */
 interface VehiclePort {
-    val vehicleState: Flow<VehicleState>        // SDK 불가 시 Manual 구현체가 사용자 입력값을 방출
+    val vehicleState: Flow<VehicleState>        // SoC를 못 받으면 앱이 운전자 입력으로 추정한다(ManualSocEstimator)
     suspend fun isSupported(): Boolean          // SoC 수신 가능 여부
+
+    /** 배터리 예열(컨디셔닝)을 켜거나 끈다. 차량이 지원하지 않거나 SDK에 기능이 없으면 실패를 돌려준다. */
+    suspend fun requestPreconditioning(on: Boolean): Result<Unit> =
+        Result.failure(UnsupportedOperationException("preconditioning not supported"))
 }
 
-/** 충전소 정보 연결. 경로 위 충전소 목록과 실시간 혼잡도를 준다. */
+/** 충전소 정보 연결. 경로 위 충전소 목록을 준다(빈 대수·대기 같은 실시간 상황도 목록에 담겨 온다). */
 interface ChargerDataPort {
-    // 경로 정보를 받아 "경로상 충전소" 후보 반환 (distanceAlongRoute 포함)
-    suspend fun stationsAlongRoute(route: RouteState): List<ChargingStation>
-    fun liveStatus(stationId: String): Flow<StationLiveStatus?>   // 불가 시 empty flow
+    /**
+     * 경로 정보를 받아 "경로상 충전소" 후보 반환 (distanceAlongRoute 포함).
+     * [connectors]를 주면 그 충전구를 쓸 수 있는 충전기만 세어 빈 대수·출력을 정한다(null = 거르지 않음).
+     */
+    suspend fun stationsAlongRoute(route: RouteState, connectors: Set<ConnectorType>? = null): List<ChargingStation>
 }
 
 /** 음성 출력(TTS = Text To Speech, 글자를 소리로 읽어 줌). */
@@ -51,11 +56,6 @@ interface TtsPort {
 /** 음성 인식(STT = Speech To Text, 말을 글자로 바꿈). [allowed]에 있는 명령만 알아듣는다. */
 interface SttPort {
     fun listenForCommand(allowed: Set<VoiceCommand>): Flow<VoiceCommand>
-}
-
-/** 현재 위치(GPS). */
-interface LocationPort {
-    val location: Flow<GeoPoint>
 }
 
 /** 운전자 설정 저장소(F5). 값이 바뀌면 [settings]로 새 값이 흘러나온다. */

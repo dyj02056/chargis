@@ -2,6 +2,8 @@ package com.chargis.app.data.asset
 
 import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.ConnectorType
+import com.chargis.app.domain.model.ElevationPoint
 import com.chargis.app.domain.model.CurvePoint
 import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.OpenHours
@@ -50,7 +52,8 @@ class AssetCatalog(
             base.copy(
                 availableChargers = o?.availableChargers ?: base.availableChargers,
                 expectedWaitMin = o?.expectedWaitMin ?: base.expectedWaitMin,
-                waitByHour = o?.waitByHour ?: base.waitByHour
+                waitByHour = o?.waitByHour ?: base.waitByHour,
+                hoursSinceLastCharge = o?.hoursSinceLastCharge ?: base.hoursSinceLastCharge
             ).toDomain()
         }.sortedBy { it.distanceAlongRouteKm }
         return Scenario(
@@ -66,7 +69,9 @@ class AssetCatalog(
             consumptionFactor = consumptionFactor,
             start = start.toDomain(),
             destination = destination.toDomain(),
-            stations = stations
+            stations = stations,
+            elevation = elevation?.map { ElevationPoint(it.km, it.m) }?.sortedBy { it.distanceKm },
+            batteryTempC = batteryTempC
         )
     }
 
@@ -89,11 +94,17 @@ private data class ProfileDto(
     val batteryKwh: Double,
     val efficiencyKmPerKwh: Double,
     val maxChargeKw: Double,
-    val chargeCurve: List<CurvePointDto>? = null
+    val chargeCurve: List<CurvePointDto>? = null,
+    val connectors: List<String>? = listOf("DC_COMBO"),  // ConnectorType 이름. null이면 미상
+    val supportsPreconditioning: Boolean = true,
+    val massKg: Double = 2100.0
 ) {
     fun toDomain() = VehicleProfile(
         id, displayName, batteryKwh, efficiencyKmPerKwh, maxChargeKw,
-        chargeCurve = chargeCurve?.map { CurvePoint(it.soc, it.kw) }?.sortedBy { it.socPercent }
+        chargeCurve = chargeCurve?.map { CurvePoint(it.soc, it.kw) }?.sortedBy { it.socPercent },
+        connectors = connectors?.map { ConnectorType.valueOf(it) }?.toSet(),
+        supportsPreconditioning = supportsPreconditioning,
+        massKg = massKg
     )
 }
 
@@ -120,7 +131,11 @@ private data class StationDto(
     val amountLimitKrw: Int? = null,
     val waitByHour: List<Int>? = null,
     val useTime: String? = null,         // 이용 가능 시간. 예) "09:00~22:00". 없으면 미상
-    val parkingFree: Boolean? = null
+    val parkingFree: Boolean? = null,
+    val connectors: List<String>? = null, // 충전구 종류(ConnectorType 이름). 없으면 미상
+    val pricePerKwh: Double? = null,      // 요금(원/kWh). 없으면 미상
+    val brokenChargers: Int? = null,      // 고장·점검 중인 충전기 수
+    val hoursSinceLastCharge: Double? = null // 마지막 충전이 끝난 뒤 지난 시간
 ) {
     /** distanceAlongRouteKm에는 경로 출발점 기준 거리(routeKm)를 담는다. 현재 위치 기준 변환은 FakeChargerData가 한다. */
     fun toDomain() = ChargingStation(
@@ -137,7 +152,11 @@ private data class StationDto(
         rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = amountLimitKrw),
         waitByHour = waitByHour?.takeIf { it.size == 24 },
         openHours = OpenHours.parse(useTime),
-        parkingFree = parkingFree
+        parkingFree = parkingFree,
+        connectors = connectors?.map { ConnectorType.valueOf(it) }?.toSet(),
+        pricePerKwh = pricePerKwh,
+        brokenChargers = brokenChargers,
+        hoursSinceLastCharge = hoursSinceLastCharge
     )
 }
 
@@ -159,8 +178,13 @@ private data class ScenarioDto(
     val start: PointDto,
     val destination: PointDto,
     val stationIds: List<String>,
-    val stationOverrides: List<OverrideDto> = emptyList()
+    val stationOverrides: List<OverrideDto> = emptyList(),
+    val elevation: List<ElevationDto>? = null,   // 출발점 기준 고도(km, m)
+    val batteryTempC: Double? = null
 )
+
+@Serializable
+private data class ElevationDto(val km: Double, val m: Double)
 
 @Serializable
 private data class PointDto(val lat: Double, val lon: Double) {
@@ -172,5 +196,6 @@ private data class OverrideDto(
     val id: String,
     val availableChargers: Int? = null,
     val expectedWaitMin: Int? = null,
-    val waitByHour: List<Int>? = null
+    val waitByHour: List<Int>? = null,
+    val hoursSinceLastCharge: Double? = null
 )

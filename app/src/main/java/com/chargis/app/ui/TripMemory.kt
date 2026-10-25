@@ -2,6 +2,7 @@ package com.chargis.app.ui
 
 import com.chargis.app.domain.model.ChargerRule
 import com.chargis.app.domain.model.ChargingStation
+import com.chargis.app.domain.model.ConnectorType
 import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.OpenHours
 import com.chargis.app.domain.model.Recommendation
@@ -37,6 +38,10 @@ class TripMemory {
     var endedByLimit = false
     var odometerKm = 0.0                                      // 여행 시작 후 달린 거리(전비 실측용, B3)
     var lastEval: EvalPoint? = null                           // 마지막으로 추천을 새로 계산한 시점(계산 간격 조절)
+    var preconditionAdvised = false                           // 이번 충전소로 가는 길에 예열을 이미 권했는지
+    var elevationSoc = 0.0                                    // 여행 시작 후 오르내림으로 쓴(+)/되찾은(−) 배터리 %(전비 실측에서 뺀다)
+    var lastElevationM: Double? = null                        // 바로 전 틱의 해발 고도
+    var pendingManualSample: Pair<Double, Double>? = null     // 운전자가 고친 배터리 값(km, %). 다시 움직일 때 전비 실측에 넣는다
 
     /** 새 여행을 위해 모두 처음으로 돌린다. */
     fun reset() {
@@ -51,6 +56,10 @@ class TripMemory {
         charge = null
         endedByLimit = false
         odometerKm = 0.0
+        preconditionAdvised = false
+        elevationSoc = 0.0
+        lastElevationM = null
+        pendingManualSample = null
     }
 }
 
@@ -85,7 +94,11 @@ data class SavedTrip(
     val arrivedAtSec: Double? = null,
     val endedByLimit: Boolean = false,
     val charge: SavedChargeSession? = null,
-    val odometerKm: Double = 0.0
+    val odometerKm: Double = 0.0,
+    val elevationSoc: Double = 0.0,
+    val preconditionAdvised: Boolean = false,
+    /** 배터리를 직접 넣는 중이었다면 그때의 추정값. 다시 켜면 이 값에서 이어 간다 */
+    val manualSoc: Double? = null
 ) {
     companion object {
         const val VERSION = 1
@@ -101,17 +114,21 @@ data class SavedSim(
     val waypointId: String? = null,
     val stoppedAtId: String? = null,
     val chargeTargetSoc: Double? = null,
-    val chargeEndsAtSec: Double? = null
+    val chargeEndsAtSec: Double? = null,
+    val batteryTempC: Double? = null,
+    val preconditioning: Boolean = false
 ) {
     fun toState(scenarioId: String, speed: Int) = SimState(
         scenarioId = scenarioId, phase = phase, traveledKm = traveledKm, soc = soc, simTimeSec = simTimeSec,
         speedMultiplier = speed, paused = false, waypointId = waypointId, stoppedAtId = stoppedAtId,
-        chargeTargetSoc = chargeTargetSoc, chargeEndsAtSec = chargeEndsAtSec
+        chargeTargetSoc = chargeTargetSoc, chargeEndsAtSec = chargeEndsAtSec,
+        batteryTempC = batteryTempC, preconditioning = preconditioning
     )
 
     companion object {
         fun of(s: SimState) = SavedSim(
-            s.phase, s.traveledKm, s.soc, s.simTimeSec, s.waypointId, s.stoppedAtId, s.chargeTargetSoc, s.chargeEndsAtSec
+            s.phase, s.traveledKm, s.soc, s.simTimeSec, s.waypointId, s.stoppedAtId, s.chargeTargetSoc, s.chargeEndsAtSec,
+            s.batteryTempC, s.preconditioning
         )
     }
 }
@@ -134,7 +151,9 @@ data class SavedRec(
     val waitSource: WaitSource = WaitSource.UNKNOWN,
     val etaMinutes: Double = 0.0,
     val costMinutes: Double = 0.0,
-    val station: SavedStation? = null
+    val station: SavedStation? = null,
+    val coldExtraMinutes: Int = 0,
+    val costKrw: Int? = null
 ) {
     fun toRecommendation(station: ChargingStation) = Recommendation(
         station = station,
@@ -149,7 +168,9 @@ data class SavedRec(
         reasonCodes = emptyList(),
         waitSource = waitSource,
         etaMinutes = etaMinutes,
-        costMinutes = costMinutes
+        costMinutes = costMinutes,
+        coldExtraMinutes = coldExtraMinutes,
+        costKrw = costKrw
     )
 
     companion object {
@@ -157,7 +178,7 @@ data class SavedRec(
         fun of(r: Recommendation, station: SavedStation) = SavedRec(
             r.station.id, r.arrivalSocPercent, r.targetSocPercent, r.chargeMinutes, r.waitMinutes, r.timeLimitMin,
             r.willHitTimeLimit, r.socAtTimeLimitPercent, r.needsAnotherStop, r.waitSource, r.etaMinutes, r.costMinutes,
-            station
+            station, r.coldExtraMinutes, r.costKrw
         )
     }
 }
@@ -179,7 +200,11 @@ data class SavedStation(
     val note: String? = null,
     val openMin: Int? = null,
     val closeMin: Int? = null,
-    val parkingFree: Boolean? = null
+    val parkingFree: Boolean? = null,
+    val connectors: List<ConnectorType>? = null,
+    val pricePerKwh: Double? = null,
+    val brokenChargers: Int? = null,
+    val hoursSinceLastCharge: Double? = null
 ) {
     fun toStation() = ChargingStation(
         id = id,
@@ -194,14 +219,19 @@ data class SavedStation(
         expectedWaitMin = null,
         rule = ChargerRule(timeLimitMin = timeLimitMin, amountLimitKrw = null, note = note, timeLimitKnown = timeLimitKnown),
         openHours = if (openMin != null && closeMin != null) OpenHours(openMin, closeMin) else null,
-        parkingFree = parkingFree
+        parkingFree = parkingFree,
+        connectors = connectors?.toSet(),
+        pricePerKwh = pricePerKwh,
+        brokenChargers = brokenChargers,
+        hoursSinceLastCharge = hoursSinceLastCharge
     )
 
     companion object {
         fun of(s: ChargingStation, traveledKm: Double) = SavedStation(
             s.id, s.name, s.location.lat, s.location.lon, s.kind, traveledKm + s.distanceAlongRouteKm, s.detourKm,
             s.maxKw, s.totalChargers, s.rule.timeLimitMin, s.rule.timeLimitKnown, s.rule.note,
-            s.openHours?.openMin, s.openHours?.closeMin, s.parkingFree
+            s.openHours?.openMin, s.openHours?.closeMin, s.parkingFree,
+            s.connectors?.toList(), s.pricePerKwh, s.brokenChargers, s.hoursSinceLastCharge
         )
     }
 }
@@ -214,12 +244,14 @@ data class SavedCharge(
     val toSoc: Double,
     val minutes: Int,
     val endedByLimit: Boolean,
-    val baselineMinutes: Int
+    val baselineMinutes: Int,
+    val costKrw: Int? = null
 ) {
-    fun toRecord() = stationId to ChargeRecord(stationName, fromSoc, toSoc, minutes, endedByLimit, baselineMinutes)
+    fun toRecord() = stationId to ChargeRecord(stationName, fromSoc, toSoc, minutes, endedByLimit, baselineMinutes, costKrw)
 
     companion object {
-        fun of(id: String, r: ChargeRecord) = SavedCharge(id, r.stationName, r.fromSoc, r.toSoc, r.minutes, r.endedByLimit, r.baselineMinutes)
+        fun of(id: String, r: ChargeRecord) =
+            SavedCharge(id, r.stationName, r.fromSoc, r.toSoc, r.minutes, r.endedByLimit, r.baselineMinutes, r.costKrw)
     }
 }
 

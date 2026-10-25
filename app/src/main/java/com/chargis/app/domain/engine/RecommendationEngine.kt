@@ -8,6 +8,7 @@ import com.chargis.app.domain.model.Recommendation
 import com.chargis.app.domain.model.RecommendationConfig
 import com.chargis.app.domain.model.RecommendationResult
 import com.chargis.app.domain.model.RouteState
+import com.chargis.app.domain.model.StationKind
 import com.chargis.app.domain.model.VehicleProfile
 import com.chargis.app.domain.model.VehicleState
 import com.chargis.app.domain.model.WaitSource
@@ -53,27 +54,27 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
     ): RecommendationResult {
         // 실측 소비가 사양과 다르면 전비를 바꾼 사양으로 모든 계산을 한다(B3).
         val p = profile.withConsumptionFactor(context.consumptionFactor)
-        val soc = vehicle.socPercent
+        val trip = Trip(route, vehicle.socPercent, p, context, speedKmh(route))
+        val end = route.remainingDistanceKm
 
         // 1. 충전 필요 여부
-        // 지금 배터리로 목적지까지(안전 마진 포함) 갈 수 있으면 추천할 필요가 없다.
-        if (ChargeMath.requiredSoc(route.remainingDistanceKm, p, config) <= soc) {
+        // 지금 배터리로 목적지까지(안전 마진, 오르막 포함) 갈 수 있으면 추천할 필요가 없다.
+        if (need(trip, end, 0.0, end, config.destinationSocPercent) <= trip.soc) {
             return RecommendationResult.NotNeeded
         }
 
         // 2. 하드 조건 필터
-        // 이미 지나친 곳, 목적지보다 먼 곳, 도착할 때 닫혀 있는 곳은 뺀다.
-        val speed = speedKmh(route)
+        // 이미 지나친 곳, 목적지보다 먼 곳, 도착할 때 닫혀 있는 곳, 충전구가 맞지 않는 곳, 쓸 수 있는 충전기가 없는 곳은 뺀다.
         val ahead = limitNonRoadside(stations.filter {
-            it.distanceAlongRouteKm > 0 && it.distanceAlongRouteKm < route.remainingDistanceKm &&
-                isOpenOnArrival(it, context, speed)
+            it.distanceAlongRouteKm > 0 && it.distanceAlongRouteKm < end && it.totalChargers > 0 &&
+                profile.canUse(it) && isOpenOnArrival(it, context, trip.speedKmh)
         }).sortedBy { it.distanceAlongRouteKm }
         // 도착했을 때 최소 잔량(10%)이 남는 곳만 "안전한" 후보로 남긴다.
-        val safe = ahead.filter { arrivalSoc(soc, it, p) >= config.minArrivalSocPercent }
+        val safe = ahead.filter { arrivalSoc(trip, it) >= config.minArrivalSocPercent }
         if (safe.isEmpty()) {
             // 안전한 곳이 하나도 없으면, 그나마 배터리가 0이 되기 전에 닿는 가장 가까운 곳을 경고용으로 알려 준다.
             val nearest = ahead
-                .filter { arrivalSoc(soc, it, p) > 0 }
+                .filter { arrivalSoc(trip, it) > 0 }
                 .minByOrNull { it.distanceAlongRouteKm + it.detourKm }
             return RecommendationResult.NoSafeStop(nearest)
         }
@@ -81,7 +82,6 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
         val latestSafe = safe.maxBy { it.distanceAlongRouteKm }
 
         // 3~5. 후보마다 가장 빠른 충전 계획(한 번 또는 두 번 들르기)을 세운다.
-        val trip = Trip(route, soc, p, context, speed)
         val plans = safe.mapNotNull { planFrom(it, ahead, trip) }
         // 안전 마진 덕분에 어느 충전소에서도 충전할 필요가 없는 경우
         if (plans.isEmpty()) return RecommendationResult.NotNeeded
@@ -123,9 +123,23 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
 
     private fun driveMinutes(km: Double, trip: Trip) = km / trip.speedKmh * 60.0
 
-    // 충전소까지 가는 거리 = 경로상 거리 + 경로에서 충전소까지 편도 거리
-    private fun arrivalSoc(soc: Double, station: ChargingStation, profile: VehicleProfile) =
-        ChargeMath.arrivalSoc(soc, station.distanceAlongRouteKm + station.detourKm, profile)
+    // 충전소까지 가는 거리 = 경로상 거리 + 경로에서 충전소까지 편도 거리. 그 사이 오르막·내리막도 더한다.
+    private fun arrivalSoc(trip: Trip, station: ChargingStation) =
+        ChargeMath.arrivalSoc(trip.soc, station.distanceAlongRouteKm + station.detourKm, trip.profile) -
+            elevation(trip, 0.0, station.distanceAlongRouteKm)
+
+    // 경로 [fromKm]~[toKm]에서 고도 변화로 더 쓰는(+)/되찾는(−) SoC. 우회 구간은 평지로 본다.
+    private fun elevation(trip: Trip, fromKm: Double, toKm: Double) =
+        ElevationModel.socBetween(trip.route.elevation, fromKm, toKm, trip.profile)
+
+    /**
+     * [km]를 달려 [reserve]%를 남기려면 출발할 때 필요한 SoC. 경로 [fromKm]~[toKm]의 오르막은 평지 소비처럼 안전 마진을 얹고,
+     * 내리막에서 되찾는 몫은 마진 없이 뺀다.
+     */
+    private fun need(trip: Trip, km: Double, fromKm: Double, toKm: Double, reserve: Double): Double {
+        val climb = elevation(trip, fromKm, toKm)
+        return ChargeMath.requiredSoc(km, trip.profile, config, reserve) + if (climb > 0) climb * (1 + config.safetyMargin) else climb
+    }
 
     // 충전소에서 목적지까지 = 경로로 돌아오는 거리 + 남은 경로
     private fun kmAfter(station: ChargingStation, route: RouteState) =
@@ -171,9 +185,10 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
      */
     private fun planFrom(s1: ChargingStation, ahead: List<ChargingStation>, trip: Trip): Plan? {
         val p = trip.profile
-        val arrival1 = arrivalSoc(trip.soc, s1, p)
-        // 경로를 벗어난 충전소라면 경로로 돌아오는 거리까지 채워야 한다.
-        val needed = ChargeMath.requiredSoc(kmAfter(s1, trip.route), p, config)
+        val end = trip.route.remainingDistanceKm
+        val arrival1 = arrivalSoc(trip, s1)
+        // 경로를 벗어난 충전소라면 경로로 돌아오는 거리까지 채워야 한다. 목적지에는 설정한 잔량을 남긴다.
+        val needed = need(trip, kmAfter(s1, trip.route), s1.distanceAlongRouteKm, end, config.destinationSocPercent)
         val options = mutableListOf<Plan>()
 
         // (가) 한 번만 들르기: 목적지까지 필요한 %를 5% 단위로 올려 "50%까지"처럼 기억하기 쉬운 숫자로 만든다.
@@ -189,8 +204,9 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
             if (s2.distanceAlongRouteKm <= s1.distanceAlongRouteKm) continue
             // s1에서 경로로 돌아오고, 경로를 따라가다, s2로 빠지는 거리
             val legKm = s1.detourKm + s2.distanceAlongRouteKm - s1.distanceAlongRouteKm + s2.detourKm
-            val needToS2 = ChargeMath.requiredSoc(legKm, p, config)
-            val needAfterS2 = ChargeMath.requiredSoc(kmAfter(s2, trip.route), p, config)
+            val needToS2 = need(trip, legKm, s1.distanceAlongRouteKm, s2.distanceAlongRouteKm, config.minArrivalSocPercent)
+            val needAfterS2 = need(trip, kmAfter(s2, trip.route), s2.distanceAlongRouteKm, end, config.destinationSocPercent)
+            val legClimb = elevation(trip, s1.distanceAlongRouteKm, s2.distanceAlongRouteKm)
             if (needAfterS2 > config.maxTargetSocPercent) continue // 세 번 이상 들러야 하는 조합은 다루지 않는다
             val target2 = min(ChargeMath.ceilToStep(needAfterS2, config.roundUpStepPercent), config.maxTargetSocPercent)
             var t1 = max(
@@ -198,7 +214,7 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
                 ChargeMath.ceilToStep(arrival1 + STEP_EPS, config.roundUpStepPercent)
             )
             while (t1 <= config.maxTargetSocPercent + STEP_EPS) {
-                val arrival2 = t1 - legKm * ChargeMath.socPerKm(p)
+                val arrival2 = t1 - legKm * ChargeMath.socPerKm(p) - legClimb
                 // 두 번째에서 충전할 필요가 없으면 (가)와 같은 계획이므로 건너뛴다.
                 if (target2 > arrival2) options += build(s1, arrival1, t1, needToS2, next = Leg(s2, arrival2, target2), trip)
                 t1 += config.roundUpStepPercent
@@ -230,20 +246,27 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
         unreachable: Boolean = false
     ): Plan {
         val p = trip.profile
-        val minutes1 = ChargeMath.chargeMinutes(arrival1, target1, s1.maxKw, p, config)
+        val toS1 = driveMinutes(s1.distanceAlongRouteKm + s1.detourKm, trip)
+        // 배터리가 차가우면 충전을 덜 받는다. 도착할 때 배터리 온도로 충전 시간을 구하고,
+        // 따뜻했다면 얼마나 걸렸을지와 비교해 예열로 줄일 수 있는 시간을 남긴다.
+        val tempAtS1 = trip.context.batteryTempC?.let {
+            BatteryThermal.tempAfter(it, toS1, if (trip.context.preconditioning) BatteryThermal.Mode.PRECONDITIONING else BatteryThermal.Mode.DRIVING)
+        }
+        val p1 = p.withChargePowerFactor(BatteryThermal.chargePowerFactor(tempAtS1))
+        val minutes1 = ChargeMath.chargeMinutes(arrival1, target1, s1.maxKw, p1, config)
+        val warmMinutes1 = ChargeMath.chargeMinutes(arrival1, target1, s1.maxKw, p, config)
         // 시간 제한 확인: 제한 시간 동안 충전하면 몇 %까지 차는지 계산한다.
         val limit = s1.rule.timeLimitMin
-        val socAtLimit = limit?.let { ChargeMath.socAfterMinutes(arrival1, it.toDouble(), s1.maxKw, p, config) }
+        val socAtLimit = limit?.let { ChargeMath.socAfterMinutes(arrival1, it.toDouble(), s1.maxKw, p1, config) }
         val willHitLimit = limit != null && minutes1 > limit
         // 제한 시간 안에 필요한 만큼도 못 채우면 한 번 더 들러야 한다.
         val limitShortfall = socAtLimit != null && needed > socAtLimit
 
-        val toS1 = driveMinutes(s1.distanceAlongRouteKm + s1.detourKm, trip)
         val wait1 = waitAt(s1, toS1, trip)
         // 우회는 갔다가 돌아오므로 두 번 센다.
         var eta = driveMinutes(trip.route.remainingDistanceKm + 2 * s1.detourKm, trip) +
             wait1.assumed + minutes1 + stopMinutes(s1)
-        var penalty = lowSocPenalty(arrival1) + kindPenalty(s1) +
+        var penalty = lowSocPenalty(arrival1) + kindPenalty(s1) + reliabilityPenalty(s1) +
             (if (willHitLimit) config.limitRiskPenaltyMin else 0.0) +
             (if (unreachable) config.unreachablePenaltyMin else 0.0)
 
@@ -251,15 +274,24 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
         var assumedWait = wait1.assumed
         val planned = next?.let { leg ->
             val s2 = leg.station
-            val minutes2 = ChargeMath.chargeMinutes(leg.arrivalSoc, leg.targetSoc, s2.maxKw, p, config)
-            val toS2 = toS1 + wait1.assumed + minutes1 + stopMinutes(s1) +
-                driveMinutes(s1.detourKm + s2.distanceAlongRouteKm - s1.distanceAlongRouteKm + s2.detourKm, trip)
+            val legMinutes = driveMinutes(s1.detourKm + s2.distanceAlongRouteKm - s1.distanceAlongRouteKm + s2.detourKm, trip)
+            // 첫 충전소에서 충전하며 데워진 배터리가 두 번째 충전소까지 가는 동안의 온도
+            val tempAtS2 = tempAtS1?.let {
+                val charged = BatteryThermal.tempAfter(it, minutes1, BatteryThermal.Mode.CHARGING)
+                BatteryThermal.tempAfter(charged, legMinutes, BatteryThermal.Mode.DRIVING)
+            }
+            val p2 = p.withChargePowerFactor(BatteryThermal.chargePowerFactor(tempAtS2))
+            val minutes2 = ChargeMath.chargeMinutes(leg.arrivalSoc, leg.targetSoc, s2.maxKw, p2, config)
+            val toS2 = toS1 + wait1.assumed + minutes1 + stopMinutes(s1) + legMinutes
             val wait2 = waitAt(s2, toS2, trip)
             assumedWait += wait2.assumed
             eta += driveMinutes(2 * s2.detourKm, trip) + wait2.assumed + minutes2 + stopMinutes(s2)
-            penalty += lowSocPenalty(leg.arrivalSoc) + kindPenalty(s2)
+            penalty += lowSocPenalty(leg.arrivalSoc) + kindPenalty(s2) + reliabilityPenalty(s2)
             s2.rule.timeLimitMin?.let { if (minutes2 > it) penalty += config.limitRiskPenaltyMin }
-            PlannedStop(s2, leg.arrivalSoc, leg.targetSoc, ceil(minutes2).toInt(), wait2.shown)
+            PlannedStop(
+                s2, leg.arrivalSoc, leg.targetSoc, ceil(minutes2).toInt(), wait2.shown,
+                ChargeMath.chargeCostKrw(leg.arrivalSoc, leg.targetSoc, p, s2.pricePerKwh, config)
+            )
         }
 
         val rec = Recommendation(
@@ -276,10 +308,23 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
             waitSource = wait1.source,
             etaMinutes = eta,
             costMinutes = eta + penalty,
-            nextStop = planned
+            nextStop = planned,
+            coldExtraMinutes = max(0, ceil(minutes1).toInt() - ceil(warmMinutes1).toInt()),
+            costKrw = ChargeMath.chargeCostKrw(arrival1, target1, p, s1.pricePerKwh, config)
         )
         return Plan(rec, assumedWait)
     }
+
+    // 오래 아무도 충전하지 못한 충전소(고장 의심)에 붙이는 순위 가산
+    private fun reliabilityPenalty(station: ChargingStation) =
+        if (isStale(station)) config.unreliablePenaltyMin else 0.0
+
+    // 고속도로 휴게소·상업시설은 사흘, 이용이 드문 쉼터·국도 휴게소·공공·기타 시설은 일주일 넘게 충전 기록이 없으면 의심한다.
+    private fun isStale(station: ChargingStation) =
+        (station.hoursSinceLastCharge ?: 0.0) >= staleHours(station.kind)
+
+    private fun staleHours(kind: StationKind) =
+        if (kind == StationKind.HIGHWAY_REST_STOP || kind == StationKind.COMMERCIAL) config.staleChargeHours else config.staleChargeHoursQuiet
 
     // 화면에 보여 줄 대기(모르면 0)와 계산에 넣을 대기(모르면 가정값), 그리고 출처
     private class Wait(val shown: Int, val assumed: Double, val source: WaitSource)
@@ -320,6 +365,7 @@ class RecommendationEngine(private val config: RecommendationConfig = Recommenda
                 if (r.willHitTimeLimit && (r.socAtTimeLimitPercent ?: 0.0) < r.targetSocPercent) {
                     add(ReasonCode.TIME_LIMIT_RISK)
                 }
+                if (isStale(s)) add(ReasonCode.MAYBE_BROKEN)
             }
             Plan(r.copy(reasonCodes = reasons), plan.assumedWait)
         }

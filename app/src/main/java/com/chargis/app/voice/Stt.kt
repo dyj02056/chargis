@@ -30,7 +30,9 @@ object VoiceCommandParser {
         "거절" to VoiceCommand.NEXT_STOP,
         "넘어가" to VoiceCommand.NEXT_STOP,
         "출발" to VoiceCommand.DEPART,
-        "가자" to VoiceCommand.DEPART
+        "가자" to VoiceCommand.DEPART,
+        "예열" to VoiceCommand.PRECONDITION,
+        "데워" to VoiceCommand.PRECONDITION
     )
 
     fun parse(text: String, allowed: Set<VoiceCommand>): VoiceCommand? {
