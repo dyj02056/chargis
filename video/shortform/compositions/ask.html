@@ -1,0 +1,43 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_extrabold.ttf"); font-weight: 800; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #ask-inner { position: absolute; inset: 0; }
+    .ask-box { position: absolute; left: 72px; right: 72px; height: 290px; background: #1a1917; border-radius: 10px; padding: 44px 48px; }
+    .ask-who { font-size: 32px; font-weight: 600; color: #a19c93; }
+    .ask-line { font-size: 104px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-top: 22px; white-space: nowrap; }
+    .ask-tail { position: absolute; bottom: -34px; width: 0; height: 0; border-left: 34px solid transparent; border-right: 34px solid transparent; border-top: 36px solid #1a1917; }
+    #ask-b { text-align: right; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap .who { flex: none; font-size: 28px; font-weight: 600; color: #a19c93; border: 2px solid #3b3833; border-radius: 6px; padding: 6px 14px; }
+  </style>
+  <div data-hf-id="hf-5110" id="root" data-composition-id="ask" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-sa0q" id="ask-world" class="clip" data-start="0" data-duration="2"><div data-hf-id="hf-tolv" id="ask-inner">
+      <div data-hf-id="hf-okhf" id="ask-a" class="ask-box" style="top:330px">
+        <div data-hf-id="hf-iono" class="ask-who">운전자</div>
+        <div data-hf-id="hf-wm2l" class="ask-line">몇 %까지 채우지?</div>
+        <div data-hf-id="hf-nfo1" class="ask-tail" style="left:110px"></div>
+      </div>
+      <div data-hf-id="hf-ptij" id="ask-b" class="ask-box" style="top:720px">
+        <div data-hf-id="hf-i4y6" class="ask-who">동승자</div>
+        <div data-hf-id="hf-mxdb" class="ask-line">언제 출발해?</div>
+        <div data-hf-id="hf-vwms" class="ask-tail" style="right:110px"></div>
+      </div>
+    </div></div>
+    <div data-hf-id="hf-pznw" id="ask-cap" class="cap clip" data-start="0.05" data-duration="1.95">
+      <span data-hf-id="hf-z2at" class="who">운전자</span><span data-hf-id="hf-yqz7" id="ask-cap-t">얼마나 채워야 할지도 모르죠.</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 말 상자가 차례로 내려앉는다.
+    tl.fromTo("#ask-a", { y: 80, opacity: 0, filter: "blur(8px)" }, { y: 0, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "expo.out" }, 0.0);
+    tl.fromTo("#ask-b", { y: 80, opacity: 0, filter: "blur(8px)" }, { y: 0, opacity: 1, filter: "blur(0px)", duration: 0.36, ease: "expo.out" }, 0.5);
+    tl.fromTo("#ask-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.05);
+    // 위로 휩: 다음 장면의 통행권이 아래에서 올라온다.
+    tl.to("#ask-inner", { y: -720, opacity: 0, filter: "blur(14px)", duration: 0.26, ease: "power3.in" }, 1.72);
+    window.__timelines["ask"] = tl;
+  </script>
+</template>

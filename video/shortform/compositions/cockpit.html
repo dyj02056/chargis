@@ -1,0 +1,48 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #ckp-inner { position: absolute; inset: 0; }
+    #ckp-cam { position: absolute; inset: 0; }
+    #ckp-lines { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+    #ckp-label { position: absolute; left: 100px; top: 540px; font-size: 30px; font-weight: 600; color: #a19c93; }
+    #ckp-bezel { position: absolute; left: 84px; top: 588px; width: 912px; height: 582px; background: #1a1917; border: 2px solid #3b3833; border-radius: 18px; }
+    #ckp-screen { position: absolute; left: 100px; top: 604px; width: 880px; height: 550px; border-radius: 6px; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap svg { width: 44px; height: 44px; flex: none; }
+  </style>
+  <div data-hf-id="hf-8l10" id="root" data-composition-id="cockpit" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-ruhi" id="ckp-world" class="clip" data-start="0" data-duration="2" data-layout-allow-overflow><div data-hf-id="hf-e1du" id="ckp-inner"><div data-hf-id="hf-obpb" id="ckp-cam">
+      <!-- 선으로 그린 운전석: 앞유리와 도로, 대시보드, 운전대(아래쪽은 플랫폼 UI 영역이라 장식만) -->
+      <svg data-hf-id="hf-pgby" id="ckp-lines" viewBox="0 0 1080 1920">
+        <path data-hf-id="hf-km14" d="M30 470 Q540 170 1050 470" fill="none" stroke="#3b3833" stroke-width="4" />
+        <path data-hf-id="hf-3kpf" d="M60 470 L170 250 M1020 470 L910 250" fill="none" stroke="#3b3833" stroke-width="4" />
+        <path data-hf-id="hf-cx2v" d="M250 470 L520 300 M830 470 L560 300" fill="none" stroke="#a19c93" stroke-width="3" />
+        <line data-hf-id="hf-dhx5" id="ckp-lane" x1="540" y1="470" x2="540" y2="306" stroke="#ede9e2" stroke-width="5" stroke-dasharray="24 22" />
+        <path data-hf-id="hf-0t6f" d="M0 500 H1080" stroke="#3b3833" stroke-width="4" />
+        <circle data-hf-id="hf-pqzw" cx="210" cy="1520" r="300" fill="none" stroke="#3b3833" stroke-width="22" />
+        <circle data-hf-id="hf-5m6b" cx="210" cy="1520" r="96" fill="none" stroke="#3b3833" stroke-width="10" />
+      </svg>
+      <div data-hf-id="hf-ad51" id="ckp-label">차량 센터 디스플레이 · Chargis</div>
+      <div data-hf-id="hf-jemu" id="ckp-bezel"></div>
+      <img data-hf-id="hf-exi5" id="ckp-screen" src="assets/screens/charging.png" alt="Chargis 충전 화면" />
+    </div></div></div>
+    <div data-hf-id="hf-45ym" id="ckp-cap" class="cap clip" data-start="0.2" data-duration="1.8">
+      <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-a9x9" id="ckp-cap-t">출발 예정 시각은 크게 띄워 드립니다.</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 블러 스왑으로 들어오고, 차선이 다가온다.
+    tl.fromTo("#ckp-inner", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power2.out" }, 0);
+    tl.fromTo("#ckp-lane", { strokeDashoffset: 0 }, { strokeDashoffset: 92, duration: 2, ease: "none" }, 0);
+    tl.fromTo("#ckp-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.2);
+    // 디스플레이로 푸시 인: 화면 중심(540, 879)을 고정하고 화면이 프레임 폭을 채운다.
+    tl.fromTo("#ckp-cam", { scale: 1, transformOrigin: "540px 879px" }, { scale: 1.2, duration: 1.0, ease: "power3.inOut" }, 0.75);
+    // 블러 스왑으로 세로로 다시 그린 충전 화면에 넘긴다.
+    tl.to("#ckp-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 1.82);
+    window.__timelines["cockpit"] = tl;
+  </script>
+</template>

@@ -22,6 +22,9 @@
     #issue-btn { position: absolute; left: 772px; top: 130px; width: 192px; height: 140px; background: #ede9e2;
       border-radius: 10px; color: #1a1917; font-size: 48px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
     #issue-cursor { position: absolute; left: 0; top: 0; width: 70px; height: 90px; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap svg { width: 44px; height: 44px; flex: none; }
   </style>
   <div data-hf-id="hf-swui" id="root" data-composition-id="issue" data-width="1080" data-height="1920">
     <div data-hf-id="hf-st6k" id="issue-world" class="clip" data-start="0" data-duration="2">
@@ -47,6 +50,10 @@
         <path data-hf-id="hf-udvo" d="M6 4 L6 72 L22 58 L34 86 L46 80 L34 53 L56 53 Z" fill="#ffffff" stroke="#0f0e0d" stroke-width="4" stroke-linejoin="round" />
       </svg>
     </div>
+    <div data-hf-id="hf-3ji6" id="issue-cap" class="cap clip" data-start="0.15" data-duration="1.85">
+      <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-2zpk" id="issue-cap-t">이제는, 차가 먼저 알려 줍니다.</span>
+    </div>
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
@@ -59,6 +66,7 @@
     tl.to("#issue-cursor", { scale: 1, duration: 0.12, ease: "power2.out" }, 1.68);
     tl.to("#issue-btn", { scale: 0.96, duration: 0.08, ease: "power2.out" }, 1.6);
     tl.to("#issue-btn", { scale: 1, duration: 0.12, ease: "power2.out" }, 1.68);
+    tl.fromTo("#issue-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.15);
     window.__timelines["issue"] = tl;
   </script>
 </template>

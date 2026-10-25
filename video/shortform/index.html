@@ -31,41 +31,67 @@
     </style>
   </head>
   <body>
-    <div data-hf-id="hf-ddde" id="root" data-composition-id="main" data-start="0" data-duration="19" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-ddde" id="root" data-composition-id="main" data-start="0" data-duration="45" data-width="1080" data-height="1920">
+      <!-- Spot 0-13 s / Solve 13-29 s / Scene 29-45 s -->
       <div data-hf-id="hf-pxiu" id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html"
-        data-start="0" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+        data-start="0" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-umup" id="crowd" data-composition-id="crowd" data-composition-src="compositions/crowd.html"
+        data-start="3" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-1zyp" id="cutoff" data-composition-id="cutoff" data-composition-src="compositions/cutoff.html"
+        data-start="7" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-u3rc" id="ask" data-composition-id="ask" data-composition-src="compositions/ask.html"
+        data-start="11" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
       <div data-hf-id="hf-qxei" id="issue" data-composition-id="issue" data-composition-src="compositions/issue.html"
-        data-start="2" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+        data-start="13" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
       <div data-hf-id="hf-p74e" id="route" data-composition-id="route" data-composition-src="compositions/route.html"
-        data-start="4" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+        data-start="15" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
       <div data-hf-id="hf-r6ro" id="recommend" data-composition-id="recommend" data-composition-src="compositions/recommend.html"
-        data-start="6" data-duration="5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+        data-start="19" data-duration="6" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-gffk" id="congested" data-composition-id="congested" data-composition-src="compositions/congested.html"
+        data-start="25" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div data-hf-id="hf-oe8z" id="cockpit" data-composition-id="cockpit" data-composition-src="compositions/cockpit.html"
+        data-start="29" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
       <div data-hf-id="hf-jn7b" id="charging" data-composition-id="charging" data-composition-src="compositions/charging.html"
-        data-start="11" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+        data-start="31" data-duration="5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
       <div data-hf-id="hf-rzr5" id="limit" data-composition-id="limit" data-composition-src="compositions/limit.html"
-        data-start="14" data-duration="2" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+        data-start="36" data-duration="4" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
       <div data-hf-id="hf-ens3" id="receipt" data-composition-id="receipt" data-composition-src="compositions/receipt.html"
-        data-start="16" data-duration="3" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
-      <!-- 음성: 앱의 안내 문장 (HeyGen TTS 여성 음성 + 가벼운 전자음 처리) -->
-      <audio data-hf-id="hf-h6xn" id="vo-1" class="clip" src="assets/voice/v1.wav" data-start="3.65" data-duration="2.78" data-track-index="2" data-volume="1"></audio>
-      <audio data-hf-id="hf-6e0i" id="vo-2" class="clip" src="assets/voice/v2.wav" data-start="6.45" data-duration="2.93" data-track-index="2" data-volume="1"></audio>
-      <audio data-hf-id="hf-x5h8" id="vo-3" class="clip" src="assets/voice/v3.wav" data-start="9.5" data-duration="2.56" data-track-index="2" data-volume="1"></audio>
-      <audio data-hf-id="hf-v8tu" id="vo-4" class="clip" src="assets/voice/v4.wav" data-start="12.3" data-duration="1.7" data-track-index="2" data-volume="1"></audio>
-      <audio data-hf-id="hf-8c6y" id="vo-5" class="clip" src="assets/voice/v5.wav" data-start="14.2" data-duration="2.04" data-track-index="2" data-volume="1"></audio>
-      <audio data-hf-id="hf-yysz" id="vo-6" class="clip" src="assets/voice/v6.wav" data-start="16.35" data-duration="2.64" data-track-index="2" data-volume="1"></audio>
-      <!-- 배경음악: HeyGen 음악 카탈로그(3bdb6d02), 음성 아래 잔잔하게 -->
-      <audio id="bgm" class="clip" src="assets/bgm/track.mp3" data-start="0" data-duration="19" data-track-index="5" data-volume="0.08" data-fade-in="0.2" data-fade-out="1.4"></audio>
+        data-start="40" data-duration="5" data-track-index="1" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <!-- 음성: HeyGen 한국어 음성(Divya). 운전자(n*)는 처리 없음, 앱(a*, v*)은 하이패스·코러스·짧은 에코 -->
+      <audio data-hf-id="hf-k0i1" id="vo-n1" class="clip" src="assets/voice/n1.wav" data-start="3.3" data-duration="2.67" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-88uv" id="vo-n2" class="clip" src="assets/voice/n2.wav" data-start="7.3" data-duration="2.5" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-l6bz" id="vo-n3" class="clip" src="assets/voice/n3.wav" data-start="11.1" data-duration="1.78" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-5ezs" id="vo-a1" class="clip" src="assets/voice/a1.wav" data-start="13.15" data-duration="1.85" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-u2m0" id="vo-1" class="clip" src="assets/voice/v1.wav" data-start="15.4" data-duration="3.03" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-z9ez" id="vo-2" class="clip" src="assets/voice/v2.wav" data-start="19.5" data-duration="2.93" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-2efg" id="vo-3" class="clip" src="assets/voice/v3.wav" data-start="22.7" data-duration="2.56" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-39wq" id="vo-a2" class="clip" src="assets/voice/a2.wav" data-start="25.4" data-duration="3.55" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-maro" id="vo-a3" class="clip" src="assets/voice/a3.wav" data-start="29.2" data-duration="2.52" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-z9pz" id="vo-4" class="clip" src="assets/voice/v4.wav" data-start="32" data-duration="1.94" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-8acx" id="vo-5" class="clip" src="assets/voice/v5.wav" data-start="36.2" data-duration="2.04" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-og6j" id="vo-a4" class="clip" src="assets/voice/a4.wav" data-start="38.28" data-duration="2" data-track-index="2" data-volume="1"></audio>
+      <audio data-hf-id="hf-l0ew" id="vo-6" class="clip" src="assets/voice/v6.wav" data-start="40.3" data-duration="2.74" data-track-index="2" data-volume="1"></audio>
+      <!-- 배경음악: Spot은 낮게 깔고 13 s 직전 끊은 뒤 Solve부터 본 볼륨 -->
+      <audio data-hf-id="hf-i8l6" id="bgm-spot" class="clip" src="assets/bgm/track.mp3" data-start="0" data-duration="12.8" data-track-index="5" data-volume="0.05" data-fade-in="0.2" data-fade-out="0.5"></audio>
+      <audio data-hf-id="hf-dala" id="bgm" class="clip" src="assets/bgm/track.mp3" data-start="13" data-duration="32" data-media-start="6" data-track-index="5" data-volume="0.08" data-fade-in="0.05" data-fade-out="1.4"></audio>
       <!-- 효과음: 화면 속 동작에 맞춰 봉우리가 한 프레임 뒤에 오도록 배치 -->
-      <audio data-hf-id="hf-a1q5" id="sfx-whoosh-1" class="clip" src="assets/sfx/whoosh_deep.mp3" data-start="1.3" data-duration="1.4" data-track-index="3" data-volume="0.45" data-fade-out="0.4"></audio>
-      <audio data-hf-id="hf-v7oy" id="sfx-click-1" class="clip" src="assets/sfx/click.mp3" data-start="3.56" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
-      <audio data-hf-id="hf-h3u0" id="sfx-car" class="clip" src="assets/sfx/car_ev_passby.mp3" data-start="3.92" data-duration="2.4" data-media-start="8.0" data-track-index="4" data-volume="0.7" data-fade-in="0.3" data-fade-out="0.7"></audio>
-      <audio data-hf-id="hf-blvt" id="sfx-click-2" class="clip" src="assets/sfx/click.mp3" data-start="9.41" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
-      <audio data-hf-id="hf-yam9" id="sfx-stamp-1" class="clip" src="assets/sfx/stamp_1.mp3" data-start="9.77" data-duration="0.58" data-track-index="3" data-volume="0.8"></audio>
-      <audio data-hf-id="hf-fd3f" id="sfx-plug" class="clip" src="assets/sfx/plug_in.mp3" data-start="10.75" data-duration="1.07" data-track-index="3" data-volume="0.7"></audio>
-      <audio data-hf-id="hf-lt1n" id="sfx-charge" class="clip" src="assets/sfx/charge_powerup.mp3" data-start="11.25" data-duration="2.1" data-track-index="4" data-volume="0.4" data-fade-out="0.5"></audio>
-      <audio data-hf-id="hf-2rdl" id="sfx-stamp-2" class="clip" src="assets/sfx/stamp_2.mp3" data-start="13.16" data-duration="0.78" data-track-index="3" data-volume="0.8"></audio>
-      <audio data-hf-id="hf-blp8" id="sfx-whoosh-2" class="clip" src="assets/sfx/whoosh_short.mp3" data-start="15.8" data-duration="0.57" data-track-index="3" data-volume="0.45"></audio>
-      <audio data-hf-id="hf-2cjd" id="sfx-stamp-3" class="clip" src="assets/sfx/stamp_3.mp3" data-start="16.61" data-duration="0.57" data-track-index="3" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-fw74" id="sfx-whoosh-1" class="clip" src="assets/sfx/whoosh_deep.mp3" data-start="2.3" data-duration="1.4" data-fade-out="0.4" data-track-index="3" data-volume="0.45"></audio>
+      <audio data-hf-id="hf-pcra" id="sfx-car-1" class="clip" src="assets/sfx/car_ev_passby.mp3" data-start="4.1" data-duration="2" data-media-start="8.0" data-fade-in="0.3" data-fade-out="0.6" data-track-index="4" data-volume="0.45"></audio>
+      <audio data-hf-id="hf-gz1z" id="sfx-charge-1" class="clip" src="assets/sfx/charge_powerup.mp3" data-start="7.3" data-duration="1.92" data-fade-out="0.05" data-track-index="4" data-volume="0.35"></audio>
+      <audio data-hf-id="hf-fw50" id="sfx-click-0" class="clip" src="assets/sfx/click.mp3" data-start="9.2" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-s0zz" id="sfx-whoosh-2" class="clip" src="assets/sfx/whoosh_deep.mp3" data-start="12.35" data-duration="1.4" data-fade-out="0.4" data-track-index="3" data-volume="0.45"></audio>
+      <audio data-hf-id="hf-qusm" id="sfx-click-1" class="clip" src="assets/sfx/click.mp3" data-start="14.56" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-5mgq" id="sfx-car" class="clip" src="assets/sfx/car_ev_passby.mp3" data-start="15.3" data-duration="3" data-media-start="8.0" data-fade-in="0.3" data-fade-out="0.7" data-track-index="4" data-volume="0.7"></audio>
+      <audio data-hf-id="hf-ii0g" id="sfx-click-2" class="clip" src="assets/sfx/click.mp3" data-start="22.56" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-vtrt" id="sfx-stamp-1" class="clip" src="assets/sfx/stamp_1.mp3" data-start="22.92" data-duration="0.58" data-track-index="3" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-fg58" id="sfx-click-3" class="clip" src="assets/sfx/click.mp3" data-start="27.76" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-cgp3" id="sfx-whoosh-3" class="clip" src="assets/sfx/whoosh_short.mp3" data-start="29.7" data-duration="0.57" data-track-index="3" data-volume="0.45"></audio>
+      <audio data-hf-id="hf-80q1" id="sfx-plug" class="clip" src="assets/sfx/plug_in.mp3" data-start="30.8" data-duration="1.07" data-track-index="3" data-volume="0.7"></audio>
+      <audio data-hf-id="hf-jag7" id="sfx-charge" class="clip" src="assets/sfx/charge_powerup.mp3" data-start="31.4" data-duration="3.1" data-fade-out="0.5" data-track-index="4" data-volume="0.4"></audio>
+      <audio data-hf-id="hf-z971" id="sfx-stamp-2" class="clip" src="assets/sfx/stamp_2.mp3" data-start="34.46" data-duration="0.78" data-track-index="3" data-volume="0.8"></audio>
+      <audio data-hf-id="hf-puq1" id="sfx-click-4" class="clip" src="assets/sfx/click.mp3" data-start="37.51" data-duration="0.36" data-track-index="3" data-volume="0.6"></audio>
+      <audio data-hf-id="hf-kgss" id="sfx-whoosh-4" class="clip" src="assets/sfx/whoosh_short.mp3" data-start="39.8" data-duration="0.57" data-track-index="3" data-volume="0.45"></audio>
+      <audio data-hf-id="hf-un8c" id="sfx-stamp-3" class="clip" src="assets/sfx/stamp_3.mp3" data-start="40.61" data-duration="0.57" data-track-index="3" data-volume="0.8"></audio>
     </div>
     <script>
       const tl = gsap.timeline({ paused: true });

@@ -1,0 +1,109 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_medium.ttf"); font-weight: 500; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #cng-inner { position: absolute; inset: 0; }
+    .hdr { position: absolute; left: 64px; right: 64px; top: 186px; height: 48px; display: flex; align-items: baseline; gap: 18px; }
+    .hdr-word { font-size: 40px; font-weight: 700; }
+    .hdr-scn { font-size: 28px; font-weight: 600; color: #a19c93; flex: 1; }
+    .hdr-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 34px; }
+    .hdr-lbl { font-size: 28px; font-weight: 600; color: #a19c93; }
+    #cng-stock { position: absolute; left: 48px; right: 48px; top: 250px; height: 900px; background: #1a1917; }
+    #cng-warn { position: absolute; left: 96px; top: 282px; display: flex; align-items: center; gap: 18px; color: #e8ae4a; font-size: 52px; font-weight: 700; white-space: nowrap; }
+    #cng-warn svg { width: 58px; height: 52px; flex: none; }
+    .mono { font-family: "Geist Mono"; font-weight: 600; }
+    #cng-sub { position: absolute; left: 96px; top: 360px; font-size: 40px; font-weight: 700; color: #8fb2ee; white-space: nowrap; }
+    #cng-sub2 { position: absolute; left: 96px; top: 414px; font-size: 32px; font-weight: 600; color: #a19c93; white-space: nowrap; }
+    .cng-card { position: absolute; left: 96px; width: 888px; height: 250px; border-top: 2px solid #3b3833; }
+    .cng-name { position: absolute; left: 0; top: 22px; font-size: 48px; font-weight: 700; }
+    .cng-note { font-size: 28px; font-weight: 600; color: #a19c93; margin-left: 14px; }
+    .cng-km { position: absolute; right: 0; top: 30px; font-family: "Geist Mono"; font-weight: 500; font-size: 36px; color: #a19c93; }
+    .cng-km span { font-family: "Wanted Sans"; font-weight: 600; font-size: 28px; margin-left: 6px; }
+    .cng-fields { position: absolute; left: 0; right: 0; top: 96px; display: flex; }
+    .cng-field { padding-left: 24px; border-left: 2px solid #3b3833; flex: 1; }
+    .cng-field:first-child { padding-left: 0; border-left: none; flex: 1.5; }
+    .cng-lbl { font-size: 28px; font-weight: 600; color: #a19c93; }
+    .cng-big { font-family: "Geist Mono"; font-weight: 600; font-size: 104px; line-height: 1; margin-top: 8px; letter-spacing: -0.03em; }
+    .cng-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 68px; line-height: 1; margin-top: 22px; }
+    .cng-unit { font-family: "Wanted Sans"; font-weight: 600; font-size: 34px; margin-left: 8px; }
+    #cng-c .cng-big { color: #8fb2ee; }
+    #cng-tear { position: absolute; left: 48px; top: 1000px; width: 984px; height: 4px; }
+    .cng-notch { position: absolute; width: 52px; height: 52px; border-radius: 50%; background: #0f0e0d; top: 976px; }
+    .cng-btn { position: absolute; top: 1030px; height: 100px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 38px; font-weight: 700; }
+    #cng-btn-b { left: 96px; width: 420px; border: 3px solid #ede9e2; }
+    #cng-btn-c { left: 540px; width: 444px; background: #8fb2ee; color: #0f1a2e; }
+    #cng-cursor { position: absolute; left: 0; top: 0; width: 70px; height: 90px; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 36px; font-weight: 600; }
+    .cap svg { width: 44px; height: 44px; flex: none; }
+  </style>
+  <div data-hf-id="hf-hb2f" id="root" data-composition-id="congested" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-s9jx" id="cng-world" class="clip" data-start="0" data-duration="4"><div data-hf-id="hf-bsw6" id="cng-inner">
+      <div data-hf-id="hf-tyyu" class="hdr"><span data-hf-id="hf-gsq7" class="hdr-word">Chargis</span><span data-hf-id="hf-vl3f" class="hdr-scn">S2 명절 혼잡 · 서울→속초(가상)</span>
+        <span data-hf-id="hf-58xo" class="hdr-fig">10:32</span><span data-hf-id="hf-bob4" class="hdr-lbl">배터리</span><span data-hf-id="hf-8ges" class="hdr-fig">47%</span></div>
+      <div data-hf-id="hf-znho" id="cng-stock"></div>
+      <div data-hf-id="hf-qfw6" id="cng-warn">
+        <svg data-hf-id="hf-ynl9" viewBox="0 0 46 42"><path data-hf-id="hf-jgbx" d="M23 3 L44 39 H2 Z" fill="none" stroke="#e8ae4a" stroke-width="4" stroke-linejoin="round" /><path data-hf-id="hf-x1ls" d="M23 16 V27" stroke="#e8ae4a" stroke-width="4" stroke-linecap="round" /><circle data-hf-id="hf-wy8y" cx="23" cy="33" r="2.6" fill="#e8ae4a" /></svg>
+        <span data-hf-id="hf-l063">B 휴게소 대기 <span data-hf-id="hf-l94o" class="mono">31</span>분</span>
+      </div>
+      <div data-hf-id="hf-dfne" id="cng-sub">C 휴게소 쪽이 21분 빨리 도착</div>
+      <div data-hf-id="hf-avkn" id="cng-sub2">대신 도착 배터리 10%p 낮음</div>
+      <div data-hf-id="hf-ydop" id="cng-b" class="cng-card" style="top:480px">
+        <div data-hf-id="hf-myhs" class="cng-name">B 휴게소</div>
+        <div data-hf-id="hf-6xt0" class="cng-km">41<span data-hf-id="hf-vrsf">km 앞</span></div>
+        <div data-hf-id="hf-u55s" class="cng-fields">
+          <div data-hf-id="hf-2ly9" class="cng-field"><div data-hf-id="hf-96eu" class="cng-lbl">목적지 도착</div><div data-hf-id="hf-tv5k" class="cng-big">13:01</div></div>
+          <div data-hf-id="hf-o33p" class="cng-field"><div data-hf-id="hf-cu55" class="cng-lbl">대기 · 예측</div><div data-hf-id="hf-pc8r" class="cng-fig">31<span data-hf-id="hf-12xc" class="cng-unit">분</span></div></div>
+          <div data-hf-id="hf-pa0s" class="cng-field"><div data-hf-id="hf-1z7s" class="cng-lbl">도착 시</div><div data-hf-id="hf-myel" class="cng-fig">37<span data-hf-id="hf-u11f" class="cng-unit">%</span></div></div>
+        </div>
+      </div>
+      <div data-hf-id="hf-pfpa" id="cng-c" class="cng-card" style="top:730px">
+        <div data-hf-id="hf-qlw3" class="cng-name">C 휴게소<span data-hf-id="hf-p1hr" class="cng-note">고장·점검 1대</span></div>
+        <div data-hf-id="hf-ozug" class="cng-km">81<span data-hf-id="hf-vdsf">km 앞</span></div>
+        <div data-hf-id="hf-ee8o" class="cng-fields">
+          <div data-hf-id="hf-ovpr" class="cng-field"><div data-hf-id="hf-yt5m" class="cng-lbl">목적지 도착</div><div data-hf-id="hf-xsut" class="cng-big">12:41</div></div>
+          <div data-hf-id="hf-q2mu" class="cng-field"><div data-hf-id="hf-0zfx" class="cng-lbl">대기 · 예측</div><div data-hf-id="hf-9221" class="cng-fig">8<span data-hf-id="hf-pp7s" class="cng-unit">분</span></div></div>
+          <div data-hf-id="hf-pobt" class="cng-field"><div data-hf-id="hf-02yo" class="cng-lbl">도착 시</div><div data-hf-id="hf-pplj" class="cng-fig">26<span data-hf-id="hf-cymb" class="cng-unit">%</span></div></div>
+        </div>
+      </div>
+      <svg data-hf-id="hf-4nxj" id="cng-tear" viewBox="0 0 984 4" preserveAspectRatio="none"><line data-hf-id="hf-vnjp" x1="0" y1="2" x2="984" y2="2" stroke="#3b3833" stroke-width="3" stroke-dasharray="28 20" /></svg>
+      <div data-hf-id="hf-wkuc" class="cng-notch" style="left:22px"></div>
+      <div data-hf-id="hf-yy5x" class="cng-notch" style="left:1006px"></div>
+      <div data-hf-id="hf-b84q" id="cng-btn-b" class="cng-btn">B 휴게소에서 충전</div>
+      <div data-hf-id="hf-kx2a" id="cng-btn-c" class="cng-btn">C 휴게소에서 충전</div>
+      <svg data-hf-id="hf-s486" id="cng-cursor" viewBox="0 0 70 90">
+        <path data-hf-id="hf-udvo" d="M6 4 L6 72 L22 58 L34 86 L46 80 L34 53 L56 53 Z" fill="#ffffff" stroke="#0f0e0d" stroke-width="4" stroke-linejoin="round" />
+      </svg>
+    </div></div>
+    <div data-hf-id="hf-ozmr" id="cng-cap" class="cap clip" data-start="0.35" data-duration="3.65">
+      <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-kkt2" id="cng-cap-t">붐비면, 대기 시간과 도착 배터리를 비교해 드립니다.</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 블러 스왑으로 들어온다.
+    tl.fromTo("#cng-inner", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "power2.out" }, 0);
+    tl.fromTo("#cng-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.35);
+    // 경고 줄과 비교 문장이 차례로 인쇄된다.
+    tl.fromTo("#cng-warn", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.4, ease: "power2.out" }, 0.2);
+    tl.fromTo(["#cng-b", "#cng-c"], { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, stagger: 0.12, ease: "power3.out" }, 0.35);
+    tl.fromTo("#cng-sub", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.4, ease: "power2.out" }, 1.2);
+    tl.fromTo("#cng-sub2", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.35, ease: "power2.out" }, 1.45);
+    // 대기가 긴 B 카드는 한발 물러선다.
+    tl.to("#cng-b", { opacity: 0.5, duration: 0.3, ease: "power2.out" }, 1.6);
+    // 커서가 [C 휴게소에서 충전]을 누른다. 버튼 중심은 (762, 1080).
+    tl.fromTo("#cng-cursor", { x: 980, y: 1500, opacity: 0 }, { x: 758, y: 1076, opacity: 1, duration: 0.45, ease: "power3.out" }, 2.25);
+    tl.to("#cng-cursor", { scale: 0.86, duration: 0.08, transformOrigin: "6px 4px" }, 2.8);
+    tl.to("#cng-cursor", { scale: 1, duration: 0.12 }, 2.88);
+    tl.to("#cng-btn-c", { scale: 0.98, duration: 0.08 }, 2.8);
+    tl.to("#cng-btn-c", { scale: 1, duration: 0.12 }, 2.88);
+    tl.to("#cng-cursor", { x: 820, y: 1500, duration: 0.3, ease: "power3.in" }, 3.3);
+    // 블러 스왑으로 다음 장면에 넘긴다.
+    tl.to("#cng-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 3.82);
+    window.__timelines["congested"] = tl;
+  </script>
+</template>

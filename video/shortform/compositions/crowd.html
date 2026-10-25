@@ -1,0 +1,87 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #crd-inner { position: absolute; inset: 0; }
+    #crd-stock { position: absolute; left: 48px; right: 48px; top: 230px; height: 900px; background: #1a1917; }
+    #crd-label { position: absolute; left: 96px; top: 266px; font-size: 30px; font-weight: 600; color: #a19c93; }
+    #crd-title { position: absolute; left: 96px; top: 312px; font-size: 56px; font-weight: 700; }
+    #crd-use { position: absolute; right: 96px; top: 290px; text-align: right; }
+    .crd-lbl { font-size: 30px; font-weight: 600; color: #a19c93; }
+    #crd-use-fig { font-family: "Geist Mono"; font-weight: 600; font-size: 96px; line-height: 1; margin-top: 6px; }
+    .crd-slot { position: absolute; top: 450px; width: 136px; height: 250px; border: 2px solid #3b3833; border-radius: 8px; }
+    .crd-slot-no { position: absolute; left: 0; right: 0; top: 12px; text-align: center; font-family: "Geist Mono"; font-weight: 600; font-size: 28px; color: #a19c93; }
+    .crd-slot svg { position: absolute; left: 30px; top: 66px; width: 76px; height: 150px; }
+    #crd-qlabel { position: absolute; left: 96px; top: 744px; display: flex; align-items: baseline; gap: 16px; }
+    #crd-qfig { font-family: "Geist Mono"; font-weight: 600; font-size: 64px; }
+    #crd-qunit { font-size: 34px; font-weight: 600; }
+    #crd-qline { position: absolute; left: 96px; top: 850px; width: 888px; height: 4px; }
+    .crd-qcar { position: absolute; top: 868px; width: 196px; height: 96px; }
+    #crd-warn { position: absolute; left: 96px; top: 1024px; display: flex; align-items: center; gap: 18px; color: #e8ae4a; font-size: 50px; font-weight: 700; white-space: nowrap; }
+    #crd-warn svg { width: 58px; height: 52px; flex: none; }
+    #crd-warn .mono { font-family: "Geist Mono"; font-weight: 600; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap .who { flex: none; font-size: 28px; font-weight: 600; color: #a19c93; border: 2px solid #3b3833; border-radius: 6px; padding: 6px 14px; }
+  </style>
+  <div data-hf-id="hf-4gq0" id="root" data-composition-id="crowd" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-mlc6" id="crd-world" class="clip" data-start="0" data-duration="4"><div data-hf-id="hf-z6al" id="crd-inner">
+      <div data-hf-id="hf-nn1r" id="crd-stock"></div>
+      <div data-hf-id="hf-r87i" id="crd-label">명절 · 고속도로 휴게소</div>
+      <div data-hf-id="hf-ai6c" id="crd-title">B 휴게소 충전소</div>
+      <div data-hf-id="hf-m2jg" id="crd-use"><div data-hf-id="hf-aaxi" class="crd-lbl">충전기 사용</div><div data-hf-id="hf-r9nu" id="crd-use-fig">0/6</div></div>
+      <div data-hf-id="hf-lt62" id="crd-slot-1" class="crd-slot" style="left:96px"><div data-hf-id="hf-zoq5" class="crd-slot-no">1</div>
+        <svg data-hf-id="hf-gh2u" id="crd-car-1" viewBox="0 0 76 150"><rect data-hf-id="hf-1x8s" x="2" y="2" width="72" height="146" rx="20" fill="#ede9e2" /><rect data-hf-id="hf-jmi4" x="12" y="34" width="52" height="24" rx="5" fill="#1a1917" /><rect data-hf-id="hf-7llp" x="12" y="110" width="52" height="16" rx="4" fill="#1a1917" /></svg></div>
+      <div data-hf-id="hf-5brm" id="crd-slot-2" class="crd-slot" style="left:246.4px"><div data-hf-id="hf-0vn8" class="crd-slot-no">2</div>
+        <svg data-hf-id="hf-6ftr" id="crd-car-2" viewBox="0 0 76 150"><rect data-hf-id="hf-4yhw" x="2" y="2" width="72" height="146" rx="20" fill="#ede9e2" /><rect data-hf-id="hf-xdms" x="12" y="34" width="52" height="24" rx="5" fill="#1a1917" /><rect data-hf-id="hf-iddd" x="12" y="110" width="52" height="16" rx="4" fill="#1a1917" /></svg></div>
+      <div data-hf-id="hf-0fmf" id="crd-slot-3" class="crd-slot" style="left:396.8px"><div data-hf-id="hf-0hc7" class="crd-slot-no">3</div>
+        <svg data-hf-id="hf-vw6s" id="crd-car-3" viewBox="0 0 76 150"><rect data-hf-id="hf-3rkt" x="2" y="2" width="72" height="146" rx="20" fill="#ede9e2" /><rect data-hf-id="hf-w6pp" x="12" y="34" width="52" height="24" rx="5" fill="#1a1917" /><rect data-hf-id="hf-jkag" x="12" y="110" width="52" height="16" rx="4" fill="#1a1917" /></svg></div>
+      <div data-hf-id="hf-jssg" id="crd-slot-4" class="crd-slot" style="left:547.2px"><div data-hf-id="hf-1o9a" class="crd-slot-no">4</div>
+        <svg data-hf-id="hf-ed11" id="crd-car-4" viewBox="0 0 76 150"><rect data-hf-id="hf-45vu" x="2" y="2" width="72" height="146" rx="20" fill="#ede9e2" /><rect data-hf-id="hf-wl0q" x="12" y="34" width="52" height="24" rx="5" fill="#1a1917" /><rect data-hf-id="hf-j5zf" x="12" y="110" width="52" height="16" rx="4" fill="#1a1917" /></svg></div>
+      <div data-hf-id="hf-t2zn" id="crd-slot-5" class="crd-slot" style="left:697.6px"><div data-hf-id="hf-19y9" class="crd-slot-no">5</div>
+        <svg data-hf-id="hf-xi3e" id="crd-car-5" viewBox="0 0 76 150"><rect data-hf-id="hf-65ez" x="2" y="2" width="72" height="146" rx="20" fill="#ede9e2" /><rect data-hf-id="hf-ykjv" x="12" y="34" width="52" height="24" rx="5" fill="#1a1917" /><rect data-hf-id="hf-h6ga" x="12" y="110" width="52" height="16" rx="4" fill="#1a1917" /></svg></div>
+      <div data-hf-id="hf-6md0" id="crd-slot-6" class="crd-slot" style="left:848px"><div data-hf-id="hf-2gvc" class="crd-slot-no">6</div>
+        <svg data-hf-id="hf-8yer" id="crd-car-6" viewBox="0 0 76 150"><rect data-hf-id="hf-6jq0" x="2" y="2" width="72" height="146" rx="20" fill="#ede9e2" /><rect data-hf-id="hf-yyuw" x="12" y="34" width="52" height="24" rx="5" fill="#1a1917" /><rect data-hf-id="hf-gs59" x="12" y="110" width="52" height="16" rx="4" fill="#1a1917" /></svg></div>
+      <div data-hf-id="hf-vlw6" id="crd-qlabel"><span data-hf-id="hf-mrsf" class="crd-lbl">대기</span><span data-hf-id="hf-w5wn" id="crd-qfig">0</span><span data-hf-id="hf-fr3d" id="crd-qunit">대</span></div>
+      <svg data-hf-id="hf-fvp4" id="crd-qline" viewBox="0 0 888 4" preserveAspectRatio="none"><line data-hf-id="hf-yugw" x1="0" y1="2" x2="888" y2="2" stroke="#3b3833" stroke-width="3" stroke-dasharray="28 20" /></svg>
+      <svg data-hf-id="hf-9u77" id="crd-q-1" class="crd-qcar" style="left:96px" viewBox="0 0 196 96"><rect data-hf-id="hf-w09d" x="2" y="6" width="180" height="84" rx="22" fill="none" stroke="#ede9e2" stroke-width="5" /><rect data-hf-id="hf-tluh" x="118" y="18" width="28" height="60" rx="6" fill="#ede9e2" /><rect data-hf-id="hf-b3zx" x="24" y="22" width="18" height="52" rx="5" fill="#ede9e2" /></svg>
+      <svg data-hf-id="hf-r3m4" id="crd-q-2" class="crd-qcar" style="left:320px" viewBox="0 0 196 96"><rect data-hf-id="hf-vged" x="2" y="6" width="180" height="84" rx="22" fill="none" stroke="#ede9e2" stroke-width="5" /><rect data-hf-id="hf-2vn1" x="118" y="18" width="28" height="60" rx="6" fill="#ede9e2" /><rect data-hf-id="hf-ii35" x="24" y="22" width="18" height="52" rx="5" fill="#ede9e2" /></svg>
+      <svg data-hf-id="hf-c5f5" id="crd-q-3" class="crd-qcar" style="left:544px" viewBox="0 0 196 96"><rect data-hf-id="hf-wnbg" x="2" y="6" width="180" height="84" rx="22" fill="none" stroke="#ede9e2" stroke-width="5" /><rect data-hf-id="hf-42k4" x="118" y="18" width="28" height="60" rx="6" fill="#ede9e2" /><rect data-hf-id="hf-jp08" x="24" y="22" width="18" height="52" rx="5" fill="#ede9e2" /></svg>
+      <svg data-hf-id="hf-5zj6" id="crd-q-4" class="crd-qcar" style="left:768px" viewBox="0 0 196 96"><rect data-hf-id="hf-w90f" x="2" y="6" width="180" height="84" rx="22" fill="none" stroke="#ede9e2" stroke-width="5" /><rect data-hf-id="hf-3o93" x="118" y="18" width="28" height="60" rx="6" fill="#ede9e2" /><rect data-hf-id="hf-jap7" x="24" y="22" width="18" height="52" rx="5" fill="#ede9e2" /></svg>
+      <div data-hf-id="hf-5e1v" id="crd-warn">
+        <svg data-hf-id="hf-ynl9" viewBox="0 0 46 42"><path data-hf-id="hf-jgbx" d="M23 3 L44 39 H2 Z" fill="none" stroke="#e8ae4a" stroke-width="4" stroke-linejoin="round" /><path data-hf-id="hf-x1ls" d="M23 16 V27" stroke="#e8ae4a" stroke-width="4" stroke-linecap="round" /><circle data-hf-id="hf-wy8y" cx="23" cy="33" r="2.6" fill="#e8ae4a" /></svg>
+        <span data-hf-id="hf-l063">B 휴게소 대기 <span data-hf-id="hf-l94o" class="mono">31</span>분</span>
+      </div>
+    </div></div>
+    <div data-hf-id="hf-t29j" id="crd-cap" class="cap clip" data-start="0.2" data-duration="3.8">
+      <span data-hf-id="hf-z2at" class="who">운전자</span><span data-hf-id="hf-l51g" id="crd-cap-t">명절 고속도로, 충전기는 늘 붐비고,</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // 앞 장면의 위로 휩을 이어받아 아래에서 올라와 내려앉는다.
+    tl.fromTo("#crd-inner", { y: 420, opacity: 0, filter: "blur(12px)" }, { y: 0, opacity: 1, filter: "blur(0px)", duration: 0.44, ease: "expo.out" }, 0);
+    tl.fromTo("#crd-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.2);
+    // 충전기 6칸이 차례로 찬다. 사용 대수는 정수로 올라간다.
+    const use = { n: 0 };
+    tl.fromTo(use, { n: 0 }, { n: 6, duration: 0.84, ease: "none",
+      onUpdate: () => { document.getElementById("crd-use-fig").textContent = Math.floor(use.n) + "/6"; } }, 0.36);
+    for (let i = 1; i <= 6; i++) {
+      tl.fromTo("#crd-car-" + i, { y: -60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power4.out" }, 0.3 + (i - 1) * 0.14);
+    }
+    // 대기 줄에 차가 오른쪽에서 붙는다.
+    const q = { n: 0 };
+    for (let i = 1; i <= 4; i++) {
+      tl.fromTo("#crd-q-" + i, { x: 520, opacity: 0 }, { x: 0, opacity: 1, duration: 0.42, ease: "power3.out" }, 1.25 + (i - 1) * 0.2);
+    }
+    tl.fromTo(q, { n: 0 }, { n: 4, duration: 0.8, ease: "none",
+      onUpdate: () => { document.getElementById("crd-qfig").textContent = Math.floor(q.n); } }, 1.4);
+    // 경고 줄이 왼쪽부터 인쇄된다.
+    tl.fromTo("#crd-warn", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "power2.out" }, 2.45);
+    // 블러 스왑으로 다음 장면에 넘긴다.
+    tl.to("#crd-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 3.82);
+    window.__timelines["crowd"] = tl;
+  </script>
+</template>

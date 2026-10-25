@@ -39,7 +39,7 @@
     .cap svg { width: 44px; height: 44px; flex: none; }
   </style>
   <div data-hf-id="hf-rzyn" id="root" data-composition-id="recommend" data-width="1080" data-height="1920">
-    <div data-hf-id="hf-kbgo" id="rec-world" class="clip" data-start="0" data-duration="5"><div data-hf-id="hf-hzea" id="rec-inner">
+    <div data-hf-id="hf-kbgo" id="rec-world" class="clip" data-start="0" data-duration="6"><div data-hf-id="hf-hzea" id="rec-inner">
       <div data-hf-id="hf-tyyu" class="hdr"><span data-hf-id="hf-gsq7" class="hdr-word">Chargis</span><span data-hf-id="hf-3s9q" class="hdr-scn">S1 · 서울→속초(가상)</span>
         <span data-hf-id="hf-ulk7" class="hdr-fig">09:26</span><span data-hf-id="hf-bob4" class="hdr-lbl">배터리</span><span data-hf-id="hf-s1hy" class="hdr-fig">49%</span></div>
       <div data-hf-id="hf-8ats" id="rec-stock"></div>
@@ -61,11 +61,11 @@
         <path data-hf-id="hf-udvo" d="M6 4 L6 72 L22 58 L34 86 L46 80 L34 53 L56 53 Z" fill="#ffffff" stroke="#0f0e0d" stroke-width="4" stroke-linejoin="round" />
       </svg>
     </div></div>
-    <div data-hf-id="hf-qm53" id="rec-cap1" class="cap clip" data-start="0.45" data-duration="2.55">
+    <div data-hf-id="hf-qm53" id="rec-cap1" class="cap clip" data-start="0.45" data-duration="3.15">
       <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
       <span data-hf-id="hf-e5fs" id="rec-cap1-t">목적지까지는 50퍼센트면 충분합니다.</span>
     </div>
-    <div data-hf-id="hf-gt10" id="rec-cap2" class="cap clip" data-start="3.45" data-duration="1.55">
+    <div data-hf-id="hf-gt10" id="rec-cap2" class="cap clip" data-start="3.6" data-duration="2.4">
       <svg data-hf-id="hf-57mt" viewBox="0 0 44 44"><path data-hf-id="hf-b1tq" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-s3wq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
       <span data-hf-id="hf-mf2g" id="rec-cap2-t">B 휴게소, 경유지로 추가했습니다.</span>
     </div>
@@ -90,19 +90,19 @@
     tl.to("#rec-r3", { ...dim, duration: 0.3 }, 1.25);
     tl.to("#rec-r4", { ...sharp, duration: 0.35 }, 1.35);
     tl.to("#rec-lens", { borderColor: "#8fb2ee", duration: 0.2, ease: "power2.out" }, 1.7);
-    tl.to(["#rec-r1", "#rec-r2", "#rec-r3"], { ...sharp, duration: 0.3, ease: "power2.out" }, 2.6);
+    tl.to(["#rec-r1", "#rec-r2", "#rec-r3"], { ...sharp, duration: 0.3, ease: "power2.out" }, 2.75);
     // 커서가 [경유지로 수락]을 누르고 도장이 찍힌다. 버튼 중심은 (384, 1076).
-    tl.fromTo("#rec-cursor", { x: 980, y: 1500, opacity: 0 }, { x: 380, y: 1072, opacity: 1, duration: 0.42, ease: "power3.out" }, 3.0);
-    tl.to("#rec-cursor", { scale: 0.86, duration: 0.08, transformOrigin: "6px 4px" }, 3.45);
-    tl.to("#rec-cursor", { scale: 1, duration: 0.12 }, 3.53);
-    tl.to("#rec-accept", { scale: 0.98, duration: 0.08 }, 3.45);
-    tl.to("#rec-accept", { scale: 1, duration: 0.12 }, 3.53);
-    tl.fromTo("#rec-cap2-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 3.45);
-    tl.fromTo("#rec-stamp", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, duration: 0.09 }, 3.55);
-    tl.to("#rec-stamp", { scale: 1, duration: 0.26, ease: "power3.out" }, 3.64);
-    tl.to("#rec-cursor", { x: 760, y: 1500, duration: 0.3, ease: "power3.in" }, 4.1);
-    // 블러 스왑으로 충전 장면에 넘긴다.
-    tl.to("#rec-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 4.82);
+    tl.fromTo("#rec-cursor", { x: 980, y: 1500, opacity: 0 }, { x: 380, y: 1072, opacity: 1, duration: 0.42, ease: "power3.out" }, 3.15);
+    tl.to("#rec-cursor", { scale: 0.86, duration: 0.08, transformOrigin: "6px 4px" }, 3.6);
+    tl.to("#rec-cursor", { scale: 1, duration: 0.12 }, 3.68);
+    tl.to("#rec-accept", { scale: 0.98, duration: 0.08 }, 3.6);
+    tl.to("#rec-accept", { scale: 1, duration: 0.12 }, 3.68);
+    tl.fromTo("#rec-cap2-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 3.6);
+    tl.fromTo("#rec-stamp", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, duration: 0.09 }, 3.7);
+    tl.to("#rec-stamp", { scale: 1, duration: 0.26, ease: "power3.out" }, 3.79);
+    tl.to("#rec-cursor", { x: 760, y: 1500, duration: 0.3, ease: "power3.in" }, 4.3);
+    // 블러 스왑으로 혼잡 비교 장면에 넘긴다.
+    tl.to("#rec-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 5.82);
     window.__timelines["recommend"] = tl;
   </script>
 </template>

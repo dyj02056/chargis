@@ -9,7 +9,7 @@
     .hook-word { display: inline-block; color: #a19c93; }
   </style>
   <div data-hf-id="hf-srfg" id="root" data-composition-id="hook" data-width="1080" data-height="1920">
-    <div data-hf-id="hf-zd0o" id="hook-clip" class="clip" data-start="0" data-duration="2" style="position:absolute;inset:0"><div data-hf-id="hf-0trk" id="hook-block">
+    <div data-hf-id="hf-zd0o" id="hook-clip" class="clip" data-start="0" data-duration="3" style="position:absolute;inset:0"><div data-hf-id="hf-0trk" id="hook-block">
       <div data-hf-id="hf-oxsb" id="hook-kicker">장거리 전기차, 휴게소에서</div>
       <div data-hf-id="hf-00yc" class="hook-line"><span data-hf-id="hf-o61j" id="hook-w1" class="hook-word">몇&nbsp;%까지</span></div>
       <div data-hf-id="hf-0ess" class="hook-line"><span data-hf-id="hf-zb7y" id="hook-w2" class="hook-word">충전하지?</span></div>
@@ -20,9 +20,9 @@
     // 0프레임부터 문장이 보이고(썸네일), 단어가 회색에서 잉크로 인쇄된다.
     tl.fromTo("#hook-w1", { color: "#a19c93" }, { color: "#ede9e2", duration: 0.25, ease: "power2.out" }, 0.15);
     tl.fromTo("#hook-w2", { color: "#a19c93" }, { color: "#ede9e2", duration: 0.25, ease: "power2.out" }, 0.4);
-    // 위로 휩: 다음 장면의 통행권이 아래에서 올라온다.
+    // 위로 휩: 다음 장면(휴게소 충전소)이 아래에서 올라온다.
     tl.fromTo("#hook-block", { y: 0, opacity: 1, filter: "blur(0px)" },
-      { y: -720, opacity: 0, filter: "blur(14px)", duration: 0.28, ease: "power3.in" }, 1.68);
+      { y: -720, opacity: 0, filter: "blur(14px)", duration: 0.28, ease: "power3.in" }, 2.68);
     window.__timelines["hook"] = tl;
   </script>
 </template>

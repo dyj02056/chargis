@@ -35,12 +35,16 @@
     .lim-notch { position: absolute; width: 52px; height: 52px; border-radius: 50%; background: #0f0e0d; top: 1002px; }
     #lim-stop { position: absolute; left: 96px; top: 1048px; width: 888px; height: 84px; border: 3px solid #ede9e2; border-radius: 10px;
       display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; }
+    #lim-next { position: absolute; left: 96px; top: 1048px; width: 888px; height: 84px; border-radius: 10px; background: #8fb2ee; color: #0f1a2e;
+      display: flex; align-items: center; gap: 22px; padding: 0 32px; font-size: 38px; font-weight: 700; white-space: nowrap; }
+    #lim-next .lbl { font-size: 30px; font-weight: 600; }
+    #lim-next .mono { font-family: "Geist Mono"; font-weight: 600; }
     .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
       display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
     .cap svg { width: 44px; height: 44px; flex: none; }
   </style>
   <div data-hf-id="hf-2ah2" id="root" data-composition-id="limit" data-width="1080" data-height="1920">
-    <div data-hf-id="hf-b7qf" id="lim-world" class="clip" data-start="0" data-duration="2"><div data-hf-id="hf-jqnm" id="lim-inner">
+    <div data-hf-id="hf-b7qf" id="lim-world" class="clip" data-start="0" data-duration="4"><div data-hf-id="hf-jqnm" id="lim-inner">
       <div data-hf-id="hf-tyyu" class="hdr"><span data-hf-id="hf-gsq7" class="hdr-word">Chargis</span><span data-hf-id="hf-cso9" class="hdr-scn">S3 · 서울→부산(가상)</span>
         <span data-hf-id="hf-wl3c" class="hdr-fig">09:23</span><span data-hf-id="hf-bob4" class="hdr-lbl">배터리</span><span data-hf-id="hf-hpd5" class="hdr-fig">55%</span></div>
       <div data-hf-id="hf-0g7k" id="lim-stock"></div>
@@ -73,10 +77,15 @@
       <div data-hf-id="hf-aopo" class="lim-notch" style="left:22px"></div>
       <div data-hf-id="hf-pegd" class="lim-notch" style="left:1006px"></div>
       <div data-hf-id="hf-p1wc" id="lim-stop">충전 중단</div>
+      <div data-hf-id="hf-aw9t" id="lim-next"><span data-hf-id="hf-axvj" class="lbl">다시 추천</span><span data-hf-id="hf-0pyz">F 휴게소 · <span data-hf-id="hf-l86f" class="mono">41</span> km 앞 · 목표 <span data-hf-id="hf-odoe" class="mono">55</span>%</span></div>
     </div></div>
-    <div data-hf-id="hf-4plr" id="lim-cap" class="cap clip" data-start="0.15" data-duration="1.65">
+    <div data-hf-id="hf-4plr" id="lim-cap" class="cap clip" data-start="0.15" data-duration="2.05">
       <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
       <span data-hf-id="hf-ktco" id="lim-cap-t">5분 뒤 충전이 종료됩니다.</span>
+    </div>
+    <div data-hf-id="hf-hcj9" id="lim-cap2" class="cap clip" data-start="2.28" data-duration="1.72">
+      <svg data-hf-id="hf-57mt" viewBox="0 0 44 44"><path data-hf-id="hf-b1tq" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-s3wq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
+      <span data-hf-id="hf-5we0" id="lim-cap2-t">다음 충전소를 다시 찾았습니다.</span>
     </div>
   </div>
   <script>
@@ -87,8 +96,12 @@
     tl.fromTo("#lim-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.15);
     // 경고 줄이 왼쪽부터 인쇄된다.
     tl.fromTo("#lim-warn", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "power2.out" }, 0.55);
+    // 제한에 걸리기 전에 다음 충전소를 다시 추천한다.
+    tl.to("#lim-stop", { opacity: 0, duration: 0.15, ease: "power2.in" }, 1.45);
+    tl.fromTo("#lim-next", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.4, ease: "power2.out" }, 1.55);
+    tl.fromTo("#lim-cap2-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 2.28);
     // 위로 휩: 영수증이 아래에서 올라온다.
-    tl.to("#lim-inner", { y: -720, opacity: 0, filter: "blur(14px)", duration: 0.26, ease: "power3.in" }, 1.72);
+    tl.to("#lim-inner", { y: -720, opacity: 0, filter: "blur(14px)", duration: 0.26, ease: "power3.in" }, 3.72);
     window.__timelines["limit"] = tl;
   </script>
 </template>

@@ -33,6 +33,7 @@
     .chg-notch { position: absolute; width: 52px; height: 52px; border-radius: 50%; background: #0f0e0d; top: 994px; }
     #chg-stop { position: absolute; left: 96px; top: 1040px; width: 888px; height: 92px; border: 3px solid #ede9e2; border-radius: 10px;
       display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 700; }
+    #chg-eta-lens { position: absolute; left: 670px; top: 812px; width: 330px; height: 176px; border: 4px solid #8fb2ee; border-radius: 10px; }
     #chg-stamp { position: absolute; left: 610px; top: 274px; padding: 7px; border: 4px solid #8fb2ee; border-radius: 8px; }
     #chg-stamp span { display: block; border: 2px solid #8fb2ee; border-radius: 4px; padding: 10px 28px; color: #8fb2ee; font-size: 44px; font-weight: 700; white-space: nowrap; }
     .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
@@ -40,7 +41,7 @@
     .cap svg { width: 44px; height: 44px; flex: none; }
   </style>
   <div data-hf-id="hf-fuvo" id="root" data-composition-id="charging" data-width="1080" data-height="1920">
-    <div data-hf-id="hf-a8v8" id="chg-world" class="clip" data-start="0" data-duration="3"><div data-hf-id="hf-rw7o" id="chg-inner">
+    <div data-hf-id="hf-a8v8" id="chg-world" class="clip" data-start="0" data-duration="5"><div data-hf-id="hf-rw7o" id="chg-inner">
       <div data-hf-id="hf-tyyu" class="hdr"><span data-hf-id="hf-gsq7" class="hdr-word">Chargis</span><span data-hf-id="hf-3s9q" class="hdr-scn">S1 · 서울→속초(가상)</span>
         <span data-hf-id="hf-23fp" class="hdr-fig">10:04</span><span data-hf-id="hf-bob4" class="hdr-lbl">배터리</span><span data-hf-id="hf-ntsa" id="chg-hdr-soc" class="hdr-fig">42%</span></div>
       <div data-hf-id="hf-7ame" id="chg-stock"></div>
@@ -57,13 +58,14 @@
       <div data-hf-id="hf-fcue" class="chg-notch" style="left:22px"></div>
       <div data-hf-id="hf-s8t7" class="chg-notch" style="left:1006px"></div>
       <div data-hf-id="hf-miy2" id="chg-stop">충전 중단</div>
+      <div data-hf-id="hf-5x15" id="chg-eta-lens"></div>
       <div data-hf-id="hf-060x" id="chg-stamp"><span data-hf-id="hf-0los">충전 완료</span></div>
     </div></div>
-    <div data-hf-id="hf-e8u7" id="chg-cap0" class="cap clip" data-start="0" data-duration="1.25">
+    <div data-hf-id="hf-e8u7" id="chg-cap0" class="cap clip" data-start="0" data-duration="0.85">
       <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
-      <span data-hf-id="hf-2d5f">B 휴게소, 경유지로 추가했습니다.</span>
+      <span data-hf-id="hf-2d5f">출발 예정 시각은 크게 띄워 드립니다.</span>
     </div>
-    <div data-hf-id="hf-3iwq" id="chg-cap" class="cap clip" data-start="1.25" data-duration="1.75">
+    <div data-hf-id="hf-3iwq" id="chg-cap" class="cap clip" data-start="0.95" data-duration="4.05">
       <svg data-hf-id="hf-57mt" viewBox="0 0 44 44"><path data-hf-id="hf-b1tq" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-s3wq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
       <span data-hf-id="hf-v9ax" id="chg-cap-t">40분 제한이 있습니다.</span>
     </div>
@@ -97,14 +99,17 @@
 
     const tl = gsap.timeline({ paused: true });
     tl.fromTo("#chg-inner", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "power2.out" }, 0);
-    tl.fromTo("#chg-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 1.25);
+    tl.fromTo("#chg-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.95);
+    // 동승자가 읽을 출발 예정 칸을 렌즈로 짚는다.
+    tl.fromTo("#chg-eta-lens", { opacity: 0, scale: 1.08 }, { opacity: 1, scale: 1, duration: 0.3, ease: "expo.out" }, 0.25);
+    tl.to("#chg-eta-lens", { opacity: 0, duration: 0.25, ease: "power2.in" }, 2.6);
     // 42% -> 50%: 숫자와 칸, 남은 시간이 함께 움직인다.
-    tl.fromTo(state, { soc: 42 }, { soc: 50, duration: 1.9, ease: "none", onUpdate: () => paint(state.soc) }, 0.3);
-    tl.fromTo("#chg-stamp", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, duration: 0.09 }, 2.3);
-    tl.to("#chg-stamp", { scale: 1, duration: 0.26, ease: "power3.out" }, 2.39);
+    tl.fromTo(state, { soc: 42 }, { soc: 50, duration: 3.1, ease: "none", onUpdate: () => paint(state.soc) }, 0.4);
+    tl.fromTo("#chg-stamp", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, duration: 0.09 }, 3.6);
+    tl.to("#chg-stamp", { scale: 1, duration: 0.26, ease: "power3.out" }, 3.69);
     // 값이 위로 빠지며 다음 장면(제한 경고)의 값과 교체된다.
     tl.to(["#chg-title", "#chg-soc-row", "#chg-stamp", "#chg-gauge", "#chg-fields"],
-      { y: -48, opacity: 0, duration: 0.2, stagger: 0.04, ease: "power3.in" }, 2.72);
+      { y: -48, opacity: 0, duration: 0.2, stagger: 0.04, ease: "power3.in" }, 4.72);
     window.__timelines["charging"] = tl;
   </script>
 </template>

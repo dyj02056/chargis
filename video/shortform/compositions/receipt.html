@@ -28,7 +28,7 @@
     .cap svg { width: 44px; height: 44px; flex: none; }
   </style>
   <div data-hf-id="hf-2xgd" id="root" data-composition-id="receipt" data-width="1080" data-height="1920">
-    <div data-hf-id="hf-xv0v" id="rcp-world" class="clip" data-start="0" data-duration="3"><div data-hf-id="hf-vmif" id="rcp-inner">
+    <div data-hf-id="hf-xv0v" id="rcp-world" class="clip" data-start="0" data-duration="5"><div data-hf-id="hf-vmif" id="rcp-inner">
       <div data-hf-id="hf-dr5u" id="rcp-sheet">
         <div data-hf-id="hf-pyt9" id="rcp-paper"></div>
         <div data-hf-id="hf-t9wo" id="rcp-title">정산 영수증</div>
@@ -48,9 +48,12 @@
         <div data-hf-id="hf-8hu7" id="rcp-kind">고속도로 충전 통행권</div>
       </div>
     </div></div>
-    <div data-hf-id="hf-9rcv" id="rcp-cap" class="cap clip" data-start="0.35" data-duration="2.65">
+    <div data-hf-id="hf-9rcv" id="rcp-cap" class="cap clip" data-start="0.3" data-duration="2.6">
       <svg data-hf-id="hf-b65t" viewBox="0 0 44 44"><path data-hf-id="hf-z26y" d="M6 16 H14 L24 7 V37 L14 28 H6 Z" fill="none" stroke="#a19c93" stroke-width="3" stroke-linejoin="round" /><path data-hf-id="hf-1znq" d="M30 15 Q35 22 30 29 M34 10 Q42 22 34 34" fill="none" stroke="#a19c93" stroke-width="3" stroke-linecap="round" /></svg>
       <span data-hf-id="hf-49wz" id="rcp-cap-t">충전은, 차지스가 먼저 알려 드립니다.</span>
+    </div>
+    <div data-hf-id="hf-7b3p" id="rcp-tags" class="cap clip" data-start="2.9" data-duration="2.1">
+      <span data-hf-id="hf-x97y" id="rcp-tags-t" style="color:#a19c93">#HMG차량용앱개발공모전 &nbsp;#PleosAppMarket</span>
     </div>
   </div>
   <script>
@@ -61,10 +64,11 @@
     ["#rcp-l1", "#rcp-l2", "#rcp-l3", "#rcp-rule", "#rcp-total"].forEach((sel, i) => {
       tl.fromTo(sel, { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.16, ease: "power2.out" }, 0.3 + i * 0.08);
     });
-    tl.fromTo("#rcp-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.35);
+    tl.fromTo("#rcp-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.3);
     tl.fromTo("#rcp-stamp", { opacity: 0, scale: 1.35, rotation: -6 }, { opacity: 1, duration: 0.09 }, 0.75);
     tl.to("#rcp-stamp", { scale: 1, duration: 0.26, ease: "power3.out" }, 0.84);
     tl.fromTo("#rcp-mark", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power2.out" }, 0.95);
+    tl.fromTo("#rcp-tags-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 2.9);
     window.__timelines["receipt"] = tl;
   </script>
 </template>

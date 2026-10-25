@@ -1,0 +1,91 @@
+<template>
+  <style>
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_semibold.ttf"); font-weight: 600; }
+    @font-face { font-family: "Wanted Sans"; src: url("assets/fonts/wanted_sans_bold.ttf"); font-weight: 700; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_medium.ttf"); font-weight: 500; }
+    @font-face { font-family: "Geist Mono"; src: url("assets/fonts/geist_mono_semibold.ttf"); font-weight: 600; }
+    #root { position: absolute; inset: 0; background: #0f0e0d; font-family: "Wanted Sans"; color: #ede9e2; }
+    #cut-inner { position: absolute; inset: 0; }
+    #cut-stock { position: absolute; left: 48px; right: 48px; top: 230px; height: 900px; background: #1a1917; }
+    #cut-label { position: absolute; left: 96px; top: 266px; font-size: 30px; font-weight: 600; color: #a19c93; }
+    #cut-title { position: absolute; left: 96px; top: 312px; font-size: 56px; font-weight: 700; }
+    #cut-soc-row { position: absolute; left: 96px; top: 400px; display: flex; align-items: baseline; gap: 12px; }
+    #cut-soc { font-family: "Geist Mono"; font-weight: 600; font-size: 260px; letter-spacing: -0.04em; line-height: 1; }
+    .cut-pct { font-size: 64px; font-weight: 600; }
+    #cut-goal { font-size: 40px; font-weight: 600; color: #a19c93; margin-left: 36px; }
+    #cut-goal .mono { font-family: "Geist Mono"; font-weight: 500; }
+    #cut-gauge { position: absolute; left: 96px; top: 700px; width: 888px; height: 96px; }
+    .cut-cell { position: absolute; top: 0; width: 37px; height: 96px; border-radius: 6px; box-sizing: border-box; overflow: hidden; }
+    .cut-fill { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #ede9e2; transform-origin: 0% 50%; }
+    #cut-fields { position: absolute; left: 96px; top: 840px; width: 888px; height: 140px; display: flex; }
+    .cut-field { flex: 1; padding-left: 24px; border-left: 2px solid #3b3833; }
+    .cut-field:first-child { padding-left: 0; border-left: none; }
+    .cut-lbl { font-size: 30px; font-weight: 600; color: #a19c93; }
+    .cut-fig { font-family: "Geist Mono"; font-weight: 500; font-size: 72px; margin-top: 8px; }
+    .cut-unit { font-family: "Wanted Sans"; font-weight: 600; font-size: 36px; margin-left: 8px; }
+    #cut-warn { position: absolute; left: 96px; top: 1024px; display: flex; align-items: center; gap: 18px; color: #e8ae4a; font-size: 46px; font-weight: 700; white-space: nowrap; }
+    #cut-warn svg { width: 58px; height: 52px; flex: none; }
+    #cut-warn .mono { font-family: "Geist Mono"; font-weight: 600; }
+    .cap { position: absolute; left: 48px; right: 48px; top: 1170px; height: 130px; background: #1a1917; border-top: 2px solid #3b3833;
+      display: flex; align-items: center; gap: 22px; padding: 0 34px; font-size: 38px; font-weight: 600; }
+    .cap .who { flex: none; font-size: 28px; font-weight: 600; color: #a19c93; border: 2px solid #3b3833; border-radius: 6px; padding: 6px 14px; }
+  </style>
+  <div data-hf-id="hf-jlga" id="root" data-composition-id="cutoff" data-width="1080" data-height="1920">
+    <div data-hf-id="hf-k7bb" id="cut-world" class="clip" data-start="0" data-duration="4"><div data-hf-id="hf-7zyg" id="cut-inner">
+      <div data-hf-id="hf-xhyq" id="cut-stock"></div>
+      <div data-hf-id="hf-4hb3" id="cut-label">충전기 화면</div>
+      <div data-hf-id="hf-htqk" id="cut-title">A 휴게소 · 3번 충전기</div>
+      <div data-hf-id="hf-3xiy" id="cut-soc-row"><span data-hf-id="hf-cuwf" id="cut-soc">38</span><span data-hf-id="hf-kpqw" class="cut-pct">%</span>
+        <span data-hf-id="hf-kno0" id="cut-goal">목표 <span data-hf-id="hf-mjq0" class="mono">80</span>%</span></div>
+      <div data-hf-id="hf-sj15" id="cut-gauge"></div>
+      <div data-hf-id="hf-jjh3" id="cut-fields">
+        <div data-hf-id="hf-gguj" class="cut-field"><div data-hf-id="hf-46nl" class="cut-lbl">충전 경과</div><div data-hf-id="hf-sm5d" class="cut-fig"><span data-hf-id="hf-os02" id="cut-elapsed">38</span><span data-hf-id="hf-x6u2" class="cut-unit">분</span></div></div>
+        <div data-hf-id="hf-6y7f" class="cut-field"><div data-hf-id="hf-dw2g" class="cut-lbl">충전기 제한</div><div data-hf-id="hf-zj8t" class="cut-fig">40<span data-hf-id="hf-crge" class="cut-unit">분</span></div></div>
+        <div data-hf-id="hf-6jwe" class="cut-field"><div data-hf-id="hf-q5pc" class="cut-lbl">상태</div><div data-hf-id="hf-xqzd" class="cut-fig" style="position:relative;font-family:'Wanted Sans';font-weight:700;font-size:60px"><span data-hf-id="hf-plee" id="cut-state-on">충전 중</span><span data-hf-id="hf-b05c" id="cut-state-off" style="position:absolute;left:0;top:0;color:#e8ae4a;opacity:0">종료</span></div></div>
+      </div>
+      <div data-hf-id="hf-qs04" id="cut-warn">
+        <svg data-hf-id="hf-ynl9" viewBox="0 0 46 42"><path data-hf-id="hf-jgbx" d="M23 3 L44 39 H2 Z" fill="none" stroke="#e8ae4a" stroke-width="4" stroke-linejoin="round" /><path data-hf-id="hf-x1ls" d="M23 16 V27" stroke="#e8ae4a" stroke-width="4" stroke-linecap="round" /><circle data-hf-id="hf-wy8y" cx="23" cy="33" r="2.6" fill="#e8ae4a" /></svg>
+        <span data-hf-id="hf-8ptm"><span data-hf-id="hf-lmhg" class="mono">40</span>분 제한 · 충전이 끊겼습니다</span>
+      </div>
+    </div></div>
+    <div data-hf-id="hf-hl8q" id="cut-cap" class="cap clip" data-start="0.2" data-duration="3.8">
+      <span data-hf-id="hf-z2at" class="who">운전자</span><span data-hf-id="hf-iirx" id="cut-cap-t">시간 제한에 걸려, 충전이 끊기고,</span>
+    </div>
+  </div>
+  <script>
+    // 20칸 게이지: 5%씩. 목표(80%)까지 칸은 괘선 테두리, 나머지는 옅은 테두리.
+    const gauge = document.getElementById("cut-gauge");
+    const fills = [];
+    for (let i = 0; i < 20; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cut-cell";
+      cell.style.left = i * 45.1 + "px";
+      cell.style.border = i < 16 ? "3px solid #a19c93" : "2px solid #3b3833";
+      const fill = document.createElement("div");
+      fill.className = "cut-fill";
+      cell.appendChild(fill);
+      gauge.appendChild(cell);
+      fills.push(fill);
+    }
+    const paint = (soc) => {
+      fills.forEach((f, i) => { f.style.transform = "scaleX(" + Math.max(0, Math.min(1, (soc - i * 5) / 5)) + ")"; });
+      document.getElementById("cut-soc").textContent = Math.floor(soc);
+      document.getElementById("cut-elapsed").textContent = 38 + Math.floor(((soc - 38) / 8) * 2);
+    };
+    const state = { soc: 38 };
+    paint(38);
+
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#cut-inner", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.15, ease: "power2.out" }, 0);
+    tl.fromTo("#cut-cap-t", { opacity: 0 }, { opacity: 1, duration: 0.12 }, 0.2);
+    // 38% -> 46%: 경과 시간이 40분에 닿는 순간 충전이 멈춘다.
+    tl.fromTo(state, { soc: 38 }, { soc: 46, duration: 1.9, ease: "none", onUpdate: () => paint(state.soc) }, 0.3);
+    tl.fromTo("#cut-state-on", { opacity: 1 }, { opacity: 0, duration: 0.08 }, 2.2);
+    tl.fromTo("#cut-state-off", { opacity: 0 }, { opacity: 1, duration: 0.08 }, 2.2);
+    tl.to(["#cut-soc-row", "#cut-gauge"], { opacity: 0.45, duration: 0.2, ease: "power2.out" }, 2.2);
+    tl.fromTo("#cut-warn", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "power2.out" }, 2.3);
+    // 블러 스왑으로 다음 장면에 넘긴다.
+    tl.to("#cut-inner", { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 3.82);
+    window.__timelines["cutoff"] = tl;
+  </script>
+</template>
