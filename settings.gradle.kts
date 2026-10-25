@@ -14,6 +14,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Pleos Connect SDK(Vehicle, NaviHelper). 로그인 없이 받을 수 있는 공개 저장소다.
+        maven("https://nexus-playground.pleos.ai/repository/maven-releases/") {
+            content { includeGroup("ai.pleos.playground") }
+        }
     }
 }
 

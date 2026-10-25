@@ -100,6 +100,9 @@ class ScenarioSimulator(
 
     fun togglePause() = _state.update { it.copy(paused = !it.paused) }
 
+    /** 실제 차량 기어가 P면 가상 주행을 멈추고, 다시 D면 이어 간다(하이브리드 데모). */
+    fun setPaused(paused: Boolean) = _state.update { it.copy(paused = paused) }
+
     /**
      * F4 데모: 경유지로 등록된 충전소에 도착하면 자동으로 정차한다.
      * [station]의 distanceAlongRouteKm는 지금 위치 기준이다(포트가 넘겨주는 값). 시나리오에 없는 충전소
@@ -113,6 +116,13 @@ class ScenarioSimulator(
         if (known.distanceAlongRouteKm <= traveled) return false
         _state.update { it.copy(waypointId = known.id) }
         return true
+    }
+
+    /** 경유지(충전소)까지 남은 거리(km). 경유지가 없으면 null. */
+    fun kmToWaypoint(): Double? {
+        val s = _state.value
+        val stop = scenario.stations.firstOrNull { it.id == s.waypointId } ?: return null
+        return stop.distanceAlongRouteKm - s.traveledKm
     }
 
     /** 경유지가 [stationId]이면 지운다(다른 충전소로 바꿀 때). */

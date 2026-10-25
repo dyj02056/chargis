@@ -26,7 +26,8 @@ class TripViewModel(container: AppContainer) : ViewModel() {
         profiles = container.catalog.profiles,
         settingsStore = container.settingsStore,
         tripStore = container.tripStore,
-        stt = container.stt
+        stt = container.stt,
+        car = container.car
     )
 
     val state = controller.state

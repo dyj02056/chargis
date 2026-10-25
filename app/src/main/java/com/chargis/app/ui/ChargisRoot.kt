@@ -87,6 +87,9 @@ fun ChargisRoot(controller: TripController) {
                             energy = state.energy,
                             onPrecondition = controller::startPreconditioning
                         )
+                    } else if (state.uxRestricted) {
+                        // 차가 움직이는데 정차 화면(상세·스크롤)이 떠야 할 때: 주행 중 화면 제한(CarUxRestrictions)을 지켜 가린다.
+                        RestrictedTicket()
                     } else {
                         ParkedScreen(
                             state = state,
@@ -122,6 +125,18 @@ private fun LoadingTicket() {
     com.chargis.app.ui.ticket.TicketStock(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.loading_trip), style = MaterialTheme.typography.titleLarge, color = c.inkMuted)
+        }
+    }
+}
+
+/** 주행 중 화면 제한: 정차 화면 대신 한 줄 안내만 보여 준다(글자 3줄 이하, 버튼·스크롤 없음). */
+@Composable
+internal fun RestrictedTicket() {
+    val c = Ticket.colors
+    com.chargis.app.ui.ticket.TicketStock(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().padding(40.dp), verticalArrangement = Arrangement.Center) {
+            Text(stringResource(R.string.restricted_title), style = MaterialTheme.typography.displaySmall, color = c.ink)
+            Text(stringResource(R.string.restricted_sub), style = MaterialTheme.typography.titleLarge, color = c.inkMuted)
         }
     }
 }

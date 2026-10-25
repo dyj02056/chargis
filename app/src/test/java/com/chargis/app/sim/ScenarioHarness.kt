@@ -48,6 +48,7 @@ internal object KeyPhrases : VoicePhrases {
     override fun congested(name: String, waitMin: Int, altName: String) = "congested:$name:$waitMin:$altName"
     override fun waypointAdded(name: String) = "waypoint:$name"
     override fun waypointFailed() = "waypoint_failed"
+    override fun waypointsFull() = "waypoints_full"
     override fun ruleNotice(limitMin: Int) = "rule:$limitMin"
     override fun limitWarn(minutesLeft: Int, nowSoc: Double, endSoc: Double) = "limit_warn:$minutesLeft:${endSoc.toInt()}"
     override fun targetSoon() = "target_soon"
@@ -76,7 +77,8 @@ internal fun TestScope.harness(
     data: (ScenarioSimulator) -> ChargerDataPort = ::FakeChargerData,
     navi: (ScenarioSimulator) -> NaviPort = ::FakeNavi,
     settings: UserSettings? = null,
-    vehicle: (ScenarioSimulator) -> com.chargis.app.port.VehiclePort = ::FakeVehicle
+    vehicle: (ScenarioSimulator) -> com.chargis.app.port.VehiclePort = ::FakeVehicle,
+    car: com.chargis.app.port.CarSignalsPort? = null
 ): Harness {
     val sim = ScenarioSimulator(catalog.scenarios.first())
     val tts = Recorder()
@@ -92,7 +94,8 @@ internal fun TestScope.harness(
         runClock = false,
         profiles = catalog.profiles,
         tripStore = store,
-        settingsStore = settings?.let(::InMemorySettingsStore)
+        settingsStore = settings?.let(::InMemorySettingsStore),
+        car = car
     )
     runCurrent()
     return Harness(sim, controller, tts)

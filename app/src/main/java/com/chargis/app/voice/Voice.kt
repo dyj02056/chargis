@@ -22,6 +22,7 @@ interface VoicePhrases {
     fun congested(name: String, waitMin: Int, altName: String): String
     fun waypointAdded(name: String): String
     fun waypointFailed(): String
+    fun waypointsFull(): String
     fun ruleNotice(limitMin: Int): String
     fun limitWarn(minutesLeft: Int, nowSoc: Double, endSoc: Double): String
     fun targetSoon(): String
@@ -63,6 +64,7 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
         s(R.string.tts_congested, name, waitMin, altName)
     override fun waypointAdded(name: String) = s(R.string.tts_waypoint_added, name)
     override fun waypointFailed() = s(R.string.tts_waypoint_failed)
+    override fun waypointsFull() = s(R.string.tts_waypoints_full)
     override fun ruleNotice(limitMin: Int) = s(R.string.tts_rule_notice, limitMin)
     override fun limitWarn(minutesLeft: Int, nowSoc: Double, endSoc: Double) =
         s(R.string.tts_limit_warn, minutesLeft, nowSoc.roundToInt(), endSoc.roundToInt())

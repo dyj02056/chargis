@@ -20,6 +20,8 @@ val localProps = Properties().apply {
 android {
     namespace = "com.chargis.app"
     compileSdk = 36
+    // CarUxRestrictions(주행 중 화면 제한)를 읽으려고 자동차용 안드로이드 라이브러리를 컴파일에만 쓴다. 실행 시에는 차량 기기에 들어 있다.
+    useLibrary("android.car")
 
     defaultConfig {
         applicationId = "com.chargis.app"   // 앱 고유 이름(설치된 앱을 구별하는 주소)
@@ -102,6 +104,9 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    // Pleos Connect SDK: 차량 상태(SoC·전비·충전)와 순정 내비 연동(경로·경유지·도착 예측)
+    implementation(libs.pleos.vehicle)
+    implementation(libs.pleos.navihelper)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

@@ -19,12 +19,14 @@ import com.chargis.app.domain.session.ChargeSession
 import com.chargis.app.domain.session.TripEvent
 import com.chargis.app.domain.session.TripPhase
 import com.chargis.app.domain.session.TripStateMachine
+import com.chargis.app.port.CarSignalsPort
 import com.chargis.app.port.ChargerDataPort
 import com.chargis.app.port.NaviPort
 import com.chargis.app.port.SettingsStore
 import com.chargis.app.port.SttPort
 import com.chargis.app.port.TripStore
 import com.chargis.app.port.VehiclePort
+import com.chargis.app.port.WaypointsFullException
 import com.chargis.app.sim.Scenario
 import com.chargis.app.sim.ScenarioSimulator
 import com.chargis.app.sim.SimPhase
@@ -40,6 +42,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
@@ -77,7 +80,8 @@ class TripController(
     private val profiles: List<VehicleProfile> = emptyList(),  // 설정에서 고를 수 있는 차종(F5)
     private val settingsStore: SettingsStore? = null,          // 운전자 설정(F5). 없으면 기본값
     private val tripStore: TripStore? = null,                  // 진행 중인 여행 저장(B5). 없으면 저장하지 않음
-    private val stt: SttPort? = null                           // 음성 명령(F5). 없으면 버튼만
+    private val stt: SttPort? = null,                          // 음성 명령(F5). 없으면 버튼만
+    private val car: CarSignalsPort? = null                    // 실제 차량 신호(하이브리드 데모, B5·B6). 없으면 데모 값만
 ) {
     private var config = baseConfig
     private var engine = RecommendationEngine(config)
@@ -128,6 +132,8 @@ class TripController(
                     .conflate()
                     .collect { (r, v) -> onTick(r, v) }
             }
+            // 실제 차량 신호에 반응한다(하이브리드 데모).
+            car?.let { watchCar(it) }
             // 저장 요청을 하나씩 순서대로 기기에 쓴다.
             tripStore?.let { store -> launch { for (json in saves) store.save(json) } }
         }
@@ -151,7 +157,7 @@ class TripController(
 
     /** 시나리오(예: S1 서울→속초) 하나를 골라 새 여행을 시작한다. 설정에서 고른 차종으로 달린다. */
     fun startScenario(id: String) {
-        demo.load(scenarios.first { it.id == id })
+        demo.load(withCarSoc(scenarios.first { it.id == id }))
         selectedProfile()?.let(demo::useProfile)
         resetTrip()
         readout.anchorAtStart(demo.scenario.startSoc)
@@ -161,7 +167,7 @@ class TripController(
 
     /** 같은 시나리오를 처음 상태로 되돌린다. */
     fun restart() {
-        demo.load(scenarios.firstOrNull { it.id == demo.scenario.id } ?: demo.scenario)
+        demo.load(withCarSoc(scenarios.firstOrNull { it.id == demo.scenario.id } ?: demo.scenario))
         selectedProfile()?.let(demo::useProfile)
         resetTrip()
         readout.anchorAtStart(demo.scenario.startSoc)
@@ -188,8 +194,54 @@ class TripController(
                     transition(TripEvent.Accepted)
                     announcer.announce(phrases.waypointAdded(rec.station.name))
                 }
-                .onFailure { announcer.announce(phrases.waypointFailed(), Priority.HIGH) }
+                .onFailure { e ->
+                    // 순정 내비 경유지 두 자리가 다른 곳으로 차 있으면 그렇게 알리고, 그 밖의 실패는 직접 추가하라고 알린다.
+                    announcer.announce(if (e is WaypointsFullException) phrases.waypointsFull() else phrases.waypointFailed(), Priority.HIGH)
+                }
         }
+    }
+
+    // ---- 실제 차량 신호(하이브리드 데모, B5·B6) ----
+    // 경로·시계·충전 진행은 데모 시뮬레이터가 맡고, 차량 신호는 아래 네 가지만 정한다.
+
+    private var gearPaused = false   // 기어 P 때문에 가상 주행을 멈췄는지
+
+    /** 차량 배터리 %를 알면 발권 시작 배터리로 쓴다. */
+    private fun withCarSoc(s: Scenario): Scenario = car?.socPercent?.value?.let { s.copy(startSoc = it.toDouble()) } ?: s
+
+    private fun CoroutineScope.watchCar(car: CarSignalsPort) {
+        // 주행 중 화면 제한: 정차 화면(스크롤·상세)을 가린다.
+        launch { car.uxRestricted.collect { r -> _state.update { it.copy(uxRestricted = r) } } }
+        // 발권 표의 출발 배터리를 차량 값으로 보여 준다.
+        launch {
+            car.socPercent.collect { soc ->
+                if (soc != null) _state.update { s -> s.copy(scenarios = s.scenarios.map { it.copy(startSoc = soc.toDouble()) }) }
+            }
+        }
+        launch { car.parked.changes().collect(::onGear) }
+        launch { car.chargeSwitchOn.changes().collect(::onChargeSwitch) }
+    }
+
+    /**
+     * 기어 P: 가상 주행을 멈춘다. 다시 D·R·N: 멈춘 것을 푼다. 정차·충전 단계에서는 버튼 흐름을 그대로 둔다.
+     * 수락한 충전소 1km 안에서 P로 바꾸면 충전소에 들어선 것으로 보고 멈추지 않는다(멈추면 도착 처리가 되지 않는다).
+     */
+    private fun onGear(parked: Boolean) {
+        val pullingIn = (demo.kmToWaypoint() ?: Double.MAX_VALUE) <= ARRIVE_GRACE_KM
+        if (parked && demo.state.value.phase == SimPhase.DRIVING && !demo.state.value.paused && !pullingIn) {
+            demo.setPaused(true)
+            gearPaused = true
+        } else if (!parked && gearPaused) {
+            demo.setPaused(false)
+            gearPaused = false
+        }
+        publish()
+    }
+
+    /** 충전 스위치가 켜지면 [충전 시작], 꺼지면 [충전 종료]를 누른 것과 같다. */
+    private fun onChargeSwitch(on: Boolean) {
+        if (on && m.phase == TripPhase.Arrived) startCharging()
+        else if (!on && m.phase == TripPhase.Charging) stopCharging()
     }
 
     /** [다음 충전소]: 이번 1순위를 거절하고 다음 후보를 기다린다. */
@@ -230,9 +282,11 @@ class TripController(
     /** 운전자가 직접 [충전 종료]를 누른 경우. */
     fun stopCharging() {
         if (m.phase != TripPhase.Charging) return
-        demo.stopCharging()
+        // 기록과 단계 전환을 먼저 한다. 시뮬레이터를 멈추면 그 자리에서 틱 처리가 끼어들 수 있는데(Main.immediate),
+        // 그때 단계가 아직 충전 중이면 같은 충전을 한 번 더 기록한다.
         recordCharge()
         transition(TripEvent.ChargingFinished)
+        demo.stopCharging()
     }
 
     /**
@@ -435,10 +489,11 @@ class TripController(
                     // 충전이 끝나는 경우: 목표 도달, 시간 제한 만료, 또는 충전기가 스스로 멈춤
                     val finished = snap != null && (snap.reached || snap.limitExpired || !demoCharging())
                     if (finished && snap != null) {
-                        if (demoCharging()) demo.stopCharging()
+                        // stopCharging()과 같은 까닭으로 기록·전환을 먼저 하고 시뮬레이터를 멈춘다.
                         m.endedByLimit = snap.limitExpired && !snap.reached
                         recordCharge()
                         transition(TripEvent.ChargingFinished)
+                        if (demoCharging()) demo.stopCharging()
                     }
                     due.forEach { speakAlert(it) }
                 }
@@ -583,6 +638,15 @@ class TripController(
 
     private fun demoCharging() = demo.state.value.phase == SimPhase.CHARGING
 
+    /** 값이 실제로 바뀔 때만 내보낸다. 구독 시작 때의 현재 값과 모르는 값(null)은 건너뛴다. */
+    private fun <T : Any> StateFlow<T?>.changes(): Flow<T> = flow {
+        var prev: T? = value
+        collect { cur ->
+            if (cur != null && prev != null && cur != prev) emit(cur)
+            if (cur != null) prev = cur
+        }
+    }
+
     private fun newSession(rec: Recommendation, target: Double, startSec: Double, fromSoc: Double, fired: Set<AlertType> = emptySet()) =
         ChargeSession(
             profile = readout.chargeProfile(m.lastVehicle),
@@ -720,6 +784,7 @@ class TripController(
     private companion object {
         const val ARRIVED_KM = 0.05      // 목적지까지 50m 이내면 도착으로 본다.
         const val CAPTION_MS = 8_000L    // 자막을 띄워 두는 시간(8초)
+        const val ARRIVE_GRACE_KM = 1.0  // 충전소까지 이만큼 남았을 때 기어 P면 들어선 것으로 본다(하이브리드 데모)
         const val SAVE_EVERY_TICKS = 25  // 진행 상황 저장 간격(0.2초 틱 기준 약 5초)
         const val EVAL_EVERY_KM = 0.5    // 추천을 새로 계산하는 주행 간격
         const val EVAL_EVERY_SEC = 30.0  // 추천을 새로 계산하는 시간 간격(가상 시각, 실시간 대기 반영용)

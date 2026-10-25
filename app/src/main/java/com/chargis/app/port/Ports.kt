@@ -2,12 +2,14 @@ package com.chargis.app.port
 
 import com.chargis.app.domain.model.ChargingStation
 import com.chargis.app.domain.model.ConnectorType
+import com.chargis.app.domain.model.GeoPoint
 import com.chargis.app.domain.model.Priority
 import com.chargis.app.domain.model.RouteState
 import com.chargis.app.domain.model.UserSettings
 import com.chargis.app.domain.model.VehicleState
 import com.chargis.app.domain.model.VoiceCommand
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 /*
  * "포트(Port)"는 앱이 바깥 세상(차량, 내비, 충전소 서버, 스피커)과 연결되는 콘센트 모양을 정해 둔 것이다.
@@ -41,6 +43,35 @@ interface VehiclePort {
     suspend fun requestPreconditioning(on: Boolean): Result<Unit> =
         Result.failure(UnsupportedOperationException("preconditioning not supported"))
 }
+
+/**
+ * 실제 차량이 알려 주는 신호(Pleos Vehicle SDK + 안드로이드 차량 주행 제한). 하이브리드 데모에서 쓴다:
+ * 경로·시계는 데모 시뮬레이터가 맡고, 이 신호들이 발권 시작 배터리·일시정지·충전 시작/종료·화면 제한을 정한다.
+ * 값을 모르면 null이다. Pleos가 아닌 기기에서는 [available]이 false이고 모든 값이 null로 남는다.
+ */
+interface CarSignalsPort {
+    val available: StateFlow<Boolean>
+    /** 배터리 잔량(%, 정수) */
+    val socPercent: StateFlow<Int?>
+    /** 기어가 P면 true, D·R·N이면 false */
+    val parked: StateFlow<Boolean?>
+    /** 충전 스위치(충전 중)가 켜졌으면 true */
+    val chargeSwitchOn: StateFlow<Boolean?>
+    /** 주행 중 화면 제한(CarUxRestrictions의 Distraction Optimization 필요)이면 true */
+    val uxRestricted: StateFlow<Boolean>
+}
+
+/** 순정 내비의 경로 예측(requestTrip). 현재 위치에서 충전소까지의 실제 도로 거리·시간·도착 배터리. */
+interface TripEstimator {
+    /** 차량의 실제 현재 위치. 모르면 null */
+    suspend fun currentLocation(): GeoPoint?
+    suspend fun estimate(station: ChargingStation): TripEstimate?
+}
+
+data class TripEstimate(val distanceKm: Double, val etaMin: Int, val arrivalSocPercent: Int?)
+
+/** 순정 내비의 경유지 두 자리가 이미 다른 곳으로 차 있어 추가하지 못했다. */
+class WaypointsFullException : IllegalStateException("navi waypoints full")
 
 /** 충전소 정보 연결. 경로 위 충전소 목록을 준다(빈 대수·대기 같은 실시간 상황도 목록에 담겨 온다). */
 interface ChargerDataPort {
