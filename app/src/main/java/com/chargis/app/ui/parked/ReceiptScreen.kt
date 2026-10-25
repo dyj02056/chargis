@@ -73,13 +73,7 @@ internal fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: 
             TicketButton(stringResource(R.string.receipt_again), onRestart, Modifier.width(320.dp), minHeight = 96.dp)
         }
         TicketStock(Modifier.width(520.dp).fillMaxHeight()) {
-            Box(Modifier.fillMaxSize()) {
-                ReceiptBody(receipt, state.scenarioTitle)
-                Stamp(
-                    stringResource(R.string.stamp_settled),
-                    Modifier.align(Alignment.BottomEnd).padding(end = 32.dp, bottom = 40.dp)
-                )
-            }
+            ReceiptBody(receipt, state.scenarioTitle)
         }
     }
 }
@@ -89,17 +83,18 @@ internal fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: 
 private fun ReceiptBody(receipt: TripReceipt, title: String) {
     val c = Ticket.colors
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 36.dp, vertical = 28.dp)) {
-        Text(stringResource(R.string.receipt_title), style = MaterialTheme.typography.titleLarge, color = c.ink)
-        Text(title, style = MaterialTheme.typography.bodyMedium, color = c.inkMuted)
+        // 정산 도장은 제목 옆에 찍는다(맨 아래에 두면 충전 줄이 늘어날 때 가리거나 밀려난다).
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.receipt_title), style = MaterialTheme.typography.titleLarge, color = c.ink)
+                Text(title, style = MaterialTheme.typography.bodyMedium, color = c.inkMuted)
+            }
+            Stamp(stringResource(R.string.stamp_settled))
+        }
         Spacer(Modifier.height(16.dp))
         TearLine()
         ReceiptLine(stringResource(R.string.receipt_depart), stringResource(R.string.receipt_soc_value, receipt.departAt, receipt.startSoc.roundToInt()))
-        receipt.charges.forEach {
-            ReceiptLine(
-                "${stringResource(R.string.receipt_charge)} · ${it.stationName}",
-                chargeValue(it)
-            )
-        }
+        receipt.charges.forEach { ChargeLines(it) }
         receipt.declinedNames.forEach {
             ReceiptLine("${stringResource(R.string.receipt_declined)} · $it", "—", muted = true)
         }
@@ -140,10 +135,19 @@ internal fun ReceiptLine(label: String, value: String, muted: Boolean = false, s
     }
 }
 
-/** 충전 기록 한 줄의 값. 충전기 시간 제한으로 끝났으면 "· 제한"을, 요금을 알면 "· 3,800원"을 붙인다. */
+/** 충전 기록 한 줄의 값. 충전기 시간 제한으로 끝났으면 "· 제한"을 붙인다. */
 @Composable
 internal fun chargeValue(r: ChargeRecord): String {
     val base = stringResource(R.string.receipt_charge_value, r.fromSoc.roundToInt(), r.toSoc.roundToInt(), r.minutes)
-    val limited = if (r.endedByLimit) stringResource(R.string.receipt_limit_suffix, base) else base
-    return r.costKrw?.let { stringResource(R.string.receipt_charge_cost_value, limited, wonText(it)) } ?: limited
+    return if (r.endedByLimit) stringResource(R.string.receipt_limit_suffix, base) else base
+}
+
+/**
+ * 충전 한 번을 영수증에 찍는다: "충전 · B 휴게소 …… 37 → 50% · 9분", 요금을 알면 아래에 "요금 …… 3,800원".
+ * 한 줄에 다 넣으면 시간 제한 표시와 요금이 겹쳐 충전소 이름이 밀려 두 줄로 깨진다.
+ */
+@Composable
+internal fun ChargeLines(r: ChargeRecord) {
+    ReceiptLine("${stringResource(R.string.receipt_charge)} · ${r.stationName}", chargeValue(r))
+    r.costKrw?.let { ReceiptLine(stringResource(R.string.receipt_charge_cost), stringResource(R.string.cost_value, wonText(it)), muted = true) }
 }

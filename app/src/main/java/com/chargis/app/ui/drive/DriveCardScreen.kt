@@ -58,7 +58,7 @@ import com.chargis.app.ui.ticket.rememberReduceMotion
 import com.chargis.app.ui.vertical
 import kotlin.math.roundToInt
 
-// 주행 중 화면을 그리는 파일이다. 스크린샷: docs/screenshots/02~04, 08, 10, 12번
+// 주행 중 화면을 그리는 파일이다. 스크린샷: docs/screenshots/02~04, 08, 10, 12, 15, 17, 18, 20, 21번
 // 화면 구성: [왼쪽 꼬리 칸(표 번호)] ┊ 절취선 ┊ [본문 카드 1장]
 
 private val StubWidth = 76.dp   // 왼쪽 꼬리 칸의 폭
@@ -398,7 +398,7 @@ private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<R
                 card.suggestPreconditioning -> {
                     InfoLine(stringResource(R.string.drive_precondition_suggest, card.coldExtraMinutes), Modifier.padding(top = 10.dp), singleLine = true)
                     Spacer(Modifier.weight(1f))
-                    TicketButton(stringResource(R.string.drive_precondition_button), onPrecondition, Modifier.fillMaxWidth(), primary = false, minHeight = 88.dp)
+                    TicketButton(stringResource(R.string.drive_precondition_button), onPrecondition, Modifier.fillMaxWidth(), primary = false, minHeight = 96.dp)
                 }
             }
         }

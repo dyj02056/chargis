@@ -89,3 +89,9 @@
 - 2026-10-25 · 공공데이터 점검 스크립트 `scripts/check-public-api.ps1`을 추가했다. local.properties의 키로 목록·상태 API를 한 번 불러 chgerType·kindDetail·lastTedt 등 어댑터가 가정한 필드가 오는지, 시도 코드 51/42 중 어느 쪽이 결과를 주는지 출력한다. 키는 출력하지 않는다.
 
 - 2026-10-25 · 300줄 넘는 파일을 역할별로 나눴다(동작 변경 없음). `ParkedScreen` → 발권·설정(`IssueScreen`), 정차(`StopScreens`), 영수증(`ReceiptScreen`). 주행·정차 화면에 따로 있던 안내·경고 한 줄은 `ticket/TicketParts.kt`의 `InfoLine`·`WarnLine`으로 합쳤다. `PublicChargerData` → `EvChargerParser`, `ChargerCodes`, `StationAggregator`, `ChargerRuleTable`, `RouteProjector`. `TripController`의 저장·복원은 `TripPersistence`, 음성 명령 듣기는 `VoiceListening`으로 뺐다. 시나리오 통합 테스트는 준비물(`ScenarioHarness`)과 기본 흐름·복원·현실 보정 세 파일로 나눴다. 시간 제한 칸(`LimitField`/`LimitCell`)은 주행 화면에만 위험 표시가 있어 합치지 않았다.
+- 2026-10-25 · 공공데이터 중계 서버를 `server/charger-proxy.mjs`(Node 18+, 외부 패키지 없음)로 만들었다. `getChargerInfo`·`getChargerStatus`만 받고, 허용한 파라미터(pageNo, numOfRows, zcode, zscode, period, dataType)만 형식을 검사해 넘기며, 앱이 보낸 serviceKey는 버린다. 목록 10분·상태 1분 메모리 저장, IP당 분당 60회 제한, 선택 `APP_TOKEN`(헤더 X-Chargis-Token, 앱은 `chargis.chargerApiToken`). 응답·오류·로그에 키를 넣지 않는다. 배포 위치는 정하지 않았다.
+- 2026-10-25 · GitHub Actions: 원격 main에서 3beb586·7f6d449 두 번 돌아 모두 성공한 것을 확인했다. 중계 서버 테스트(`node --test`)를 별도 작업으로 더했다.
+- 2026-10-25 · 스크린샷 22장을 모두 다시 찍었다. 01~16은 S1~S3, 17·20은 S4, 18은 S5, 21은 S6, 19는 설정 화면, 22는 배터리 직접 입력이다. 08·11·17만 주간 모드다. 에뮬레이터 화면 글자(uiautomator)를 읽어 버튼을 누르는 방식으로 찍었다.
+- 2026-10-25 · 영수증 레이아웃: 시간 제한 표시와 요금을 한 줄에 넣으면 충전소 이름이 두 줄로 깨져, 요금을 충전 줄 아래 "요금" 줄로 나눴다. 정산 도장은 마지막 줄을 가려 제목 옆으로 옮겼다.
+- 2026-10-25 · 버그 수정: 결정을 기다리는 동안 1순위가 바뀌어 기존 안내를 유지할 때, 1순위 거리만 갱신하고 혼잡 비교 카드의 대안 거리는 처음 안내한 때 값에 멈춰 있었다(S5에서 I 마트가 49km인데 70km로 보임). 대안 거리도 함께 갱신한다. 건너뛰는 시점에 따라 생기는 상태라 시나리오 테스트로는 재현하지 못했고, 에뮬레이터에서 고친 뒤 49km로 나오는 것을 확인했다.
+- 2026-10-25 · 예열 버튼 높이를 88dp에서 96dp로 올렸다. 주행 중 터치 대상은 96dp 이상(DESIGN.md)이다.

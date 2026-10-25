@@ -40,7 +40,8 @@ Map and charging apps show where chargers are. Chargis computes how much and how
 
 ## Evidence on Hand
 
-- Working demo app with five scenarios (S1 basic, S2 holiday congestion, S3 charger time limit, S4 winter consumption, S5 off-route charger) and screenshots in `docs/screenshots/`.
+- Working demo app with six scenarios (S1 basic, S2 holiday congestion, S3 charger time limit, S4 winter consumption and preconditioning, S5 off-route charger, S6 mountain pass) and 22 screenshots in `docs/screenshots/` (retaken 2026-10-25).
+- A tested relay server for the public charger API (`server/`), not yet deployed. CI (GitHub Actions) runs the app and relay tests on every push to main.
 - No real users, testimonials, partner logos, or measured outcomes exist; none may be invented.
 
 ## Product Principles

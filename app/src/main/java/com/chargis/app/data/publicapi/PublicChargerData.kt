@@ -43,19 +43,22 @@ fun interface EvChargerHttp {
  * 충전소 API 호출 구현.
  * - [baseUrl]: 기본은 data.go.kr. 키를 앱에 넣지 않으려면 키를 붙여 주는 중계 서버(프록시) 주소를 넣는다.
  * - [serviceKey]: data.go.kr 키. 비어 있으면 붙이지 않는다(프록시가 붙인다고 본다).
+ * - [appToken]: 중계 서버(server/charger-proxy.mjs)에 APP_TOKEN을 정했으면 같은 값을 X-Chargis-Token 헤더로 보낸다.
  * 앱에 넣은 키는 APK에서 꺼낼 수 있으므로, 배포용(release) 빌드는 키를 넣지 않고 프록시를 쓴다(app/build.gradle.kts).
  * 오류 메시지에는 주소를 넣지 않는다(키가 로그에 남지 않게).
  */
 class UrlEvChargerHttp(
     private val serviceKey: String?,
     private val baseUrl: String = DEFAULT_BASE,
-    private val timeoutMs: Int = 8_000
+    private val timeoutMs: Int = 8_000,
+    private val appToken: String? = null
 ) : EvChargerHttp {
     override suspend fun get(operation: String, params: Map<String, String>): String = withContext(Dispatchers.IO) {
         val conn = URL(urlFor(operation, params)).openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = timeoutMs
             conn.readTimeout = timeoutMs
+            appToken?.takeIf { it.isNotBlank() }?.let { conn.setRequestProperty(TOKEN_HEADER, it) }
             if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode} ($operation)")
             conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } finally {
@@ -73,6 +76,7 @@ class UrlEvChargerHttp(
 
     companion object {
         const val DEFAULT_BASE = "https://apis.data.go.kr/B552584/EvCharger"
+        const val TOKEN_HEADER = "X-Chargis-Token"
     }
 }
 

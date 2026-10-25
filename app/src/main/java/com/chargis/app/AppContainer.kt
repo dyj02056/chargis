@@ -63,7 +63,7 @@ class AppContainer(context: Context) {
         if (BuildConfig.USE_PUBLIC_CHARGER_API && (BuildConfig.CHARGER_API_KEY.isNotBlank() || proxyUrl != null)) {
             FallbackChargerData(
                 primary = PublicChargerData(
-                    UrlEvChargerHttp(BuildConfig.CHARGER_API_KEY, proxyUrl ?: UrlEvChargerHttp.DEFAULT_BASE),
+                    UrlEvChargerHttp(BuildConfig.CHARGER_API_KEY, proxyUrl ?: UrlEvChargerHttp.DEFAULT_BASE, appToken = BuildConfig.CHARGER_API_TOKEN),
                     rules = ChargerRuleTable.parse(readAsset("charger_rules.json"))
                 ),
                 fallback = FakeChargerData(simulator)

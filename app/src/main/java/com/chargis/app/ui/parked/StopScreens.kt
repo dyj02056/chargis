@@ -88,9 +88,7 @@ private fun TripLines(state: TripUiState) {
     ReceiptLine(stringResource(R.string.label_ticket_no), state.ticketNo)
     state.receipt?.let { r ->
         ReceiptLine(stringResource(R.string.label_issued), stringResource(R.string.receipt_soc_value, r.departAt, r.startSoc.roundToInt()))
-        r.charges.forEach {
-            ReceiptLine("${stringResource(R.string.receipt_charge)} · ${it.stationName}", chargeValue(it))
-        }
+        r.charges.forEach { ChargeLines(it) }
         r.declinedNames.forEach { ReceiptLine("${stringResource(R.string.receipt_declined)} · $it", "—", muted = true) }
     }
 }

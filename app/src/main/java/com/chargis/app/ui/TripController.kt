@@ -56,8 +56,9 @@ import kotlin.math.roundToInt
  * 2. 운전자가 버튼을 누르거나 말하면([accept], [decline], [startCharging], [depart] 등) 단계를 넘긴다.
  * 3. 화면에 보여 줄 모든 값을 [state] 하나로 묶어 내보낸다([publish]).
  *
- * 역할을 나눠 두었다(B5): 여행 중 기억은 [TripMemory], 화면 상태 조립은 [TripPresenter],
- * 충전 한 번의 추적과 알림은 [ChargeSession], 앱을 껐다 켜도 이어 가기는 [TripStore]가 맡는다.
+ * 역할을 나눠 두었다: 여행 중 기억은 [TripMemory], 화면 상태 조립은 [TripPresenter],
+ * 충전 한 번의 추적과 알림은 [ChargeSession], 차량 값 읽기(거리·고도·전비 보정·배터리 직접 입력)는 [VehicleReadout],
+ * 예열 안내 시점은 [PreconditionAdvisor], 저장·복원 형식은 [TripPersistence], 음성 명령 듣기는 [VoiceListening]이 맡는다.
  *
  * 코루틴(CoroutineScope, launch): 화면을 멈추지 않고 뒤에서 동시에 일을 처리하는 코틀린의 방법이다.
  */
@@ -524,11 +525,14 @@ class TripController(
             return
         }
         // 1순위가 그대로면 새 계산값을 쓰고(혼잡 여부는 처음 안내한 그대로 유지),
-        // 1순위가 바뀌었으면 화면이 갑자기 바뀌지 않게 기존 추천의 거리만 갱신한다.
+        // 1순위가 바뀌었으면 화면이 갑자기 바뀌지 않게 기존 추천의 거리만 갱신한다(혼잡 비교 카드의 대안도 함께).
         m.offer = if (result is RecommendationResult.Recommended && result.primary.station.id == current.primary.station.id) {
             result.copy(congested = current.congested)
         } else {
-            current.copy(primary = current.primary.withDistanceFrom(m.stations))
+            current.copy(
+                primary = current.primary.withDistanceFrom(m.stations),
+                alternatives = current.alternatives.map { it.withDistanceFrom(m.stations) }
+            )
         }
     }
 

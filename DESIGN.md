@@ -276,7 +276,7 @@ Tactile, printed blocks on the tear strip.
 - **TearLine:** horizontal dashed perforation with notches, always directly above the action strip.
 
 ### Stamp (signature)
-A double-bordered rectangular stamp (2dp outer border at 4dp radius, 3dp gap, 1dp inner border at 2dp radius), 14 x 6dp inner padding, Title text in stamp ink, rotated -6 degrees. On first appearance it drops from 1.35 scale to 1.0 over 260ms with a cubic ease-out after a 90ms fade; with system animations off it appears immediately. Used for 경유지, 충전 완료, 도착, 정산 완료. This is the app's only flourish.
+A double-bordered rectangular stamp (2dp outer border at 4dp radius, 3dp gap, 1dp inner border at 2dp radius), 14 x 6dp inner padding, Title text in stamp ink, rotated -6 degrees. On first appearance it drops from 1.35 scale to 1.0 over 260ms with a cubic ease-out after a 90ms fade; with system animations off it appears immediately. Used for 경유지, 충전 완료, 도착, 정산 완료. On the receipt the 정산 완료 stamp sits beside the receipt title, never over the lines, so it cannot hide a line when a trip has more charges. This is the app's only flourish.
 
 ### Route Strip
 A printed segment band: travelled route as a 4px ink line, remaining route as a 3px dashed rule line, end bars at departure and arrival, a 5px current-position tick. Stops: target filled cobalt (1.25x), charged filled ink, ahead ink ring, passed muted ring, declined muted X with struck-through label. Labels in Label style beneath.
@@ -286,6 +286,24 @@ Charging progress as 20 cells (5% each, 6dp gaps, 3dp radius, 40dp tall): charge
 
 ### Receipt Line
 Label (Body Large, or Title when the total) at left, a dotted leader in rule colour, value in Figure Small at right (Bold when the total). Declined stops print muted with "—".
+A charge prints as two lines: the session ("충전 · B 휴게소 …… 37 → 50% · 9분", with "· 제한" when the charger's time limit ended it) and, when the price is known, a muted "요금 …… 3,800원" line beneath. One long line squeezed the station name onto two lines. Totals add "충전 요금" (with "일부 정보 없음" when some prices are unknown). Amounts are rounded to 100원 with thousands separators.
+
+### Info Line and Warn Line
+One-line notes shared by the driving and parked screens (`InfoLine`, `WarnLine` in TicketParts).
+- **Info Line:** a 10dp cobalt dot and Title Medium ink text. Used for the second planned stop, "배터리 예열 중", and the preconditioning suggestion.
+- **Warn Line:** the WarnGlyph (24dp on driving stubs, 26dp on parked screens) and Title Medium amber text. Used for time-limit risk, taper above 80%, a cold battery, and "one more stop needed".
+- On driving stubs both get 10dp top padding and clip to one line with an ellipsis so the stub never grows.
+
+### Settings
+- **Issue screen:** the left column shows a three-line summary (vehicle; target cap · margin · destination reserve; station range · battery source · voice) in Label over Title Medium, and a ruled [설정] button. The full settings do not sit on the issue screen.
+- **Settings screen:** two columns of setting rows (charging: vehicle, cap, margin, destination reserve; app: voice, station range, battery source) under a Display Small title and an ink [설정 완료] button. It fits 1280 x 800 without scrolling.
+- **Choice Cell:** a 48dp-minimum cell with a 1.5dp ink-muted border; the selected cell fills with stamp ink. Rows separate with hairlines.
+
+### Battery Correction (manual SoC)
+When the battery value is entered by hand, parked screens show "계기판과 같으면 [맞음], 다르면 고쳐 주세요" above a single full-width row of ruled buttons: [맞음] (stamp-ink text, 120dp) and [−5] [−1] [+1] [+5] (104dp). The row wraps rather than clipping a button. Spacing above and below the hairline tightens from 20dp to 12dp so the action strip keeps its height.
+
+### Preconditioning prompt
+On the "안내 중" driving stub, when a cold battery would slow the accepted stop's charge by more than three minutes and arrival is within 30 minutes, the right column adds an Info Line ("배터리 예열을 켜면 충전 약 N분 단축") and one ruled 96dp button [배터리 예열 켜기]. Once preconditioning is on, the button gives way to "배터리 예열 중".
 
 ### Ticket Header and Caption Bar
 - **Header:** wordmark in Title Large ink, scenario in Body muted, then clock and battery in Figure Small with a Label caption, then the data source label. Always visible.

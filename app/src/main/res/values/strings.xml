@@ -184,7 +184,7 @@
     <string name="receipt_saved_value">%1$d분</string>
     <string name="receipt_cost_total">충전 요금</string>
     <string name="receipt_cost_partial">%1$s · 일부 정보 없음</string>
-    <string name="receipt_charge_cost_value">%1$s · %2$s원</string>
+    <string name="receipt_charge_cost">요금</string>
     <string name="finished_cost">충전 요금</string>
 
     <!-- 설정(F5) -->

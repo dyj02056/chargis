@@ -31,6 +31,8 @@ android {
         buildConfigField("boolean", "USE_PUBLIC_CHARGER_API", localProps.getProperty("chargis.usePublicChargerApi", "false"))
         // 충전소 API 주소. 비우면 data.go.kr. 키를 앱에 넣지 않으려면 키를 붙여 주는 중계 서버(프록시) 주소를 넣는다.
         buildConfigField("String", "CHARGER_API_BASE_URL", "\"${localProps.getProperty("chargis.chargerApiBaseUrl", "")}\"")
+        // 중계 서버(server/charger-proxy.mjs)에 APP_TOKEN을 정했으면 같은 값. 서비스 키가 아니라 남용을 줄이는 표시일 뿐이다.
+        buildConfigField("String", "CHARGER_API_TOKEN", "\"${localProps.getProperty("chargis.chargerApiToken", "")}\"")
     }
 
     // debug = 개발·시연용(개발자 오버레이 켬), release = 배포용(끔)

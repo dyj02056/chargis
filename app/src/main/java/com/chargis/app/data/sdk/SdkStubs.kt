@@ -26,7 +26,10 @@ class SdkNavi : NaviPort {
         Result.failure(UnsupportedOperationException("TODO(SDK): NaviHelper.requestReRoute"))
 }
 
-/** TODO(SDK): Vehicle SDK — SoC, 주행가능거리, 주행/정차 상태(권한 승인 필요). */
+/**
+ * TODO(SDK): Vehicle SDK — SoC, 주행가능거리, 주행/정차 상태, 배터리 온도, 예열(컨디셔닝) 상태·제어(권한 승인 필요).
+ * SoC를 주지 못하면 isSupported()가 false이고, 앱은 배터리 직접 입력(ManualSocEstimator)으로 넘어간다.
+ */
 class SdkVehicle : VehiclePort {
     override val vehicleState: Flow<VehicleState> = emptyFlow()
     override suspend fun isSupported(): Boolean = false

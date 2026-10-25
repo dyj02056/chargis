@@ -4,6 +4,11 @@
 > 원본 기획: 현대자동차그룹 차량용 앱 개발 공모전 참가신청서(Chargis). 이 문서와 충돌하면 이 문서가 우선합니다.
 > 작성일: 2026-10-24 / 1차 제출 목표: 2026-11-14 (마감 11-15 23:59)
 
+> **현재 상태(2026-10-25):** M0~M2의 앱 쪽 작업과 M3의 F3 알림은 끝났다. 남은 것은 SDK 연동(10/28 설명회 뒤), 공공데이터 실키 검증,
+> 중계 서버 배포 위치 결정, 시연 영상이다. 이 계획서 이후에 더한 기능(휴게소 밖 충전소, 충전구 호환, 배터리 온도와 예열, 요금,
+> 목적지 도착 잔량, 고장 의심, 고도, 배터리 직접 입력, 시나리오 S4~S6)과 그 근거는 `docs/DECISIONS.md`에, 확인할 것은
+> `docs/OPEN_ISSUES.md`에, 지금 동작은 `README.md`에 있다. 아래 본문은 처음 계획 그대로 두고, 체크리스트만 진행 상황에 맞췄다.
+
 ---
 
 ## 0. 에이전트 작업 지침 (가장 먼저 읽을 것)
@@ -440,31 +445,31 @@ DriveMode에서 스크롤/입력이 불가능한지, ParkedMode 전환이 즉시
 > 일정은 신청서 기준. 오늘 = 10/24(토). 각 단계 끝에 빌드·테스트 통과 + `docs/DECISIONS.md` 갱신.
 
 ### M0 · 10/24–10/25 · 뼈대 + 엔진
-- [ ] Gradle 프로젝트 생성(Compose, minSdk 28), 패키지 구조, `AppContainer`
-- [ ] 도메인 모델(§5), 포트(§6), `ChargeMath`
-- [ ] `RecommendationEngine` + T1~T7 테스트 통과
-- [ ] `assets/` 샘플 JSON, `vehicle_profiles.json`
+- [x] Gradle 프로젝트 생성(Compose, minSdk 28), 패키지 구조, `AppContainer`
+- [x] 도메인 모델(§5), 포트(§6), `ChargeMath`
+- [x] `RecommendationEngine` + T1~T7 테스트 통과
+- [x] `assets/` 샘플 JSON, `vehicle_profiles.json`
 
 ### M1 · 10/25–10/28 · 시뮬레이터 + 핵심 화면
-- [ ] `ScenarioSimulator` + `Fake*` 구현, 배속/점프 컨트롤
-- [ ] `TripViewModel` 상태머신(§8.1)
-- [ ] DriveCard(추천/수락/다음), ParkedDetail, 최소 ChargingScreen
-- [ ] `FakeTts`(자막) + 기본 `TextToSpeech` 폴백
-- [ ] **10/28 설명회용 질문 목록 확정(§14)**
+- [x] `ScenarioSimulator` + `Fake*` 구현, 배속/점프 컨트롤
+- [x] `TripViewModel` 상태머신(§8.1) — 실제로는 `TripController`(안드로이드 의존 없음)와 `TripStateMachine`
+- [x] DriveCard(추천/수락/다음), ParkedDetail, 최소 ChargingScreen
+- [x] `FakeTts`(자막) + 기본 `TextToSpeech` 폴백
+- [x] **10/28 설명회용 질문 목록 확정(§14)**
 
 ### ◆ 10/28 · 설명회 후 조정
 - [ ] 확인 결과를 `docs/DECISIONS.md`에 반영, 이중안 확정, 미지원 기능은 폴백 구현체로 고정
 - [ ] SDK 문서/샘플을 `docs/sdk/`에 두고 에이전트에게 재전달
 
 ### M2 · 10/29–11/7 · F1/F2 실데이터화
-- [ ] `ChargerDataPort` 실제/정적 구현, 시간대별 혼잡 통계
-- [ ] `VehiclePort` SDK 또는 Manual 확정 + 수동 SoC 입력 UI
-- [ ] 후보 비교 표, 혼잡 대안 카드(S2), 설정 화면(상한/마진), 차종 선택(기본값 → 목록)
+- [x] `ChargerDataPort` 실제/정적 구현 — 공공데이터 어댑터(실키 검증 전)와 번들 샘플. 시간대별 혼잡 통계는 샘플에만 있다
+- [ ] `VehiclePort` SDK 확정 — 대안인 배터리 직접 입력(추정 + 정차 중 고치기)은 구현했다
+- [x] 후보 비교 표, 혼잡 대안 카드(S2), 설정 화면(상한/마진/목적지 잔량/충전소 범위/배터리 값/음성), 차종 선택
 - [ ] `SdkNavi` 경로/위치 연동(SDK 확보 시)
 
 ### M3 · 11/8–11/13 · F3/F4 + 영상
-- [ ] `ChargingSessionTracker` + `AlertScheduler`(§8) + ChargingScreen 완성(동승자 큰 표시)
-- [ ] `addWaypoint`/`requestReRoute` 연동(F4), 실패 시 안내 문구
+- [x] `ChargingSessionTracker` + `AlertScheduler`(§8) + ChargingScreen 완성(동승자 큰 표시)
+- [ ] `addWaypoint`/`requestReRoute` 연동(F4) — Fake 내비로 동작, 실패 시 안내 문구는 구현. SDK 연동은 남음
 - [ ] 시연 영상용 S1 리허설, 화면 녹화 점검(개인정보 비노출)
 
 ### M4 · 11/14 · 제출

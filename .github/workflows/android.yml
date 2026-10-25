@@ -1,4 +1,5 @@
 # 푸시와 풀 리퀘스트마다 단위 테스트(Compose 화면 테스트 포함)를 돌리고 debug APK를 빌드한다.
+# 공공 충전소 API 중계 서버(server/)의 테스트도 함께 돌린다.
 # 공공데이터 키는 쓰지 않는다(번들 샘플 데이터로만 테스트한다).
 name: Android CI
 
@@ -42,3 +43,17 @@ jobs:
           name: test-reports
           path: app/build/reports/tests/testDebugUnitTest/
           retention-days: 7
+
+  proxy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 중계 서버 테스트
+        run: node --test server/charger-proxy.test.mjs
