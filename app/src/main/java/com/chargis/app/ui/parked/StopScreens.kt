@@ -302,7 +302,8 @@ private fun PowerCurve(stop: StopInfo, warning: String?, modifier: Modifier) {
                 Text(stringResource(R.string.curve_title), style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
                 Spacer(Modifier.weight(1f))
             }
-            Text(stringResource(R.string.label_power), style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
+            // 차량이 지금 출력을 주지 않으면(Pleos Vehicle SDK에는 충전 출력이 없다) 곡선에서 읽은 값이므로 "추정"이라고 밝힌다.
+            Text(stringResource(if (stop.chargePowerKw == null) R.string.label_power_estimated else R.string.label_power), style = MaterialTheme.typography.labelMedium, color = c.inkMuted)
             Figure("${nowKw.roundToInt()}", stringResource(R.string.unit_kw), FigureStyle.Small, unitStyle = MaterialTheme.typography.bodyMedium)
         }
         Spacer(Modifier.height(6.dp))

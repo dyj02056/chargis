@@ -9,6 +9,8 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk
+# 공모전 제출 규칙: 저장소 apk/ 폴더에 release APK를 함께 올린다
+!/apk/*.apk
 *.aab
 *.keystore
 *.jks

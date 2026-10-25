@@ -82,11 +82,11 @@ class TripController(
     private var config = baseConfig
     private var engine = RecommendationEngine(config)
     private val gate = AnnouncementGate(config.announceWithinKm, config.switchMinutesGap)
-    private val presenter = TripPresenter()
+    private val presenter = TripPresenter(vehicle.canControlPreconditioning)
     private val m = TripMemory()
     private val readout = VehicleReadout(m) { demo.scenario.profile }   // 거리·고도·전비 보정·배터리 직접 입력
     private val persistence = TripPersistence(m, gate)                 // 여행 저장·복원(B5)
-    private val voice = VoiceListening(scope, stt, ::onVoiceCommand)   // 음성 명령 듣기(F5)
+    private val voice = VoiceListening(scope, stt, vehicle.canControlPreconditioning, ::onVoiceCommand)   // 음성 명령 듣기(F5)
     private var settings = UserSettings()
 
     // 화면 상태. _state(밑줄)는 이 클래스 안에서만 고칠 수 있고, 바깥(화면)에는 읽기 전용 state로 보여 준다.
@@ -418,8 +418,12 @@ class TripController(
                     val acc = m.accepted
                     if (acc != null && PreconditionAdvisor.shouldAdvise(acc, vehicleState, route, demo.scenario.profile, m.preconditionAdvised, config.defaultSpeedKmh)) {
                         m.preconditionAdvised = true
-                        announcer.announce(phrases.preconditionAdvice(acc.coldExtraMinutes))
-                        updateListening()   // "예열"이라고 말해 켤 수 있게 한다
+                        if (vehicle.canControlPreconditioning) {
+                            announcer.announce(phrases.preconditionAdvice(acc.coldExtraMinutes))
+                            updateListening()   // "예열"이라고 말해 켤 수 있게 한다
+                        } else {
+                            announcer.announce(phrases.preconditionAdviceManual(acc.coldExtraMinutes))   // 차량 화면에서 켜 달라고만 한다
+                        }
                     }
                 }
             }

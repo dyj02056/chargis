@@ -25,6 +25,7 @@
     <string name="tts_waypoint_switched_unreachable">%1$s까지 가기 어려워져 경유지를 바꿨습니다. 새 경유지는 %2$s.</string>
     <string name="tts_rule_unknown">이 충전기의 시간 제한 정보가 없습니다. 충전기 화면에서 확인해 주세요.</string>
     <string name="tts_precondition_advice">배터리가 차가워 충전이 느립니다. 지금 배터리 예열을 켜면 충전이 약 %1$d분 빨라집니다.</string>
+    <string name="tts_precondition_advice_manual">배터리가 차가워 충전이 느립니다. 차량 화면에서 배터리 예열을 켜면 충전이 약 %1$d분 빨라집니다.</string>
     <string name="tts_precondition_started">배터리 예열을 켰습니다. 도착할 때까지 배터리를 데웁니다.</string>
     <string name="tts_check_soc">계기판의 배터리 값을 확인해 주세요. 다르면 화면에서 고칠 수 있습니다.</string>
     <string name="tts_precondition_manual">이 앱에서는 예열을 켤 수 없습니다. 차량 화면에서 배터리 예열을 켜 주세요.</string>
@@ -92,6 +93,7 @@
     <string name="wait_forecast">예측</string>
     <string name="drive_navigating">%1$s로 안내 중</string>
     <string name="drive_precondition_suggest">배터리 예열을 켜면 충전 약 %1$d분 단축</string>
+    <string name="drive_precondition_suggest_manual">차량 화면에서 예열을 켜면 충전 약 %1$d분 단축</string>
     <string name="drive_precondition_on">배터리 예열 중</string>
     <string name="drive_precondition_button">배터리 예열 켜기</string>
     <string name="drive_no_safe_title">배터리 부족</string>
@@ -145,6 +147,7 @@
     <string name="target_minus_desc">목표를 5퍼센트 낮추기</string>
     <string name="target_plus_desc">목표를 5퍼센트 높이기</string>
     <string name="label_power">출력</string>
+    <string name="label_power_estimated">추정 출력</string>
     <string name="curve_title">예상 출력</string>
     <string name="curve_desc">충전 출력 곡선. 지금 %1$d퍼센트에서 약 %2$d킬로와트, 목표 %3$d퍼센트</string>
     <string name="taper_note">80%% 이후에는 충전이 크게 느려집니다</string>

@@ -20,7 +20,9 @@ import kotlin.math.roundToInt
  * [TripMemory]와 시뮬레이터 상태를 읽어 화면에 그릴 값([TripUiState])으로 옮겨 담기만 한다. 아무것도 바꾸지 않는다.
  * 계산(추천, 충전 추적)과 그리기 준비를 나눠 두면, 화면에 무엇을 보여 줄지 바꿀 때 이 파일만 고치면 된다.
  */
-class TripPresenter {
+class TripPresenter(
+    private val canControlPreconditioning: Boolean = true   // 앱에서 예열을 켤 수 있는 차량인지(VehiclePort)
+) {
 
     /** 지금 상황을 화면 상태 하나로 묶는다. [prev]에서 자막·설정처럼 다른 곳이 채우는 값은 그대로 이어받는다. */
     fun present(
@@ -96,7 +98,8 @@ class TripPresenter {
                     coldExtraMinutes = acc.coldExtraMinutes,
                     preconditioning = m.lastVehicle?.preconditioning,
                     // 컨트롤러가 예열을 권한 뒤(도착 30분 이내)부터, 아직 꺼져 있으면 버튼을 띄운다.
-                    suggestPreconditioning = m.preconditionAdvised && m.lastVehicle?.preconditioning != true
+                    suggestPreconditioning = m.preconditionAdvised && m.lastVehicle?.preconditioning != true,
+                    canStartPreconditioning = canControlPreconditioning
                 )
             else -> when (val r = m.lastResult) {
                 is RecommendationResult.NoSafeStop ->

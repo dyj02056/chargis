@@ -1,6 +1,11 @@
 package com.chargis.app.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -129,6 +134,46 @@ class ScreenTest {
         compose.onNodeWithText("배터리 예열을 켜면 충전 약 6분 단축").assertIsDisplayed()
         compose.onNodeWithText("배터리 예열 켜기").performClick()
         assertEquals(true, pressed)
+    }
+
+    /** 앱에서 예열을 켤 수 없는 차량이면 버튼 없이 차량 화면에서 켜라는 안내만 한다. */
+    @Test
+    fun navigatingCard_manualPreconditioningHasNoButton() {
+        val card = DriveCard.Navigating(
+            stationName = "B 휴게소", distanceKm = 30.0, targetSoc = 55.0, arrivalSoc = 30.0, chargeMinutes = 21,
+            timeLimitMin = 40, coldExtraMinutes = 6, preconditioning = false, suggestPreconditioning = true,
+            canStartPreconditioning = false
+        )
+        compose.setContent {
+            ChargisTheme(night = true) {
+                DriveCardScreen(card, "18:40", 120.0, TicketMeta("S4-1700", "17:00"), emptyList(), 0.4f, {}, {})
+            }
+        }
+        compose.onNodeWithText("차량 화면에서 예열을 켜면 충전 약 6분 단축").assertIsDisplayed()
+        compose.onAllNodesWithText("배터리 예열 켜기").assertCountEquals(0)
+    }
+
+    /** 충전 중: 차량이 출력을 주지 않으면 곡선에서 읽은 값이라 "추정 출력"으로 표시한다. */
+    @Test
+    fun charging_labelsPowerAsEstimateWithoutVehicleValue() {
+        val curve = (0..100 step 10).map { CurveSample(it.toFloat(), 100f - it * 0.6f) }
+        fun stop(kw: Double?) = StopInfo(
+            stationName = "B 휴게소", currentSoc = 40.0, targetSoc = 50.0, minutesToTarget = 6, timeLimitMin = null,
+            minutesToLimit = null, departAt = "10:20", chargePowerKw = kw, powerCurve = curve
+        )
+        var current by mutableStateOf(stop(null))
+        compose.setContent {
+            ChargisTheme(night = true) {
+                ParkedScreen(
+                    state = TripUiState(phase = com.chargis.app.domain.session.TripPhase.Charging, stop = current),
+                    onStartScenario = {}, onStartCharging = {}, onStopCharging = {}, onDepart = {}, onRestart = {}
+                )
+            }
+        }
+        compose.onNodeWithText("추정 출력").assertIsDisplayed()
+        current = stop(75.0)
+        compose.onNodeWithText("출력").assertIsDisplayed()
+        compose.onAllNodesWithText("추정 출력").assertCountEquals(0)
     }
 
     /** 휴게소 도착: 예상 요금을 100원 단위로 보여 주고, 배터리를 직접 넣는 중이면 고치는 버튼이 있다. */

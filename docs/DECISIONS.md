@@ -95,3 +95,17 @@
 - 2026-10-25 · 영수증 레이아웃: 시간 제한 표시와 요금을 한 줄에 넣으면 충전소 이름이 두 줄로 깨져, 요금을 충전 줄 아래 "요금" 줄로 나눴다. 정산 도장은 마지막 줄을 가려 제목 옆으로 옮겼다.
 - 2026-10-25 · 버그 수정: 결정을 기다리는 동안 1순위가 바뀌어 기존 안내를 유지할 때, 1순위 거리만 갱신하고 혼잡 비교 카드의 대안 거리는 처음 안내한 때 값에 멈춰 있었다(S5에서 I 마트가 49km인데 70km로 보임). 대안 거리도 함께 갱신한다. 건너뛰는 시점에 따라 생기는 상태라 시나리오 테스트로는 재현하지 못했고, 에뮬레이터에서 고친 뒤 49km로 나오는 것을 확인했다.
 - 2026-10-25 · 예열 버튼 높이를 88dp에서 96dp로 올렸다. 주행 중 터치 대상은 96dp 이상(DESIGN.md)이다.
+- 2026-10-25 · Pleos 공식 문서 확인(document.pleos.ai, Vehicle SDK 2.3.2 · NaviHelper 3.0.5 · TTS/STT 3.3.1 · Emulator 2.1.0). 설명회 질문 1·2·3·5·6의 답을 문서에서 찾았다. 아래 줄들이 그 결과다.
+- 2026-10-25 · SDK 사용 신청: Vehicle State와 NaviHelper는 신청 없이 바로 쓸 수 있다. FusedLocation·TTS·STT·Vehicle Control은 "준비 중(Coming Soon)"이라 신청할 수 없다. 그래서 TTS·STT는 Android 기본 엔진 폴백을 유지하고, 차량 제어(예열 등)는 계획에서 뺀다. 앱 마켓 심사에서는 Vehicle 퍼미션이 App Market과 사전 협의·승인된 범위여야 한다.
+- 2026-10-25 · Vehicle SDK로 받을 수 있는 것: SoC(`EvBattery.getEvBatteryStateOfCharge`, 정수 %, 퍼미션 CAR_ENERGY), 전비(현재·누적·충전 이후·순간), 충전 스위치 상태·충전구 열림·충전 목표 % 설정, 주행 거리(Odometer). 받을 수 없는 것: 충전 출력(kW), 배터리 온도, 기어·속도, 배터리 예열 제어. 주행 가능 거리는 조회 API를 찾지 못했다(`setRangeRemainingDistance`만 있음).
+- 2026-10-25 · 주행/정차 판단은 Vehicle SDK가 아니라 AAOS `CarUxRestrictionsManager`로 한다. 앱이 Distraction Optimization(DO)을 선언하지 않으면 주행 중 사용할 수 없다. 앱 카테고리는 Mobility Services로 한다(주행 중 허용 예시에 "전기차 충전소 찾기 및 경유지 설정"이 있다).
+- 2026-10-25 · NaviHelper: 경유지는 최대 2개(FIRST·SECOND), `removeWaypoint`로 삭제할 수 있다. `requestRouteWithWaypoints`로 목적지와 경유지를 한 번에 요청할 수 있다. 경로 폴리라인과 고도는 없다(경로 지점의 `ratioOnRoute`만 있다). `requestTrip(좌표)`가 그 지점까지 거리·도착 시간·도착 SoC·소비 전력량을 준다 → 직선 투영과 우회 어림을 이것으로 바꿀 수 있다.
+- 2026-10-25 · `getChargerOperatorInfo`는 사업자 id·이름만 준다. 시간 제한·요금·실시간 상태는 없으므로 공공데이터와 `charger_rules.json`을 계속 쓴다.
+- 2026-10-25 · 순정 내비가 이미 EV 충전 계획을 낸다: `onDrivingInfo`의 `DrivingState`에 추천 충전소 여부, 최소 도착 SoC(targetSoc), 충전 계획(시작·목표 %, 충전 시간), 목적지 도착 SoC가 있다. "목표 %를 계산해 준다"만으로는 순정 내비와 겹치므로, 차별점은 시간 제한·혼잡 비교·동승자 화면·휴게소 밖 대안에 두고 내비 계획과의 비교에 이 값을 쓴다.
+- 2026-10-25 · 화면: 앱 창에 앱이 1개 또는 2개 뜰 수 있어 가로·세로 레이아웃을 모두 지원해야 하고, 해상도가 바뀌어도 상태를 잃으면 안 된다. 주행 중 애니메이션·자동 스크롤 금지, 대비 4.5:1, 문장 3줄 이하, 터치 반응 0.25초·버튼 반응 2초 이내. 주행 중 버튼 개수 제한은 명시돼 있지 않다.
+- 2026-10-25 · 에뮬레이터: Android Studio SDK Update Site에 Pleos Connect System Image(API 34, v2.1.0)를 추가하고 Automotive AVD(RAM 4GB, Cold boot)를 만든다. Virtual Console(`adb forward tcp:8088 tcp:8088` 후 127.0.0.1:8088)로 기어·SoC·주행 가능 거리·충전 상태를 바꿀 수 있고, 마이크 설정으로 STT를 시험할 수 있다.
+- 2026-10-25 · SDK 의존성은 공개 Maven 저장소에서 받는다: `https://nexus-playground.pleos.ai/repository/maven-releases/`, `ai.pleos.playground:Vehicle:2.3.2`, `ai.pleos.playground:NaviHelper:3.0.5`. 그래서 `docs/sdk/`·`libs/`에 SDK를 따로 둘 필요가 없다(2026-10-24 "SDK 미제공, Fake 우선" 결정을 이것으로 대체한다. Fake는 데모·테스트용으로 남긴다).
+- 2026-10-25 · MainActivity에 `distractionOptimized` 메타데이터를 넣었다. Pleos에서 DO를 선언하지 않은 앱은 주행 중 사용할 수 없다.
+- 2026-10-25 · 예열: `VehiclePort.canControlPreconditioning`(기본 false)을 두었다. false면 예열을 권하되 "차량 화면에서 켜면 N분 빨라진다"고만 말하고, 카드에 버튼을 띄우지 않으며 "예열" 음성 명령도 듣지 않는다. 데모 시뮬레이터 차량(FakeVehicle)만 true다.
+- 2026-10-25 · 충전 화면의 출력은 차량이 값을 주지 않으면(Pleos Vehicle SDK에는 충전 출력이 없다) 충전 곡선에서 읽은 값이므로 "추정 출력"으로 표시한다.
+- 2026-10-25 · release 서명: 키스토어와 비밀번호는 local.properties(`chargis.release*`)에만 두고, 없으면 서명 없이 빌드한다. 제출 규칙에 따라 서명한 release APK를 `apk/Chargis_release.apk`로 저장소에 둔다(.gitignore 예외). 파일명의 팀명(개인은 실명) 부분은 설명회 답을 듣고 정한다.

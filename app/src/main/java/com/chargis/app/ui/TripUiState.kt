@@ -48,7 +48,9 @@ sealed interface DriveCard {
         /** 예열 상태: true 켜짐, false 꺼짐, null 모름 */
         val preconditioning: Boolean? = null,
         /** 예열을 권할 때인지(차가 지원하고, 차가운 배터리로 충전이 눈에 띄게 늦어지고, 도착까지 30분 이내) */
-        val suggestPreconditioning: Boolean = false
+        val suggestPreconditioning: Boolean = false,
+        /** 앱에서 예열을 켤 수 있는지. false면 버튼 없이 "차량 화면에서 켜면" 안내만 */
+        val canStartPreconditioning: Boolean = true
     ) : DriveCard
     /**
      * 평소 주행 상태(남은 거리, 충전 계획) (02-drive-status.png)

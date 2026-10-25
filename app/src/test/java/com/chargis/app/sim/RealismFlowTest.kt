@@ -121,6 +121,34 @@ class RealismFlowTest {
     }
 
     /**
+     * 앱에서 예열을 켤 수 없는 차량(Pleos Vehicle SDK에 예열 제어가 없다): 예열은 권하되 차량 화면에서 켜 달라고만 하고,
+     * 카드에 버튼을 띄우지 않으며 "예열" 음성 명령도 듣지 않는다.
+     */
+    @Test
+    fun s4_preconditioningWithoutControl_advisesManually() = runTest {
+        val h = harness(vehicle = { sim ->
+            val real = FakeVehicle(sim)
+            object : com.chargis.app.port.VehiclePort {
+                override val vehicleState = real.vehicleState
+                override suspend fun isSupported() = true
+            }
+        })
+        h.controller.startScenario("S4")
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        h.controller.decline()   // A(50kW)는 차가워도 손해가 없어 예열 안내가 나오지 않는다
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        val rec = (h.controller.state.value.card as DriveCard.Recommend).rec
+        h.controller.accept(rec.station.id)
+        runCurrent()
+        drive(h) { h.tts.spoken.contains("precondition_advice_manual") }
+        val card = h.controller.state.value.card as DriveCard.Navigating
+        assertTrue(card.suggestPreconditioning)
+        assertEquals(false, card.canStartPreconditioning)
+        assertEquals(0, h.tts.spoken.count { it == "precondition_advice" })
+    }
+
+    /**
      * 배터리 직접 입력: 차량 값을 쓰지 않고 출발 배터리에서 계산으로 이어 간다(출처 "직접 입력").
      * S4는 실제 소비가 앱의 어림보다 커서 휴게소에 도착하면 추정이 실제보다 높다. 계기판을 보고 고치면 그 값으로 이어 간다.
      */

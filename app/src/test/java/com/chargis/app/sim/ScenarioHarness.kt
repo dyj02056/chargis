@@ -62,6 +62,7 @@ internal object KeyPhrases : VoicePhrases {
     override fun waypointSwitchedUnreachable(fromName: String, toName: String) = "switched_unreachable:$fromName:$toName"
     override fun ruleUnknown() = "rule_unknown"
     override fun preconditionAdvice(savedMin: Int) = "precondition_advice"
+    override fun preconditionAdviceManual(savedMin: Int) = "precondition_advice_manual"
     override fun preconditionStarted() = "precondition_started"
     override fun preconditionManual() = "precondition_manual"
     override fun checkSoc() = "check_soc"

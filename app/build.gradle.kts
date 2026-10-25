@@ -35,6 +35,20 @@ android {
         buildConfigField("String", "CHARGER_API_TOKEN", "\"${localProps.getProperty("chargis.chargerApiToken", "")}\"")
     }
 
+    // 배포용 서명. 키스토어 경로와 비밀번호는 local.properties에만 둔다(커밋하지 않음).
+    // 값이 없으면 서명 없이 빌드된다(app-release-unsigned.apk).
+    val releaseStore = localProps.getProperty("chargis.releaseStoreFile")
+    signingConfigs {
+        if (releaseStore != null) {
+            create("release") {
+                storeFile = file(releaseStore)
+                storePassword = localProps.getProperty("chargis.releaseStorePassword")
+                keyAlias = localProps.getProperty("chargis.releaseKeyAlias")
+                keyPassword = localProps.getProperty("chargis.releaseKeyPassword")
+            }
+        }
+    }
+
     // debug = 개발·시연용(개발자 오버레이 켬), release = 배포용(끔)
     buildTypes {
         debug {
@@ -47,6 +61,7 @@ android {
             buildConfigField("boolean", "DEV_OVERLAY", "false")
             // 배포용 빌드에는 키를 넣지 않는다. 공공데이터를 쓰려면 chargis.chargerApiBaseUrl에 프록시를 지정한다.
             buildConfigField("String", "CHARGER_API_KEY", "\"\"")
+            if (releaseStore != null) signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

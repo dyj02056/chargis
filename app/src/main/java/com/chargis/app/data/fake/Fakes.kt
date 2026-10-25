@@ -81,6 +81,8 @@ class FakeVehicle(private val sim: ScenarioSimulator) : VehiclePort {
     override suspend fun isSupported(): Boolean = true
 
     // 데모: 시뮬레이터 차량의 배터리 예열을 켠다(주행 중이고 배터리 온도를 알 때만 된다).
+    override val canControlPreconditioning: Boolean = true
+
     override suspend fun requestPreconditioning(on: Boolean): Result<Unit> =
         if (sim.setPreconditioning(on)) Result.success(Unit)
         else Result.failure(IllegalStateException("preconditioning unavailable"))

@@ -41,6 +41,8 @@ interface VoicePhrases {
     fun ruleUnknown(): String
     /** 배터리가 차가워 충전이 늦어질 때 예열을 권한다. [savedMin]은 예열로 줄일 수 있는 충전 시간(분). */
     fun preconditionAdvice(savedMin: Int): String
+    /** 예열을 권하지만 앱에서 켤 수 없는 차량일 때(차량 화면에서 켜 달라고 한다). */
+    fun preconditionAdviceManual(savedMin: Int): String
     /** 차량에 예열을 켰을 때. */
     fun preconditionStarted(): String
     /** 앱에서 예열을 켤 수 없을 때(차량에서 직접 켜야 함). */
@@ -80,7 +82,8 @@ class AndroidVoicePhrases(private val context: Context) : VoicePhrases {
         s(R.string.tts_waypoint_switched_unreachable, fromName, toName)
     override fun ruleUnknown() = s(R.string.tts_rule_unknown)
     override fun preconditionAdvice(savedMin: Int) = s(R.string.tts_precondition_advice, savedMin)
-    override fun preconditionStarted() = s(R.string.tts_precondition_started)
+    override fun preconditionAdviceManual(savedMin: Int) = s(R.string.tts_precondition_advice_manual, savedMin)
+    override fun preconditionStarted() =s(R.string.tts_precondition_started)
     override fun preconditionManual() = s(R.string.tts_precondition_manual)
     override fun checkSoc() = s(R.string.tts_check_soc)
 

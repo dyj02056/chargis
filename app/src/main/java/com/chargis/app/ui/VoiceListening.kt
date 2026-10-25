@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 class VoiceListening(
     private val scope: CoroutineScope,
     private val stt: SttPort?,
+    private val canControlPreconditioning: Boolean,   // false면 "예열" 명령을 듣지 않는다(켤 수 없으니)
     private val onCommand: (VoiceCommand) -> Unit
 ) {
     private var job: Job? = null
@@ -23,7 +24,7 @@ class VoiceListening(
         TripPhase.AwaitingDecision -> setOf(VoiceCommand.ACCEPT, VoiceCommand.NEXT_STOP)
         // 예열을 권한 뒤 아직 꺼져 있으면 "예열"이라고 말해 켤 수 있다(주행 중 버튼을 누르지 않아도 되게).
         TripPhase.NavigatingToCharger ->
-            if (m.preconditionAdvised && m.lastVehicle?.preconditioning != true) setOf(VoiceCommand.PRECONDITION) else emptySet()
+            if (canControlPreconditioning && m.preconditionAdvised && m.lastVehicle?.preconditioning != true) setOf(VoiceCommand.PRECONDITION) else emptySet()
         TripPhase.Arrived -> setOf(VoiceCommand.START_CHARGING, VoiceCommand.DEPART)
         TripPhase.Done -> setOf(VoiceCommand.DEPART)
         else -> emptySet()

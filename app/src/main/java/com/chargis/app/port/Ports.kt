@@ -34,6 +34,9 @@ interface VehiclePort {
     val vehicleState: Flow<VehicleState>        // SoC를 못 받으면 앱이 운전자 입력으로 추정한다(ManualSocEstimator)
     suspend fun isSupported(): Boolean          // SoC 수신 가능 여부
 
+    /** 앱에서 배터리 예열을 켤 수 있는지. false면 [배터리 예열 켜기] 버튼과 "예열" 음성 명령 없이 차량 화면에서 켜 달라고만 안내한다. */
+    val canControlPreconditioning: Boolean get() = false
+
     /** 배터리 예열(컨디셔닝)을 켜거나 끈다. 차량이 지원하지 않거나 SDK에 기능이 없으면 실패를 돌려준다. */
     suspend fun requestPreconditioning(on: Boolean): Result<Unit> =
         Result.failure(UnsupportedOperationException("preconditioning not supported"))

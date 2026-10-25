@@ -367,7 +367,7 @@ private fun ChoiceColumn(rec: Recommendation, eta: String, emphasize: Boolean, o
 
 /**
  * 수락한 충전소로 가는 중 카드 (04-navigating.png). 남은 거리와 "경유지 등록" 도장, 아래에 경로 띠.
- * 배터리가 차가워 충전이 늦어질 때는 도착 30분 전부터 예열을 권하고 [배터리 예열 켜기] 버튼 하나를 띄운다.
+ * 배터리가 차가워 충전이 늦어질 때는 도착 30분 전부터 예열을 권하고, 앱에서 켤 수 있는 차량이면 [배터리 예열 켜기] 버튼 하나를 띄운다.
  */
 @Composable
 private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<RouteMark>, progress: Float, onPrecondition: () -> Unit) {
@@ -395,6 +395,9 @@ private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<R
             HairlineH()
             when {
                 card.preconditioning == true -> InfoLine(stringResource(R.string.drive_precondition_on), Modifier.padding(top = 10.dp), singleLine = true)
+                // 앱에서 켤 수 없는 차량이면 버튼 없이 차량 화면에서 켜라는 안내만 한다.
+                card.suggestPreconditioning && !card.canStartPreconditioning ->
+                    InfoLine(stringResource(R.string.drive_precondition_suggest_manual, card.coldExtraMinutes), Modifier.padding(top = 10.dp), singleLine = true)
                 card.suggestPreconditioning -> {
                     InfoLine(stringResource(R.string.drive_precondition_suggest, card.coldExtraMinutes), Modifier.padding(top = 10.dp), singleLine = true)
                     Spacer(Modifier.weight(1f))

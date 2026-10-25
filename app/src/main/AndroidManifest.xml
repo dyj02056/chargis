@@ -26,6 +26,10 @@
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="unspecified">
+            <!-- 주행 중에도 쓰는 앱이라는 선언(Distraction Optimization). 없으면 Pleos Connect가 주행 중 앱을 막는다. -->
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
