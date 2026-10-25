@@ -112,3 +112,14 @@ dependencies {
     testImplementation(libs.robolectric)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+// 제출용 APK 내보내기: release APK를 제출 규칙 파일명(팀명_앱이름_release.apk)으로 apk/ 폴더에 복사한다.
+// 실행: ./gradlew exportReleaseApk (서명 설정이 없으면 서명 없는 APK가 복사된다)
+tasks.register<Copy>("exportReleaseApk") {
+    dependsOn("assembleRelease")
+    from(layout.buildDirectory.dir("outputs/apk/release")) {
+        include("*.apk")
+    }
+    into(rootProject.layout.projectDirectory.dir("apk"))
+    rename { "JSW_Lab_Chargis_release.apk" }
+}

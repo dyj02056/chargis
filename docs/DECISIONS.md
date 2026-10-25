@@ -109,3 +109,4 @@
 - 2026-10-25 · 예열: `VehiclePort.canControlPreconditioning`(기본 false)을 두었다. false면 예열을 권하되 "차량 화면에서 켜면 N분 빨라진다"고만 말하고, 카드에 버튼을 띄우지 않으며 "예열" 음성 명령도 듣지 않는다. 데모 시뮬레이터 차량(FakeVehicle)만 true다.
 - 2026-10-25 · 충전 화면의 출력은 차량이 값을 주지 않으면(Pleos Vehicle SDK에는 충전 출력이 없다) 충전 곡선에서 읽은 값이므로 "추정 출력"으로 표시한다.
 - 2026-10-25 · release 서명: 키스토어와 비밀번호는 local.properties(`chargis.release*`)에만 두고, 없으면 서명 없이 빌드한다. 제출 규칙에 따라 서명한 release APK를 `apk/Chargis_release.apk`로 저장소에 둔다(.gitignore 예외). 파일명의 팀명(개인은 실명) 부분은 설명회 답을 듣고 정한다.
+- 2026-10-26 · APK 파일명: 팀명을 `JSW_Lab`으로 정해 `apk/JSW_Lab_Chargis_release.apk`로 바꿨다(제출 규칙 `팀명_앱이름_release.apk`). `./gradlew exportReleaseApk`가 release APK를 빌드해 이 이름으로 복사한다. 키스토어와 local.properties는 저장소 밖 개인 폴더에 백업했다.

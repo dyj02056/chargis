@@ -272,10 +272,10 @@ scripts/                               # 에뮬레이터 설치·실행, 공공�
 
 ## 빌드와 실행
 
-**APK:** 바로 설치할 수 있는 release APK는 [`apk/Chargis_release.apk`](apk/Chargis_release.apk)에 있습니다. release 빌드는 개발자 오버레이(배속·점프)가 꺼져 있어 데모 시나리오가 실제 속도로 진행되고, 공공데이터 키가 들어 있지 않아 번들 샘플 데이터로 동작합니다.
+**APK:** 바로 설치할 수 있는 release APK는 [`apk/JSW_Lab_Chargis_release.apk`](apk/JSW_Lab_Chargis_release.apk)에 있습니다. release 빌드는 개발자 오버레이(배속·점프)가 꺼져 있어 데모 시나리오가 실제 속도로 진행되고, 공공데이터 키가 들어 있지 않아 번들 샘플 데이터로 동작합니다.
 
 ```bash
-adb install -r apk/Chargis_release.apk
+adb install -r apk/JSW_Lab_Chargis_release.apk
 ```
 
 **필요한 것:** JDK 17, Android SDK(platform 36, build-tools), Android 9(API 28) 이상 기기 또는 에뮬레이터
@@ -314,7 +314,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
   - `chargis.chargerApiKey=…`: data.go.kr 키. **개발용(debug) 빌드에만** 들어갑니다. 앱에 넣은 문자열은 APK에서 꺼낼 수 있어서, 배포용(release) 빌드에는 키를 넣지 않습니다.
   - `chargis.chargerApiBaseUrl=…`: 키를 대신 붙여 주는 중계 서버 주소. 배포용 빌드에서 공공데이터를 쓰려면 이것을 지정합니다. 비우면 data.go.kr로 직접 부릅니다. 중계 서버는 [`server/`](server/README.md)에 있습니다.
   - `chargis.chargerApiToken=…`: 중계 서버에 `APP_TOKEN`을 정했을 때만 같은 값.
-- release APK를 서명해 만들려면 `local.properties`에 `chargis.releaseStoreFile`(키스토어 경로), `chargis.releaseStorePassword`, `chargis.releaseKeyAlias`, `chargis.releaseKeyPassword`를 넣고 `./gradlew assembleRelease`를 실행합니다. 값이 없으면 서명 없는 APK가 만들어집니다.
+- release APK를 서명해 만들려면 `local.properties`에 `chargis.releaseStoreFile`(키스토어 경로), `chargis.releaseStorePassword`, `chargis.releaseKeyAlias`, `chargis.releaseKeyPassword`를 넣고 `./gradlew exportReleaseApk`를 실행합니다. release APK를 빌드해 `apk/JSW_Lab_Chargis_release.apk`로 복사합니다. 값이 없으면 서명 없는 APK가 만들어집니다.
 
 **공공데이터 응답 점검:** 키를 넣었으면 다음 명령으로 어댑터가 가정한 응답 필드(충전기 타입 코드, 시설 구분, 마지막 충전 시각 등)가 실제로 오는지 한 번에 확인합니다. 키는 출력하지 않습니다.
 
