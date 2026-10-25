@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import com.chargis.app.ui.ticket.Field
 import com.chargis.app.ui.ticket.Figure
 import com.chargis.app.ui.ticket.HairlineH
 import com.chargis.app.ui.ticket.HairlineV
+import com.chargis.app.ui.ticket.LocalCompact
 import com.chargis.app.ui.ticket.RouteStrip
 import com.chargis.app.ui.ticket.Stamp
 import com.chargis.app.ui.ticket.TearLine
@@ -63,18 +65,34 @@ import kotlin.math.roundToInt
  */
 @Composable
 internal fun StopScreen(state: TripUiState, stop: StopInfo, modifier: Modifier, body: @Composable ColumnScope.() -> Unit) {
+    val side = @Composable {
+        RouteStrip(state.routeMarks, state.progress)
+        Spacer(Modifier.height(24.dp))
+        if (state.candidates.isNotEmpty()) CandidateTable(state.candidates)
+        Spacer(Modifier.height(28.dp))
+        TripLines(state)
+    }
+    if (LocalCompact.current) {
+        // 좁은 창: 본문 표가 화면 높이를 다 쓰고, 경로·후보·여행 기록 표는 그 아래에 이어 붙여 스크롤로 본다.
+        BoxWithConstraints(modifier.fillMaxSize()) {
+            val bodyHeight = maxHeight
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                TicketStock(Modifier.fillMaxWidth().height(bodyHeight)) {
+                    Column(Modifier.fillMaxSize().padding(start = 28.dp, end = 28.dp, top = 28.dp, bottom = 20.dp), content = body)
+                }
+                TicketStock(Modifier.fillMaxWidth(), perforationX = 0.dp) {
+                    Column(Modifier.fillMaxWidth().padding(28.dp)) { side() }
+                }
+            }
+        }
+        return
+    }
     Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         TicketStock(Modifier.weight(1.45f).fillMaxHeight()) {
             Column(Modifier.fillMaxSize().padding(start = 40.dp, end = 40.dp, top = 32.dp, bottom = 20.dp), content = body)
         }
         TicketStock(Modifier.weight(1f).fillMaxHeight(), perforationX = 0.dp) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp)) {
-                RouteStrip(state.routeMarks, state.progress)
-                Spacer(Modifier.height(24.dp))
-                if (state.candidates.isNotEmpty()) CandidateTable(state.candidates)
-                Spacer(Modifier.height(28.dp))
-                TripLines(state)
-            }
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(28.dp)) { side() }
         }
     }
 }
@@ -145,7 +163,8 @@ internal fun ColumnScope.ArrivedBody(stop: StopInfo, onStartCharging: () -> Unit
     Spacer(Modifier.weight(1f))
     TearLine(Modifier.padding(vertical = 8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        TicketButton(stringResource(R.string.parked_start_charging), onStartCharging, Modifier.weight(2f), minHeight = 96.dp)
+        // 좁은 창에서는 "충전 없이 출발"이 줄바꿈되지 않게 3:2로 나눈다.
+        TicketButton(stringResource(R.string.parked_start_charging), onStartCharging, Modifier.weight(if (LocalCompact.current) 1.5f else 2f), minHeight = 96.dp)
         TicketButton(stringResource(R.string.parked_skip_charging), onDepart, Modifier.weight(1f), primary = false, minHeight = 96.dp)
     }
 }

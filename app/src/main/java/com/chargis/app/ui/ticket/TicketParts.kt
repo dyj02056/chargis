@@ -144,15 +144,22 @@ fun Figure(
     color: Color = Ticket.colors.ink,
     unitStyle: TextStyle = com.chargis.app.ui.theme.FigureStyle.Unit
 ) {
+    // 좁고 낮은 창(분할)에서는 큰 숫자와 그 단위를 줄인다. 작은 숫자(표 안 값 등)는 그대로 둔다.
+    val shrink = LocalShrinkFigures.current && style.fontSize.isSp && style.fontSize.value >= 36f
+    val figure = if (!shrink) style else style.scaled(if (style.fontSize.value >= 100f) CompactMonumentalScale else CompactFigureScale)
+    val unitText = if (shrink) unitStyle.scaled(0.85f) else unitStyle
     Row(modifier.semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
-        Text(value, style = style, color = color, maxLines = 1)
+        Text(value, style = figure, color = color, maxLines = 1, softWrap = false)
         if (unit != null) {
             // 단위 글자를 숫자 밑선에 맞추려고 글자 크기에 비례해 아래 여백을 준다.
+            // 폭이 모자라도 "km 앞"이 한 글자씩 세로로 쌓이지 않게 한 줄로 둔다.
             Text(
                 unit,
-                style = unitStyle,
+                style = unitText,
                 color = color,
-                modifier = Modifier.padding(start = 6.dp, bottom = (style.fontSize.value * 0.12f).dp)
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(start = 6.dp, bottom = (figure.fontSize.value * 0.12f).dp)
             )
         }
     }

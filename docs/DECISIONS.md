@@ -110,3 +110,4 @@
 - 2026-10-25 · 충전 화면의 출력은 차량이 값을 주지 않으면(Pleos Vehicle SDK에는 충전 출력이 없다) 충전 곡선에서 읽은 값이므로 "추정 출력"으로 표시한다.
 - 2026-10-25 · release 서명: 키스토어와 비밀번호는 local.properties(`chargis.release*`)에만 두고, 없으면 서명 없이 빌드한다. 제출 규칙에 따라 서명한 release APK를 `apk/Chargis_release.apk`로 저장소에 둔다(.gitignore 예외). 파일명의 팀명(개인은 실명) 부분은 설명회 답을 듣고 정한다.
 - 2026-10-26 · APK 파일명: 팀명을 `JSW_Lab`으로 정해 `apk/JSW_Lab_Chargis_release.apk`로 바꿨다(제출 규칙 `팀명_앱이름_release.apk`). `./gradlew exportReleaseApk`가 release APK를 빌드해 이 이름으로 복사한다. 키스토어와 local.properties는 저장소 밖 개인 폴더에 백업했다.
+- 2026-10-26 · 좁은 창 대응(B0): 본문 폭이 1000dp보다 좁으면(세로 약 750dp, 앱 2개 분할 약 590dp) 2단 배치를 1단으로 쌓는다(`ui/ticket/Compact.kt`의 `LocalCompact`). 큰 숫자는 좁고 낮은 창(본문 높이 900dp 미만, 분할)에서만 줄인다(기념비 0.6배, 그 밖의 큰 숫자 0.7배). 주행 카드는 스크롤 없이 한 화면에 들어가게 목표 %를 거리 오른쪽으로 옮기고, 정차·영수증·발권 화면은 1단으로 쌓아 스크롤한다. 단위 글자는 한 줄로 고정해 "km 앞"이 세로로 쌓이지 않게 했다.

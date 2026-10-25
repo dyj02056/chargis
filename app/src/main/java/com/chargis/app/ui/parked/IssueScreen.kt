@@ -43,6 +43,7 @@ import com.chargis.app.ui.TripUiState
 import com.chargis.app.ui.theme.FigureStyle
 import com.chargis.app.ui.theme.Ticket
 import com.chargis.app.ui.ticket.HairlineH
+import com.chargis.app.ui.ticket.LocalCompact
 import com.chargis.app.ui.ticket.TicketButton
 import com.chargis.app.ui.ticket.TicketStock
 import kotlin.math.roundToInt
@@ -71,12 +72,25 @@ internal fun IssueScreen(
         if (!state.settings.onboarded) onSettings { it.copy(onboarded = true) }
         onStart(id)
     }
+    val intro = @Composable {
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize * 1.4f, lineHeight = MaterialTheme.typography.displayMedium.lineHeight * 1.35f), color = c.ink, modifier = Modifier.semantics { heading() })
+        Text(stringResource(R.string.ticket_kind), style = MaterialTheme.typography.headlineMedium, color = c.ink)
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.idle_lede), style = MaterialTheme.typography.bodyLarge, color = c.inkMuted, modifier = Modifier.widthIn(max = 460.dp))
+    }
+    if (LocalCompact.current) {
+        // 좁은 창: 소개 → 시나리오 표들 → 설정 요약을 한 줄로 쌓고 함께 스크롤한다(정차 화면이라 스크롤 허용).
+        Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column { intro() }
+            state.scenarios.forEach { IssueTicket(it, issue) }
+            Spacer(Modifier.height(8.dp))
+            SettingsSummary(state) { editing = true }
+        }
+        return
+    }
     Row(modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp), horizontalArrangement = Arrangement.spacedBy(56.dp)) {
         Column(Modifier.weight(0.85f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.displayMedium.copy(fontSize = MaterialTheme.typography.displayMedium.fontSize * 1.4f, lineHeight = MaterialTheme.typography.displayMedium.lineHeight * 1.35f), color = c.ink, modifier = Modifier.semantics { heading() })
-            Text(stringResource(R.string.ticket_kind), style = MaterialTheme.typography.headlineMedium, color = c.ink)
-            Spacer(Modifier.height(12.dp))
-            Text(stringResource(R.string.idle_lede), style = MaterialTheme.typography.bodyLarge, color = c.inkMuted, modifier = Modifier.widthIn(max = 460.dp))
+            intro()
             Spacer(Modifier.height(24.dp))
             SettingsSummary(state) { editing = true }
         }
@@ -138,15 +152,24 @@ private fun SettingsScreen(
     modifier: Modifier
 ) {
     val c = Ticket.colors
-    Column(modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp)) {
+    val compact = LocalCompact.current
+    Column(modifier.fillMaxSize().padding(horizontal = if (compact) 24.dp else 40.dp, vertical = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.displaySmall, color = c.ink, modifier = Modifier.weight(1f).semantics { heading() })
-            TicketButton(stringResource(R.string.settings_done), onDone, Modifier.width(240.dp), minHeight = 72.dp)
+            TicketButton(stringResource(R.string.settings_done), onDone, Modifier.width(if (compact) 180.dp else 240.dp), minHeight = 72.dp)
         }
         Spacer(Modifier.height(16.dp))
-        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(56.dp)) {
-            Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { TripSettings(state, onSettings) }
-            Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { AppSettings(state, onSettings) }
+        if (LocalCompact.current) {
+            // 좁은 창: 두 묶음을 위아래로 이어 붙여 한 번에 스크롤한다.
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
+                TripSettings(state, onSettings)
+                AppSettings(state, onSettings)
+            }
+        } else {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(56.dp)) {
+                Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { TripSettings(state, onSettings) }
+                Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) { AppSettings(state, onSettings) }
+            }
         }
     }
 }
@@ -237,15 +260,19 @@ private fun ChoiceCell(text: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 // 시나리오 하나를 표 한 장으로 그린다: 이름, 거리, 출발 배터리, 출발 시각, [발권] 버튼
+// 좁은 창에서는 이름을 두 줄까지 허용하고, 세 값은 폭이 모자라면 다음 줄로 넘긴다.
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun IssueTicket(option: ScenarioOption, onStart: (String) -> Unit) {
     val c = Ticket.colors
-    TicketStock(Modifier.fillMaxWidth(), perforationX = 180.dp, perforationFromEnd = true) {
-        Row(Modifier.fillMaxWidth().padding(start = 28.dp), verticalAlignment = Alignment.CenterVertically) {
+    val compact = LocalCompact.current
+    val buttonWidth = if (compact) 120.dp else 140.dp
+    TicketStock(Modifier.fillMaxWidth(), perforationX = buttonWidth + 40.dp, perforationFromEnd = true) {
+        Row(Modifier.fillMaxWidth().padding(start = if (compact) 20.dp else 28.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(vertical = 22.dp)) {
-                Text(option.title, style = MaterialTheme.typography.headlineMedium, color = c.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(option.title, style = MaterialTheme.typography.headlineMedium, color = c.ink, maxLines = if (compact) 2 else 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(if (compact) 24.dp else 36.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     MeasureField(stringResource(R.string.label_distance), "${option.distanceKm.roundToInt()}", stringResource(R.string.unit_km), FigureStyle.Medium)
                     MeasureField(stringResource(R.string.label_start_soc), "${option.startSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Medium)
                     MeasureField(stringResource(R.string.label_depart), option.departAt, null, FigureStyle.Medium)
@@ -254,7 +281,7 @@ private fun IssueTicket(option: ScenarioOption, onStart: (String) -> Unit) {
             TicketButton(
                 stringResource(R.string.idle_issue),
                 { onStart(option.id) },
-                Modifier.padding(20.dp).width(140.dp),
+                Modifier.padding(20.dp).width(buttonWidth),
                 minHeight = 88.dp
             )
         }

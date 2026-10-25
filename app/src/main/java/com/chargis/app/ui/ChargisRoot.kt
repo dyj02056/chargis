@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import com.chargis.app.ui.ticket.ProvideCompact
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,7 +69,8 @@ fun ChargisRoot(controller: TripController) {
             Column(Modifier.fillMaxSize()) {
                 TicketHeader(state)
                 // weight(1f): 머리 줄과 자막 줄을 뺀 나머지 공간을 모두 차지한다.
-                Box(Modifier.weight(1f).padding(horizontal = 24.dp).padding(bottom = 16.dp)) {
+                // 본문 폭으로 좁은 창(세로·분할)인지 정한다(ticket/Compact.kt).
+                ProvideCompact(Modifier.weight(1f).padding(horizontal = 24.dp).padding(bottom = 16.dp)) {
                     // 운전 중에는 꼭 필요한 정보만, 멈춰 있을 때는 자세한 정보를 보여 준다(운전자 안전).
                     if (state.loading) {
                         LoadingTicket()

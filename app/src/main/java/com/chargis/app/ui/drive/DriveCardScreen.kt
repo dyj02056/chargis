@@ -53,6 +53,7 @@ import com.chargis.app.ui.ticket.TicketButton
 import com.chargis.app.ui.ticket.TicketStock
 import com.chargis.app.ui.ticket.WarnGlyph
 import com.chargis.app.ui.ticket.InfoLine
+import com.chargis.app.ui.ticket.LocalCompact
 import com.chargis.app.ui.ticket.WarnLine
 import com.chargis.app.ui.ticket.rememberReduceMotion
 import com.chargis.app.ui.vertical
@@ -146,13 +147,20 @@ private fun LeadColumn(
     extra: (@Composable () -> Unit)? = null
 ) {
     val c = Ticket.colors
-    Column(modifier.fillMaxHeight(), verticalArrangement = Arrangement.Bottom) {
+    val compact = LocalCompact.current
+    val type = MaterialTheme.typography
+    Column(modifier, verticalArrangement = Arrangement.Bottom) {
         Figure("$km", unit, FigureStyle.Monumental)
         Spacer(Modifier.height(8.dp))
-        // 충전소 이름은 한 줄, 문장(상태 안내)은 작은 크기로 두 줄까지
+        // 충전소 이름은 한 줄, 문장(상태 안내)은 작은 크기로 두 줄까지. 좁은 창에서는 한 단계씩 작게.
         Text(
             name,
-            style = if (sentence) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayMedium,
+            style = when {
+                sentence && compact -> type.headlineMedium
+                sentence -> type.displaySmall
+                compact -> type.displaySmall
+                else -> type.displayMedium
+            },
             color = c.ink,
             maxLines = if (sentence) 2 else 1,
             overflow = TextOverflow.Ellipsis
@@ -168,15 +176,56 @@ private fun LeadColumn(
     }
 }
 
-/** 괘선 칸 두 개를 나란히: 위·아래 가로 괘선, 가운데 세로 괘선. */
+/**
+ * 본문 2단: 넓은 창이면 [lead](왼쪽, 1.3) ┊ [cells](오른쪽, 1)로 나란히,
+ * 좁은 창(세로·분할)이면 [lead]를 위에, 가로 괘선 아래 [cells]를 쌓는다. 어느 쪽이든 스크롤 없이 한 화면에 들어간다.
+ */
+@Composable
+private fun ColumnScope.SplitBody(
+    modifier: Modifier = Modifier,
+    lead: @Composable (Modifier) -> Unit,
+    cells: @Composable (Modifier) -> Unit
+) {
+    if (LocalCompact.current) {
+        Column(modifier.weight(1f).fillMaxWidth()) {
+            lead(Modifier.fillMaxWidth())
+            HairlineH(Modifier.padding(vertical = 8.dp))
+            cells(Modifier.weight(1f).fillMaxWidth())
+        }
+    } else {
+        Row(modifier.weight(1f).fillMaxWidth()) {
+            lead(Modifier.weight(1.3f).fillMaxHeight())
+            HairlineV(Modifier.padding(horizontal = 32.dp))
+            cells(Modifier.weight(1f).fillMaxHeight())
+        }
+    }
+}
+
+/** 좁은 창에서 거리 오른쪽에 붙이는 목표 % 칸. [etaClock]이 있으면 그 아래 목적지 도착 시각. */
+@Composable
+private fun TargetAside(targetPercent: Int, etaClock: String) {
+    val c = Ticket.colors
+    Column(Modifier.padding(start = 16.dp), horizontalAlignment = Alignment.End) {
+        Field(stringResource(R.string.label_target)) {
+            Figure("$targetPercent", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
+        }
+        if (etaClock.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Field(stringResource(R.string.label_dest_eta)) { Figure(etaClock, null, FigureStyle.Small, color = c.inkMuted) }
+        }
+    }
+}
+
+/** 괘선 칸 두 개를 나란히: 위·아래 가로 괘선, 가운데 세로 괘선. 좁은 창에서는 위아래 여백을 줄인다. */
 @Composable
 private fun CellPair(left: @Composable () -> Unit, right: @Composable () -> Unit) {
+    val pad = if (LocalCompact.current) 10.dp else 16.dp
     Column {
         HairlineH()
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            Box(Modifier.weight(1f).padding(vertical = 16.dp)) { left() }
+            Box(Modifier.weight(1f).padding(vertical = pad)) { left() }
             HairlineV(Modifier.padding(end = 20.dp))
-            Box(Modifier.weight(1f).padding(vertical = 16.dp)) { right() }
+            Box(Modifier.weight(1f).padding(vertical = pad)) { right() }
         }
     }
 }
@@ -215,24 +264,34 @@ private fun ColumnScope.RecommendStub(card: DriveCard.Recommend, onAccept: (Stri
             card.fasterThanNextMin == null || it != stringResource(R.string.reason_fastest)
         })
     }
-    Row(Modifier.weight(1f).fillMaxWidth()) {
-        LeadColumn(
-            rec.station.distanceAlongRouteKm.roundToInt(), stringResource(R.string.unit_km_ahead), rec.station.name, stationMeta(rec.station), Modifier.weight(1.3f),
-            extra = if (tags.isEmpty()) null else {
-                { FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { tags.forEach { StampTag(it) } } }
+    val compact = LocalCompact.current
+    val target = @Composable { m: Modifier ->
+        Row(m, verticalAlignment = Alignment.Bottom) {
+            Field(stringResource(R.string.label_target), Modifier.weight(1f)) {
+                Figure("${rec.targetSocPercent.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
             }
-        )
-        HairlineV(Modifier.padding(horizontal = 32.dp))
-        Column(Modifier.weight(1f).fillMaxHeight()) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Field(stringResource(R.string.label_target), Modifier.weight(1f)) {
-                    Figure("${rec.targetSocPercent.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
-                }
-                if (card.etaClock.isNotEmpty()) {
-                    Field(stringResource(R.string.label_dest_eta)) { Figure(card.etaClock, null, FigureStyle.Small, color = c.inkMuted) }
-                }
+            if (card.etaClock.isNotEmpty()) {
+                Field(stringResource(R.string.label_dest_eta)) { Figure(card.etaClock, null, FigureStyle.Small, color = c.inkMuted) }
             }
-            Spacer(Modifier.height(16.dp))
+        }
+    }
+    SplitBody(lead = { m ->
+        // 좁은 창에서는 높이를 아끼려고 목표 %를 거리 오른쪽에 둔다.
+        Row(m, verticalAlignment = Alignment.Bottom) {
+            LeadColumn(
+                rec.station.distanceAlongRouteKm.roundToInt(), stringResource(R.string.unit_km_ahead), rec.station.name, stationMeta(rec.station), Modifier.weight(1f),
+                extra = if (tags.isEmpty()) null else {
+                    { FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { tags.forEach { StampTag(it) } } }
+                }
+            )
+            if (compact) TargetAside(rec.targetSocPercent.roundToInt(), card.etaClock)
+        }
+    }) { m ->
+        Column(m) {
+            if (!compact) {
+                target(Modifier)
+                Spacer(Modifier.height(16.dp))
+            }
             CellPair(
                 { Measure(stringResource(R.string.label_charge_time), "${rec.chargeMinutes}", min) },
                 { WaitCell(rec) }
@@ -255,9 +314,9 @@ private fun ColumnScope.RecommendStub(card: DriveCard.Recommend, onAccept: (Stri
         }
     }
     TearLine(Modifier.padding(vertical = 8.dp))
-    // 수락 버튼을 2배 넓게 해서 주로 누를 버튼이 눈에 띄게 한다.
+    // 수락 버튼을 2배 넓게 해서 주로 누를 버튼이 눈에 띄게 한다. 좁은 창에서는 "다음 충전소"가 줄바꿈되지 않게 3:2로.
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        TicketButton(stringResource(R.string.drive_accept), { onAccept(rec.station.id) }, Modifier.weight(2f), stampInk = true)
+        TicketButton(stringResource(R.string.drive_accept), { onAccept(rec.station.id) }, Modifier.weight(if (compact) 1.5f else 2f), stampInk = true)
         TicketButton(stringResource(R.string.drive_next), onDecline, Modifier.weight(1f), primary = false)
     }
 }
@@ -304,7 +363,7 @@ private fun ColumnScope.CongestedStub(card: DriveCard.Congested, onAccept: (Stri
     val socCost = (slower.arrivalSocPercent - faster.arrivalSocPercent).roundToInt()
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         WarnGlyph(size = 34.dp, modifier = Modifier.padding(bottom = 8.dp))
-        Text(stringResource(R.string.drive_congested_title, primary.station.name), style = MaterialTheme.typography.displaySmall, color = c.ink)
+        Text(stringResource(R.string.drive_congested_title, primary.station.name), style = MaterialTheme.typography.displaySmall, color = c.ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
         Figure("${primary.waitMinutes}", stringResource(R.string.unit_min), FigureStyle.Medium, color = c.warn)
     }
     // 판정 한 줄: "C 휴게소 쪽이 23분 빨리 도착 · 대신 도착 배터리 11%p 낮음"
@@ -373,14 +432,20 @@ private fun ChoiceColumn(rec: Recommendation, eta: String, emphasize: Boolean, o
 private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<RouteMark>, progress: Float, onPrecondition: () -> Unit) {
     val c = Ticket.colors
     val min = stringResource(R.string.unit_min)
-    Row(Modifier.weight(1f).fillMaxWidth()) {
-        LeadColumn(card.distanceKm.roundToInt(), stringResource(R.string.unit_km_left), stringResource(R.string.drive_navigating, card.stationName), null, Modifier.weight(1.3f))
-        HairlineV(Modifier.padding(horizontal = 32.dp))
-        Column(Modifier.weight(1f).fillMaxHeight()) {
-            Field(stringResource(R.string.label_target)) {
-                Figure("${card.targetSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
+    val compact = LocalCompact.current
+    SplitBody(lead = { m ->
+        Row(m, verticalAlignment = Alignment.Bottom) {
+            LeadColumn(card.distanceKm.roundToInt(), stringResource(R.string.unit_km_left), stringResource(R.string.drive_navigating, card.stationName), null, Modifier.weight(1f))
+            if (compact) TargetAside(card.targetSoc.roundToInt(), "")
+        }
+    }) { m ->
+        Column(m) {
+            if (!compact) {
+                Field(stringResource(R.string.label_target)) {
+                    Figure("${card.targetSoc.roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Large, color = c.stamp)
+                }
+                Spacer(Modifier.height(16.dp))
             }
-            Spacer(Modifier.height(16.dp))
             CellPair(
                 { Measure(stringResource(R.string.label_arrival_soc), "${card.arrivalSoc.roundToInt()}", stringResource(R.string.unit_percent)) },
                 { Measure(stringResource(R.string.label_charge_time), "${card.chargeMinutes}", min) }
@@ -418,29 +483,31 @@ private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<R
 private fun ColumnScope.StatusStub(card: DriveCard.Status, eta: String, remainingKm: Double, marks: List<RouteMark>, progress: Float, energy: EnergyInfo?) {
     val c = Ticket.colors
     val min = stringResource(R.string.unit_min)
+    val compact = LocalCompact.current
     // 구간 띠를 표 머리에 인쇄해 위쪽 칸을 채운다.
     Field(stringResource(R.string.label_route)) { RouteStrip(marks, progress) }
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
     HairlineH()
-    Row(Modifier.weight(1f).fillMaxWidth().padding(top = 20.dp)) {
+    SplitBody(Modifier.padding(top = if (compact) 8.dp else 20.dp), lead = { m ->
         LeadColumn(
             remainingKm.roundToInt(),
             stringResource(R.string.unit_km_left),
             stringResource(if (card.chargePlanned) R.string.drive_charge_planned else R.string.drive_no_charge),
             energyNote(energy),
-            Modifier.weight(1.3f),
+            m,
             sentence = true
         )
-        HairlineV(Modifier.padding(horizontal = 32.dp))
-        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Bottom) {
+    }) { m ->
+        Column(m, verticalArrangement = Arrangement.Bottom) {
             Field(stringResource(R.string.label_planned)) {
+                val nameStyle = if (compact) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.displaySmall
                 if (card.chargePlanned && card.plannedName != null) {
-                    Text(card.plannedName, style = MaterialTheme.typography.displaySmall, color = c.ink, maxLines = 1)
+                    Text(card.plannedName, style = nameStyle, color = c.ink, maxLines = 1)
                 } else {
-                    Text(stringResource(R.string.value_not_needed), style = MaterialTheme.typography.displaySmall, color = c.inkMuted, maxLines = 1)
+                    Text(stringResource(R.string.value_not_needed), style = nameStyle, color = c.inkMuted, maxLines = 1)
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(if (compact) 8.dp else 16.dp))
             CellPair(
                 {
                     if (card.plannedKm != null) Measure(stringResource(R.string.label_distance), "${card.plannedKm.roundToInt()}", stringResource(R.string.unit_km_ahead))

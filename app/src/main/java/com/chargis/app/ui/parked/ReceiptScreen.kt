@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -33,6 +35,7 @@ import com.chargis.app.ui.wonText
 import com.chargis.app.ui.theme.FigureStyle
 import com.chargis.app.ui.theme.Ticket
 import com.chargis.app.ui.ticket.HairlineH
+import com.chargis.app.ui.ticket.LocalCompact
 import com.chargis.app.ui.ticket.Stamp
 import com.chargis.app.ui.ticket.TearLine
 import com.chargis.app.ui.ticket.TicketButton
@@ -42,15 +45,15 @@ import kotlin.math.roundToInt
 // 목적지 도착 후 정산 영수증 화면(ParkedScreen.kt에서 분리). 스크린샷: 09-finished.png, 16-limit-receipt.png
 
 /** 목적지 도착 후 화면. 왼쪽에 요약(충전 횟수, 최종 배터리)과 [다시 발권], 오른쪽에 영수증. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: Modifier) {
     val c = Ticket.colors
     val receipt = state.receipt ?: return
-    Row(modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp), horizontalArrangement = Arrangement.spacedBy(56.dp)) {
-        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+    val summary = @Composable {
             Text(stringResource(R.string.finished_title), style = MaterialTheme.typography.displayMedium, color = c.ink)
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(36.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 MeasureField(stringResource(R.string.finished_charges), "${receipt.charges.size}", stringResource(R.string.unit_times), FigureStyle.Medium)
                 MeasureField(stringResource(R.string.finished_charge_total), "${receipt.chargeMinutesTotal}", stringResource(R.string.unit_min), FigureStyle.Medium)
                 MeasureField(stringResource(R.string.finished_battery), "${(receipt.endSoc ?: state.socPercent).roundToInt()}", stringResource(R.string.unit_percent), FigureStyle.Medium)
@@ -71,7 +74,17 @@ internal fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: 
             }
             Spacer(Modifier.height(36.dp))
             TicketButton(stringResource(R.string.receipt_again), onRestart, Modifier.width(320.dp), minHeight = 96.dp)
+    }
+    if (LocalCompact.current) {
+        // 좁은 창: 요약을 위에, 영수증을 아래에 쌓고 함께 스크롤한다.
+        Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(32.dp)) {
+            Column { summary() }
+            TicketStock(Modifier.fillMaxWidth()) { ReceiptBody(receipt, state.scenarioTitle) }
         }
+        return
+    }
+    Row(modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp), horizontalArrangement = Arrangement.spacedBy(56.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) { summary() }
         TicketStock(Modifier.width(520.dp).fillMaxHeight()) {
             ReceiptBody(receipt, state.scenarioTitle)
         }
@@ -82,7 +95,9 @@ internal fun ReceiptScreen(state: TripUiState, onRestart: () -> Unit, modifier: 
 @Composable
 private fun ReceiptBody(receipt: TripReceipt, title: String) {
     val c = Ticket.colors
-    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 36.dp, vertical = 28.dp)) {
+    // 좁은 창에서는 바깥 화면이 통째로 스크롤하므로 영수증 안에서는 스크롤하지 않는다(스크롤 겹침 방지).
+    val scroll = if (LocalCompact.current) Modifier else Modifier.verticalScroll(rememberScrollState())
+    Column(Modifier.fillMaxWidth().then(scroll).padding(horizontal = 36.dp, vertical = 28.dp)) {
         // 정산 도장은 제목 옆에 찍는다(맨 아래에 두면 충전 줄이 늘어날 때 가리거나 밀려난다).
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

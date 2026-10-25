@@ -22,7 +22,7 @@
 
 ## 사용자 결정 필요
 - Pleos Connect 에뮬레이터: Android Studio SDK Manager의 SDK Update Sites에 Pleos Connect System Image(API 34, v2.1.0)를 추가해 설치한다(설치 방법은 DECISIONS 2026-10-25). Android Studio가 필요하다.
-- 현재 화면 확인은 일반 Android 에뮬레이터(`chargis_wide`, API 35 태블릿 가로형)로만 했다. Pleos Connect 에뮬레이터에서 다시 확인해야 하고, 앱 창이 1개·2개로 나뉘는 세로 레이아웃도 확인해야 한다.
+- 현재 화면 확인은 일반 Android 에뮬레이터(`chargis_wide`, API 35 태블릿 가로형)로만 했다. Pleos Connect 에뮬레이터에서 다시 확인해야 한다. 세로·분할 레이아웃은 2026-10-26에 고쳐 일반 에뮬레이터에서 `wm size`로 세로(1600×2560)·분할 크기(1280×1600)를 확인했다. 실제 분할 창(앱 2개 동시 표시)은 Pleos 에뮬레이터에서 확인한다.
 - 시연 영상 구성: F3 제한 알림은 S3 시나리오에서만 나온다. 3분 영상에 S1과 S3를 어떻게 나눠 담을지 결정이 필요하다.
 - 순정 내비가 이미 충전 계획(추천 충전소, 목표 SoC, 충전 시간)을 낸다. 신청서·README의 차별점을 시간 제한·혼잡 비교·동승자 화면·휴게소 밖 대안 쪽으로 다시 쓸지 정해야 한다.
 - 공공 충전소 API 키를 발급받으면 `scripts/check-public-api.ps1`로 실제 응답 필드를 한 번에 점검할 수 있다. 실제 응답 필드(statId, chgerType, output, stat, limitYn/limitDetail, kind/kindDetail, useTime, parkingFree, note 등)가 어댑터 가정과 맞는지 확인해야 한다. 특히 ① limitDetail이 이용자 제한 사유인지(시간 제한 문구가 들어오는 경우가 있는지), ② 시설 구분 코드표(C001/C002/C003 등)와 빼기로 한 20개 소분류가 맞는지, ③ 휴게소 충전기의 시간 제한이 어느 필드에 오는지 확인한다. 공공데이터에 없으면 운영기관 공지에서 확인한 규칙을 출처와 함께 `assets/charger_rules.json`에 적는다(`getChargerOperatorInfo`는 사업자 id·이름만 준다). 지금은 비어 있어 실제 데이터에서는 시간 제한이 "정보 없음"으로 나온다. ④ `busiId`(운영기관 아이디)가 목록 API에도 오는지 확인한다.
