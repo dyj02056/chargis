@@ -42,10 +42,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -86,6 +84,8 @@ class TripController(
     private val presenter = TripPresenter()
     private val m = TripMemory()
     private val readout = VehicleReadout(m) { demo.scenario.profile }   // 거리·고도·전비 보정·배터리 직접 입력
+    private val persistence = TripPersistence(m, gate)                 // 여행 저장·복원(B5)
+    private val voice = VoiceListening(scope, stt, ::onVoiceCommand)   // 음성 명령 듣기(F5)
     private var settings = UserSettings()
 
     // 화면 상태. _state(밑줄)는 이 클래스 안에서만 고칠 수 있고, 바깥(화면)에는 읽기 전용 state로 보여 준다.
@@ -100,7 +100,6 @@ class TripController(
     val state: StateFlow<TripUiState> = _state.asStateFlow()
 
     private var captionClear: Job? = null      // 자막을 일정 시간 뒤 지우는 예약 작업
-    private var listenJob: Job? = null         // 음성 명령을 듣는 작업(F5)
     private var acceptJob: Job? = null         // 진행 중인 경유지 추가(수락) 작업
     private var ticksSinceSave = 0
     // 저장 요청 줄. 가장 최근 요청만 남겨(CONFLATED) 오래된 저장이 새 저장을 덮지 않게 한다.
@@ -669,28 +668,10 @@ class TripController(
 
     // ---- 음성 명령(F5) ----
 
-    /** 지금 단계에서 말할 수 있는 명령. 없으면 듣지 않는다. */
-    private fun allowedCommands(): Set<VoiceCommand> = when (m.phase) {
-        TripPhase.AwaitingDecision -> setOf(VoiceCommand.ACCEPT, VoiceCommand.NEXT_STOP)
-        // 예열을 권한 뒤 아직 꺼져 있으면 "예열"이라고 말해 켤 수 있다(주행 중 버튼을 누르지 않아도 되게).
-        TripPhase.NavigatingToCharger ->
-            if (m.preconditionAdvised && m.lastVehicle?.preconditioning != true) setOf(VoiceCommand.PRECONDITION) else emptySet()
-        TripPhase.Arrived -> setOf(VoiceCommand.START_CHARGING, VoiceCommand.DEPART)
-        TripPhase.Done -> setOf(VoiceCommand.DEPART)
-        else -> emptySet()
-    }
-
     // 음성 명령을 켜 두었고 지금 받을 명령이 있으면 듣기 시작하고, 아니면 멈춘다.
     private fun updateListening() {
-        listenJob?.cancel()
-        listenJob = null
-        val allowed = allowedCommands()
-        val source = stt
-        val listening = settings.voiceCommands && source != null && allowed.isNotEmpty()
-        _state.update { it.copy(voice = VoiceUi(settings.voiceCommands, listening, allowed.map { c -> c.name })) }
-        if (listening && source != null) {
-            listenJob = scope.launch { source.listenForCommand(allowed).collect(::onVoiceCommand) }
-        }
+        val ui = voice.update(m, settings.voiceCommands)
+        _state.update { it.copy(voice = ui) }
     }
 
     // ---- 여행 저장·복원(B5) ----
@@ -699,35 +680,9 @@ class TripController(
     private fun saveNow() {
         ticksSinceSave = 0
         if (tripStore == null) return
-        saves.trySend(if (m.phase == TripPhase.Idle || m.phase == TripPhase.Finished) null else json.encodeToString(SavedTrip.serializer(), snapshotForSave()))
-    }
-
-    private fun snapshotForSave(): SavedTrip {
-        val sim = demo.state.value
-        // 결정 대기 중에 꺼졌다면, 다시 켰을 때 같은 추천을 다시 안내할 수 있게 "주행 중"으로 저장한다.
-        val awaiting = m.phase == TripPhase.AwaitingDecision
-        val offeredId = m.offer?.primary?.station?.id
-        return SavedTrip(
-            scenarioId = demo.scenario.id,
-            profileId = demo.scenario.profile.id,
-            sim = SavedSim.of(sim),
-            phase = if (awaiting) TripPhase.Driving else m.phase,
-            // 충전소는 시뮬레이터가 들고 있는 출발점 기준 값을 먼저 쓴다(공공데이터 충전소도 수락할 때 올라가 있다).
-            accepted = m.accepted?.let { r ->
-                val routeStation = demo.scenario.stations.firstOrNull { it.id == r.station.id }
-                SavedRec.of(r, routeStation?.let { SavedStation.of(it, 0.0) } ?: SavedStation.of(r.station, sim.traveledKm))
-            },
-            charges = m.charges.map { SavedCharge.of(it.first, it.second) },
-            handled = gate.handledIds.filter { !(awaiting && it == offeredId) || it in gate.declinedIds },
-            declined = gate.declinedIds.toList(),
-            noSafeWarned = m.noSafeWarned,
-            arrivedAtSec = m.arrivedAtSec,
-            endedByLimit = m.endedByLimit,
-            charge = m.charge?.let { SavedChargeSession(it.targetSoc, it.startSec, it.fromSoc, it.firedAlerts.toList()) },
-            odometerKm = m.odometerKm,
-            elevationSoc = m.elevationSoc,
-            preconditionAdvised = m.preconditionAdvised,
-            manualSoc = if (readout.manualMode) m.lastVehicle?.socPercent else null
+        saves.trySend(
+            if (persistence.shouldClear()) null
+            else persistence.encode(demo.scenario, demo.state.value, if (readout.manualMode) m.lastVehicle?.socPercent else null)
         )
     }
 
@@ -735,34 +690,17 @@ class TripController(
     private suspend fun restoreSaved() {
         val store = tripStore ?: return
         val text = store.load() ?: return
-        val saved = runCatching { json.decodeFromString(SavedTrip.serializer(), text) }.getOrNull()
-        val base = saved?.let { s -> scenarios.firstOrNull { it.id == s.scenarioId } }
-        if (saved == null || base == null || saved.version != SavedTrip.VERSION) {
+        val saved = persistence.decode(text)
+        val base = saved?.let { sv -> scenarios.firstOrNull { it.id == sv.scenarioId } }
+        if (saved == null || base == null) {
             store.save(null)
             return
         }
         val profile = profiles.firstOrNull { it.id == saved.profileId } ?: base.profile
         val scenario = base.copy(profile = profile)
         demo.restore(scenario, saved.sim.toState(scenario.id, demo.state.value.speedMultiplier))
-        m.reset()
-        m.phase = saved.phase
-        m.noSafeWarned = saved.noSafeWarned
-        m.arrivedAtSec = saved.arrivedAtSec
-        m.endedByLimit = saved.endedByLimit
-        m.odometerKm = saved.odometerKm
-        m.elevationSoc = saved.elevationSoc
-        m.preconditionAdvised = saved.preconditionAdvised
+        val rec = persistence.restoreMemory(saved, scenario, demo::addStation)
         saved.manualSoc?.let { readout.restore(it, saved.sim.simTimeSec, saved.phase == TripPhase.Charging) }
-        saved.charges.forEach { m.charges += it.toRecord() }
-        gate.restore(saved.handled, saved.declined)
-        // 수락한 충전소는 시나리오 목록에서 다시 찾아, 지금 위치 기준 거리로 바꿔 넣는다.
-        // 시나리오에 없는 충전소(공공데이터)는 저장해 둔 정보로 되살려 시뮬레이터에 다시 올린다.
-        m.accepted = saved.accepted?.let { r ->
-            val st = scenario.stations.firstOrNull { it.id == r.stationId }
-                ?: r.station?.toStation()?.also(demo::addStation)
-            st?.let { r.toRecommendation(it.copy(distanceAlongRouteKm = it.distanceAlongRouteKm - saved.sim.traveledKm)) }
-        }
-        val rec = m.accepted
         m.charge = saved.charge?.let { c ->
             rec?.let { newSession(it, c.targetSoc, c.startSec, c.fromSoc, c.fired.toSet()) }
         }
@@ -778,6 +716,5 @@ class TripController(
         const val EVAL_EVERY_KM = 0.5    // 추천을 새로 계산하는 주행 간격
         const val EVAL_EVERY_SEC = 30.0  // 추천을 새로 계산하는 시간 간격(가상 시각, 실시간 대기 반영용)
         const val HABIT_TARGET = 80.0    // F4 비교: 습관처럼 채우는 %
-        val json = Json { ignoreUnknownKeys = true }
     }
 }

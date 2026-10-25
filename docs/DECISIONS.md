@@ -88,3 +88,4 @@
 - 2026-10-25 · SDK 대비: 차량이 SoC를 주지 못하면(`isSupported() == false`) 설정과 상관없이 직접 입력으로 넘어가고, 배터리 온도를 모르면 바깥 기온으로 어림하며, 예열을 켜지 못하면 차량 화면에서 켜 달라고 안내하는 흐름을 테스트로 고정했다(`sdkWithoutSoc_fallsBackToManualAndOutsideTemperature`).
 - 2026-10-25 · 공공데이터 점검 스크립트 `scripts/check-public-api.ps1`을 추가했다. local.properties의 키로 목록·상태 API를 한 번 불러 chgerType·kindDetail·lastTedt 등 어댑터가 가정한 필드가 오는지, 시도 코드 51/42 중 어느 쪽이 결과를 주는지 출력한다. 키는 출력하지 않는다.
 
+- 2026-10-25 · 300줄 넘는 파일을 역할별로 나눴다(동작 변경 없음). `ParkedScreen` → 발권·설정(`IssueScreen`), 정차(`StopScreens`), 영수증(`ReceiptScreen`). 주행·정차 화면에 따로 있던 안내·경고 한 줄은 `ticket/TicketParts.kt`의 `InfoLine`·`WarnLine`으로 합쳤다. `PublicChargerData` → `EvChargerParser`, `ChargerCodes`, `StationAggregator`, `ChargerRuleTable`, `RouteProjector`. `TripController`의 저장·복원은 `TripPersistence`, 음성 명령 듣기는 `VoiceListening`으로 뺐다. 시나리오 통합 테스트는 준비물(`ScenarioHarness`)과 기본 흐름·복원·현실 보정 세 파일로 나눴다. 시간 제한 칸(`LimitField`/`LimitCell`)은 주행 화면에만 위험 표시가 있어 합치지 않았다.

@@ -9,7 +9,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -53,6 +52,8 @@ import com.chargis.app.ui.ticket.TearLine
 import com.chargis.app.ui.ticket.TicketButton
 import com.chargis.app.ui.ticket.TicketStock
 import com.chargis.app.ui.ticket.WarnGlyph
+import com.chargis.app.ui.ticket.InfoLine
+import com.chargis.app.ui.ticket.WarnLine
 import com.chargis.app.ui.ticket.rememberReduceMotion
 import com.chargis.app.ui.vertical
 import kotlin.math.roundToInt
@@ -244,12 +245,12 @@ private fun ColumnScope.RecommendStub(card: DriveCard.Recommend, onAccept: (Stri
             Spacer(Modifier.weight(1f))
             // 경고 줄: 시간 제한 안에 못 채울 위험 / 한 번 더 충전해야 함
             if (limitRisk && rec.timeLimitMin != null) {
-                WarnLine(stringResource(R.string.drive_limit_risk, rec.timeLimitMin, (rec.socAtTimeLimitPercent ?: 0.0).roundToInt()))
+                WarnLine(stringResource(R.string.drive_limit_risk, rec.timeLimitMin, (rec.socAtTimeLimitPercent ?: 0.0).roundToInt()), Modifier.padding(top = 10.dp), singleLine = true)
             }
             val next = rec.nextStop
             when {
-                next != null -> InfoLine(stringResource(R.string.drive_two_stop, next.station.name, next.targetSocPercent.roundToInt()))
-                rec.needsAnotherStop -> WarnLine(stringResource(R.string.drive_need_another))
+                next != null -> InfoLine(stringResource(R.string.drive_two_stop, next.station.name, next.targetSocPercent.roundToInt()), Modifier.padding(top = 10.dp), singleLine = true)
+                rec.needsAnotherStop -> WarnLine(stringResource(R.string.drive_need_another), Modifier.padding(top = 10.dp), singleLine = true)
             }
         }
     }
@@ -393,9 +394,9 @@ private fun ColumnScope.NavigatingStub(card: DriveCard.Navigating, marks: List<R
             )
             HairlineH()
             when {
-                card.preconditioning == true -> InfoLine(stringResource(R.string.drive_precondition_on))
+                card.preconditioning == true -> InfoLine(stringResource(R.string.drive_precondition_on), Modifier.padding(top = 10.dp), singleLine = true)
                 card.suggestPreconditioning -> {
-                    InfoLine(stringResource(R.string.drive_precondition_suggest, card.coldExtraMinutes))
+                    InfoLine(stringResource(R.string.drive_precondition_suggest, card.coldExtraMinutes), Modifier.padding(top = 10.dp), singleLine = true)
                     Spacer(Modifier.weight(1f))
                     TicketButton(stringResource(R.string.drive_precondition_button), onPrecondition, Modifier.fillMaxWidth(), primary = false, minHeight = 88.dp)
                 }
@@ -456,7 +457,7 @@ private fun ColumnScope.StatusStub(card: DriveCard.Status, eta: String, remainin
             )
             HairlineH()
             if (card.nextStopName != null && card.nextStopTarget != null) {
-                InfoLine(stringResource(R.string.drive_two_stop, card.nextStopName, card.nextStopTarget.roundToInt()))
+                InfoLine(stringResource(R.string.drive_two_stop, card.nextStopName, card.nextStopTarget.roundToInt()), Modifier.padding(top = 10.dp), singleLine = true)
             }
         }
     }
@@ -499,24 +500,4 @@ private fun ColumnScope.NoSafeStub(card: DriveCard.NoSafeStop, marks: List<Route
         )
     }
     RouteStrip(marks, progress)
-}
-
-// 경고가 아닌 안내 한 줄(예: 두 번째 충전 계획). 도장 잉크 점 + 본문 잉크 글자.
-@Composable
-private fun InfoLine(text: String) {
-    val c = Ticket.colors
-    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.width(10.dp).height(10.dp).background(c.stamp, androidx.compose.foundation.shape.CircleShape))
-        Text(text, style = MaterialTheme.typography.titleMedium, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-// 경고 기호 + 호박색 글자 한 줄
-@Composable
-private fun WarnLine(text: String) {
-    val c = Ticket.colors
-    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        WarnGlyph(size = 24.dp)
-        Text(text, style = MaterialTheme.typography.titleMedium, color = c.warn, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
 }

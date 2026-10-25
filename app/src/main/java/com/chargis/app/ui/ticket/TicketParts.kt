@@ -30,6 +30,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
@@ -298,5 +300,34 @@ fun SpeakerGlyph(modifier: Modifier = Modifier, color: Color = Ticket.colors.ink
         // 스피커 오른쪽의 소리 물결 두 줄
         drawArc(color, -45f, 90f, false, Offset(w * 0.5f, h * 0.3f), androidx.compose.ui.geometry.Size(w * 0.32f, h * 0.4f), style = Stroke(w * 0.08f, cap = StrokeCap.Round))
         drawArc(color, -50f, 100f, false, Offset(w * 0.46f, h * 0.14f), androidx.compose.ui.geometry.Size(w * 0.52f, h * 0.72f), style = Stroke(w * 0.08f, cap = StrokeCap.Round))
+    }
+}
+
+/**
+ * 안내 한 줄: 도장 잉크 점 + 본문 잉크 글자. 예) "다음 충전 · F 휴게소 55%까지", "배터리 예열 중"
+ * 주행 화면은 [singleLine]으로 한 줄에서 잘라 카드가 밀리지 않게 한다.
+ */
+@Composable
+fun InfoLine(text: String, modifier: Modifier = Modifier, singleLine: Boolean = false) {
+    val c = Ticket.colors
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(10.dp).background(c.stamp, CircleShape))
+        Text(
+            text, style = MaterialTheme.typography.titleMedium, color = c.ink,
+            maxLines = if (singleLine) 1 else Int.MAX_VALUE, overflow = if (singleLine) TextOverflow.Ellipsis else TextOverflow.Clip
+        )
+    }
+}
+
+/** 경고 한 줄: 경고 기호 + 호박색 글자. 색만으로 뜻을 전하지 않도록 늘 기호와 함께 쓴다. */
+@Composable
+fun WarnLine(text: String, modifier: Modifier = Modifier, glyphSize: Dp = 24.dp, singleLine: Boolean = false) {
+    val c = Ticket.colors
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        WarnGlyph(size = glyphSize)
+        Text(
+            text, style = MaterialTheme.typography.titleMedium, color = c.warn,
+            maxLines = if (singleLine) 1 else Int.MAX_VALUE, overflow = if (singleLine) TextOverflow.Ellipsis else TextOverflow.Clip
+        )
     }
 }
