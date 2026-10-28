@@ -11,6 +11,9 @@
     <!-- Pleos NaviHelper SDK: 위치·경유지 조회와 경로 예측(NAVI_ROUTE), 경유지 추가·삭제·재탐색(NAVI_ROUTE_SEARCH) -->
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" />
+    <!-- Pleos TextToSpeech·SpeechToText SDK: 안내 음성과 음성 명령 -->
+    <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
+    <uses-permission android:name="pleos.car.permission.STT_SERVICE" />
 
     <queries>
         <intent>

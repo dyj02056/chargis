@@ -62,7 +62,7 @@ Chargis는 경로 안내를 기존 내비에 맡기고(`NaviPort`), 충전 판�
 - **경유지 변경 안내:** 수락한 곳보다 5분 넘게 빨리 도착하는 곳이 생겨 경유지를 바꾸면, 이전 경유지를 지우고 *"경유지를 바꿨습니다. B 휴게소 대신 C 휴게소. 목적지에 약 7분 빨리 도착합니다"* 처럼 이유를 말합니다.
 - **시간 제한 정보 없음:** 제한이 없다고 확인한 충전기는 "없음", 확인하지 못한 충전기는 **"정보 없음"** 으로 나눠 표시하고, 충전을 시작하면 *"이 충전기의 시간 제한 정보가 없습니다. 충전기 화면에서 확인해 주세요"* 라고 알립니다.
 - **이용 제한 충전소 제외:** 아파트·사업장·학교처럼 외부인이 쓰기 어려운 시설과 "입주민 외 이용불가" 같은 이용자 제한이 걸린 충전기는 후보에서 뺍니다.
-- **음성 안내:** 모든 안내에 음성을 함께 내고 화면 아래에 자막으로도 보여 줍니다. 같은 문장은 반복하지 않고, 이미 안내했거나 거절한 충전소도 다시 안내하지 않습니다.
+- **음성 안내와 음성 명령:** 모든 안내에 음성을 함께 내고 화면 아래에 자막으로도 보여 줍니다. 같은 문장은 반복하지 않고, 이미 안내했거나 거절한 충전소도 다시 안내하지 않습니다. Pleos 차량에서는 **Pleos TextToSpeech SDK**로 차량 오디오에 말하고, 설정에서 음성 명령을 켜면 **Pleos SpeechToText SDK**로 "수락", "다음", "충전 시작", "출발", "예열"을 알아듣습니다. 둘 다 차량 안의 On-device 엔진을 써서 네트워크가 없어도 됩니다. Pleos가 아닌 기기에서는 안드로이드 기본 엔진을 씁니다.
 - **출처 표시:** 실시간 정보가 없으면 숨기지 않고 "정보 없음"으로 표시하고, 화면 상단에 데이터 출처(시뮬레이션, 직접 입력, 차량 데이터)를 표시합니다.
 - **충전구 호환:** 차종의 충전구(기본 DC콤보)를 꽂을 수 없는 충전기는 후보에서 빼고, 빈 대수와 출력도 꽂을 수 있는 충전기만 셉니다. 충전구를 모르면 거르지 않습니다.
 - **차가운 배터리와 예열:** 배터리가 차가우면 충전을 덜 받는 만큼 충전 시간을 늘려 잡습니다(20°C 이상 제 속도, -10°C 이하 25%, 가정). 수락한 충전소에서 3분 넘게 늦어질 것 같으면 도착 30분 전에 *"지금 배터리 예열을 켜면 충전이 약 N분 빨라집니다"* 라고 권하고, 앱에서 예열을 켤 수 있는 차량이면 경유지 안내 카드에 **[배터리 예열 켜기]** 를 띄웁니다(음성으로 "예열"이라고 말해도 됩니다). Pleos Vehicle SDK에는 예열 제어가 없어(차량 제어 SDK 준비 중) 실차에서는 버튼 없이 *"차량 화면에서 배터리 예열을 켜면 충전이 약 N분 빨라집니다"* 라고만 안내합니다. 데모 시뮬레이터 차량은 앱에서 켤 수 있습니다.
@@ -240,10 +240,11 @@ socPerKm          = (1 / 전비) / 배터리 용량 × 100              // 1km�
 ┌───────┴──────────────────── Ports (interface) ──────────────────────┐
 │  NaviPort  VehiclePort  ChargerDataPort  TtsPort  SttPort  Settings/TripStore │
 └───────┬──────────────────────────────────────────────┬───────────────┘
-   Fake* + ScenarioSimulator (경로·시계)          Pleos* (Vehicle·NaviHelper SDK, CarUxRestrictions)
+   Fake* + ScenarioSimulator (경로·시계)          Pleos* (Vehicle·NaviHelper·TextToSpeech·SpeechToText SDK, CarUxRestrictions)
    HybridNavi: 데모 경로 + 순정 내비 경유지     RoadDistanceRefiner: requestTrip 도로 거리
    PublicChargerData (공공데이터, 키 또는 중계 서버가 있을 때) → 실패 시 샘플로 폴백
-   PrefsSettingsStore · PrefsTripStore (DataStore) · AndroidSpeechStt
+   PleosTts·PleosStt → Pleos가 아니면 AndroidTts·AndroidSpeechStt로 폴백
+   PrefsSettingsStore · PrefsTripStore (DataStore)
 
  server/charger-proxy.mjs: data.go.kr 키를 붙여 주는 중계 서버(배포용 빌드에서 사용)
 ```
@@ -258,7 +259,7 @@ socPerKm          = (1 / 전비) / 배터리 용량 × 100              // 1km�
 app/src/main/java/com/chargis/app/
 ├─ domain/   model/ engine/ session/   # 도메인 모델, 추천 엔진, 상태머신
 ├─ port/                               # 외부 의존 인터페이스
-├─ data/     fake/ sdk/ asset/         # Fake 구현, Pleos SDK 어댑터(차량 신호·내비·도로 거리), 번들 JSON 로더
+├─ data/     fake/ sdk/ asset/         # Fake 구현, Pleos SDK 어댑터(차량 신호·내비·도로 거리·음성), 번들 JSON 로더
 │            publicapi/                # 공공 충전소 API: 파싱, 코드표, 충전소 묶기, 규칙표, 경로 투영, 호출·캐시
 │            store/                    # 설정·여행 저장(DataStore)
 ├─ sim/                                # 데모 시나리오 시뮬레이터
@@ -280,6 +281,18 @@ adb install -r apk/JSW_Lab_Chargis_release.apk
 ```
 
 **필요한 것:** JDK 17, Android SDK(platform 36, build-tools), Android 9(API 28) 이상 기기 또는 에뮬레이터
+
+**테스트 환경**
+
+| 환경 | 용도 | 확인한 것 |
+|---|---|---|
+| **Pleos Connect 에뮬레이터** v2.1.0(API 34, Automotive) + Virtual Console | 공모전 심사 환경. Pleos SDK가 실제로 붙는다 | 차량 배터리 %로 발권, 기어 P/D, 충전 스위치, 주행 중 화면 제한, 순정 내비 경유지 추가·재탐색, `requestTrip` 도로 거리, Pleos TTS 안내 음성 |
+| 일반 Android 에뮬레이터(`chargis_wide`, API 35 태블릿 가로) | 데모 시나리오 S1~S6, 화면 캡처 | 모든 기능(차량 신호 대신 데모 시뮬레이터 값) |
+
+- 사용한 Pleos SDK: Vehicle 2.3.2, NaviHelper 3.0.5, TextToSpeech 3.3.1, SpeechToText 3.3.1(모두 공개 Maven 저장소 `https://nexus-playground.pleos.ai/repository/maven-releases/`에서 받습니다. 로그인이나 앱 등록이 필요 없습니다).
+- Pleos 에뮬레이터 설치: Android Studio SDK Manager의 SDK Update Sites에 Pleos Connect System Image를 추가하고 Automotive AVD(RAM 4GB, Cold boot)를 만듭니다. 자세한 방법은 [Pleos Playground 문서](https://document.pleos.ai/docs/pleos-only/getting-started)에 있습니다.
+- Virtual Console: `adb forward tcp:8088 tcp:8088`을 실행하고 브라우저에서 `127.0.0.1:8088`을 엽니다. 배터리 SOC, 기어, 충전 상태를 바꾸면 앱이 바로 따라갑니다. 순정 내비에 목적지를 먼저 정해 두면 [경유지로 수락]이 순정 내비에도 경유지를 넣습니다.
+- Pleos 에뮬레이터 앱은 AAOS 사용자 10으로 돕니다. 데이터를 지우려면 `adb shell pm clear --user current com.chargis.app`을 씁니다.
 
 **Android Studio 없이 Windows에서 실행하기**
 
@@ -335,7 +348,7 @@ Set-ExecutionPolicy -Scope Process Bypass -Force; .\scripts\check-public-api.ps1
 
 ## 테스트
 
-`./gradlew testDebugUnitTest` 하나로 아래 앱 테스트(122개)가 모두 돌아갑니다. 화면 테스트도 에뮬레이터 없이 JVM(Robolectric)에서 돌아갑니다. 중계 서버 테스트(7개)는 `node --test server/charger-proxy.test.mjs`로 돌립니다.
+`./gradlew testDebugUnitTest` 하나로 아래 앱 테스트(125개)가 모두 돌아갑니다. 화면 테스트도 에뮬레이터 없이 JVM(Robolectric)에서 돌아갑니다. 중계 서버 테스트(7개)는 `node --test server/charger-proxy.test.mjs`로 돌립니다.
 
 GitHub Actions([.github/workflows/android.yml](.github/workflows/android.yml))가 `main` 푸시와 풀 리퀘스트마다 앱 테스트와 debug 빌드, 중계 서버 테스트를 실행합니다. 원격 저장소에서 실제로 돌아 성공한 것을 확인했습니다.
 
@@ -349,7 +362,7 @@ GitHub Actions([.github/workflows/android.yml](.github/workflows/android.yml))�
 | 현실 보정 | 충전구 호환(차데모 전용 제외·미상 유지), 쓸 수 있는 충전기 0대 제외, 배터리 온도 배율과 예열, 요금 계산, 목적지 도착 잔량, 고장 의심 순위 가산, 오르막·내리막 에너지와 목표 상향, 배터리 직접 입력 추정(주행·충전·이어 붙이기) |
 | 충전 알림 (T8) | 제한 10분·5분 전 경고와 미달 종료, 목표 5분 전과 도달이 각각 한 번씩 순서대로 나오는지, 데모 가속에서도 순서가 같은지, 실제 충전 속도로 남은 시간을 보정하는지 |
 | 상태머신 | 정상 흐름, 거절, 허용되지 않은 전이 |
-| Pleos 하이브리드 | 차량 배터리 %로 발권, 기어 P면 가상 주행 멈춤(충전소 1km 안은 예외)·D면 이어 감, 충전 스위치로 충전 시작·종료, 주행 중 화면 제한 반영, 내비 경유지 가득 안내, 충전 종료 한 번만 기록(즉시 실행 디스패처), requestTrip 도로 거리(가까운 3곳·위치 일치 시만·캐시·위치 조회 10초 간격·단위 변환) |
+| Pleos 하이브리드 | 차량 배터리 %로 발권, 기어 P면 가상 주행 멈춤(충전소 1km 안은 예외)·D면 이어 감, 충전을 마친 뒤 D면 출발(도착만 했을 때는 그대로), 충전 스위치로 충전 시작·종료, Pleos가 아닌 기기에서 음성 안내·명령이 기본 엔진으로 넘어가는지, 주행 중 화면 제한 반영, 내비 경유지 가득 안내, 충전 종료 한 번만 기록(즉시 실행 디스패처), requestTrip 도로 거리(가까운 3곳·위치 일치 시만·캐시·위치 조회 10초 간격·단위 변환) |
 | 음성 명령 | 자연스러운 말에서 명령 고르기, 지금 받을 수 없는 명령 무시, "예열" |
 | 시나리오 통합 (기본 흐름) | S1 전체(추천 → 수락 → 도착 → 충전 → 재출발 → 도착)의 상태 순서와 음성 순서, 거절 후 다음 후보, S2 혼잡 카드, S3 제한 경고 → 미달 종료 → 다음 휴게소 재추천, S5 휴게소 혼잡 → 경로 밖 마트 대안·우회 안내·우회만큼 배터리 사용, 시나리오에 없는 충전소 수락 → 정차·충전 → 앱 재시작 후 이어 가기, 수락 두 번 눌러도 경유지 한 번, 추천 계산 간격(20km에 약 40번), S1 목표 올리기와 아낀 시간, 시뮬레이터 결정성 |
 | 시나리오 통합 (복원) | 충전 중 앱 재시작 후 같은 알림 기록으로 이어 가기, 충전소 도착 화면에서 재시작하면 비교 표 다시 채우기, 공공데이터 충전소 복원, 불러오는 동안 대기 화면 |
@@ -366,10 +379,10 @@ GitHub Actions([.github/workflows/android.yml](.github/workflows/android.yml))�
 - **추정값:** 배터리 온도 배율, 예열 속도, 충전 손실, 차량 무게, 회생 효율은 공개 자료의 경향을 따른 가정값입니다. 배터리 온도·예열·경로 고도를 SDK로 받을 수 있는지는 아직 모릅니다(받지 못하면 바깥 기온으로 어림하고, 고도는 평지로 봅니다).
 - **중계 서버 배포:** 중계 서버([`server/`](server/README.md))는 만들고 테스트했지만 어디에 띄울지는 아직 정하지 않았습니다. 상태를 메모리에만 두므로 여러 대로 늘리면 저장과 한도를 인스턴스마다 따로 셉니다.
 - **경로 투영:** 내비 경로 폴리라인이 없어 현재 위치→목적지 직선으로 경로상 거리와 우회 거리를 어림합니다. 차의 실제 위치가 경로 위 현재 위치와 2km 안에서 맞으면 가까운 충전소 3곳은 순정 내비 `requestTrip`의 실제 도로 거리로 바꿉니다(가상 경로 데모에서는 위치가 달라 쓰지 않습니다). 반대 방향 휴게소는 이름의 방향 표기로 임시로 걸러 내지만, IC에서 실제로 들어가기 어려운 충전소는 가려내지 못하므로, 국도변·IC 근처 충전소는 실제 경로를 받은 뒤에야 믿을 만해집니다.
-- **검증 환경:** Pleos Connect 에뮬레이터(v2.1.0, API 34)에서 앱 실행, 차량 배터리 % 반영, 기어 P/D, 충전 스위치, 주행 중 화면 제한, 경유지 추가 호출을 확인했습니다. 순정 내비에 목적지를 정한 뒤 수락하면 내비가 경유지를 넣어 다시 탐색하는 것과, `requestTrip` 값의 단위(거리 m·시간 초)도 확인했습니다.
+- **검증 환경:** Pleos Connect 에뮬레이터(v2.1.0, API 34)와 Virtual Console로 S1~S6을 돌려 확인했습니다(2026-10-28). 차량 배터리 %로 발권, 기어 P/D, 충전 스위치로 충전 시작·종료, 주행 중 화면 가림, 순정 내비 경유지 추가, Pleos TextToSpeech 안내 음성(onStart·onDone), S3의 제한 10분·5분 전 경고와 미달 종료·F 휴게소 재추천까지 나왔습니다. SpeechToText는 초기화까지 확인했고 마이크 입력은 아직 확인하지 못했습니다. 순정 내비 `requestTrip` 값의 단위(거리 m·시간 초)도 확인했습니다.
 - **주행 중 규정:** 앱은 Distraction Optimization을 선언해 주행 중에도 쓸 수 있게 했습니다(Pleos 문서상 미선언 앱은 주행 중 사용 불가). 주행 중 카드(큰 버튼 2개)가 Mobility Services 카테고리 심사에서 허용되는지는 Pleos Connect 에뮬레이터에서 확인해야 합니다. 세로·분할 화면은 본문 폭이 1000dp보다 좁으면 2단을 1단으로 쌓도록 고쳤고, 일반 에뮬레이터에서 세로(1600×2560)·분할 크기(1280×1600)로 확인했습니다.
 
-설계 결정과 가정은 [docs/DECISIONS.md](docs/DECISIONS.md)에, 확인이 필요한 항목은 [docs/OPEN_ISSUES.md](docs/OPEN_ISSUES.md)에, 전체 개발 계획은 [plan.md](plan.md)에 있습니다.
+PT 기술 Q&A와 Pleos 에뮬레이터 시연 순서는 [docs/PT_TECH_QA.md](docs/PT_TECH_QA.md)에, 설계 결정과 가정은 [docs/DECISIONS.md](docs/DECISIONS.md)에, 확인이 필요한 항목은 [docs/OPEN_ISSUES.md](docs/OPEN_ISSUES.md)에, 전체 개발 계획은 [plan.md](plan.md)에 있습니다.
 
 ---
 

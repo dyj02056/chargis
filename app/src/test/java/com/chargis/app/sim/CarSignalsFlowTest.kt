@@ -94,6 +94,33 @@ class CarSignalsFlowTest {
         assertEquals(1, h.controller.state.value.receipt?.charges?.size)
     }
 
+    /** 충전을 마친 뒤 [출발]을 누르지 않고 기어를 D로 바꾸면 출발로 본다(주행 중에는 정차 화면이 가려진다). 도착만 했을 때는 그대로 둔다. */
+    @Test
+    fun gearDriveAfterChargingDeparts() = runTest {
+        val car = FakeCar()
+        val h = harness(car = car)
+        h.controller.startScenario("S1")
+        drive(h) { h.controller.state.value.phase == TripPhase.AwaitingDecision }
+        h.controller.accept("rest_b")
+        runCurrent()
+        drive(h) { h.controller.state.value.phase == TripPhase.Arrived }
+        car.parked.value = true
+        runCurrent()
+        car.parked.value = false   // 충전기 자리로 옮기는 중: 도착 단계 그대로
+        runCurrent()
+        assertEquals(TripPhase.Arrived, h.controller.state.value.phase)
+
+        car.parked.value = true
+        car.chargeSwitchOn.value = true
+        runCurrent()
+        car.chargeSwitchOn.value = false
+        runCurrent()
+        assertEquals(TripPhase.Done, h.controller.state.value.phase)
+        car.parked.value = false
+        runCurrent()
+        assertEquals(TripPhase.Driving, h.controller.state.value.phase)
+    }
+
     /**
      * 충전 종료는 한 번만 기록된다. 기기에서는 Main.immediate라 시뮬레이터를 멈추는 순간 틱 처리가 끼어들 수 있다.
      * Unconfined 디스패처로 그 끼어들기를 재현한다.

@@ -107,6 +107,9 @@ dependencies {
     // Pleos Connect SDK: 차량 상태(SoC·전비·충전)와 순정 내비 연동(경로·경유지·도착 예측)
     implementation(libs.pleos.vehicle)
     implementation(libs.pleos.navihelper)
+    // Pleos 음성: 안내 음성(TextToSpeech)과 음성 명령(SpeechToText). 차량 On-device 엔진을 쓴다.
+    implementation(libs.pleos.tts)
+    implementation(libs.pleos.stt)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

@@ -225,8 +225,15 @@ class TripController(
     /**
      * 기어 P: 가상 주행을 멈춘다. 다시 D·R·N: 멈춘 것을 푼다. 정차·충전 단계에서는 버튼 흐름을 그대로 둔다.
      * 수락한 충전소 1km 안에서 P로 바꾸면 충전소에 들어선 것으로 보고 멈추지 않는다(멈추면 도착 처리가 되지 않는다).
+     * 충전을 마친 뒤(Done) 기어를 D·R·N으로 바꾸면 [출발]을 누른 것으로 본다. 주행 중에는 정차 화면이 가려져
+     * [출발]을 누를 수 없어, 그대로 두면 여행이 멈춘다. 도착만 하고 충전 전(Arrived)이면 충전기 자리로 옮기는 중일 수 있어 그대로 둔다.
      */
     private fun onGear(parked: Boolean) {
+        if (!parked && m.phase == TripPhase.Done) {
+            depart()
+            publish()
+            return
+        }
         val pullingIn = (demo.kmToWaypoint() ?: Double.MAX_VALUE) <= ARRIVE_GRACE_KM
         if (parked && demo.state.value.phase == SimPhase.DRIVING && !demo.state.value.paused && !pullingIn) {
             demo.setPaused(true)

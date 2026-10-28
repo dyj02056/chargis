@@ -16,6 +16,8 @@ import com.chargis.app.port.ChargerDataPort
 import com.chargis.app.data.sdk.HybridNavi
 import com.chargis.app.data.sdk.PleosCarSignals
 import com.chargis.app.data.sdk.PleosNavi
+import com.chargis.app.data.sdk.PleosStt
+import com.chargis.app.data.sdk.PleosTts
 import com.chargis.app.data.sdk.RoadDistanceRefiner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,8 +95,9 @@ class AppContainer(context: Context) {
     // B8: 가까운 충전소 3곳은 순정 내비에 실제 도로 거리를 묻는다(차 위치가 경로와 맞을 때만).
     val chargerData: ChargerDataPort = RoadDistanceRefiner(baseChargerData, pleosNavi)
 
-    // 음성 안내. 실제 소리는 안드로이드 기본 TTS로 내고, Fake가 말한 내용을 기록해 둔다.
-    val tts = FakeTts(delegate = AndroidTts(app))
+    // 음성 안내. Pleos 차량에서는 TextToSpeech SDK로, 그 밖에서는 안드로이드 기본 TTS로 소리를 내고,
+    // Fake가 말한 내용을 자막으로 띄우고 기록해 둔다.
+    val tts = FakeTts(delegate = PleosTts(app, fallback = AndroidTts(app)).also { it.start() })
     val announcer = VoiceAnnouncer(tts)
     val phrases: VoicePhrases = AndroidVoicePhrases(app)
 
@@ -102,10 +105,12 @@ class AppContainer(context: Context) {
     val settingsStore: SettingsStore = PrefsSettingsStore(app)
     val tripStore: TripStore = PrefsTripStore(app)
 
-    // 음성 명령(F5). 아직 차량 STT SDK가 없어 안드로이드 기본 음성 인식을 쓴다. 마이크 권한이 있을 때만 듣는다.
-    val stt: SttPort = AndroidSpeechStt(app) {
+    // 음성 명령(F5). Pleos 차량에서는 SpeechToText SDK로, 그 밖에서는 안드로이드 기본 음성 인식으로 듣는다.
+    // 어느 쪽이든 마이크 권한이 있을 때만 듣는다.
+    private val micAllowed = {
         ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
     }
+    val stt: SttPort = PleosStt(app, fallback = AndroidSpeechStt(app, micAllowed), hasPermission = micAllowed).also { it.start() }
 
     // assets 폴더의 파일을 UTF-8 텍스트로 읽는다(한글이 깨지지 않게).
     private fun readAsset(name: String): String =
